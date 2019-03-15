@@ -15,14 +15,12 @@ package redshift
 package generators
 
 import scala.annotation.tailrec
-
 import cats.data.NonEmptyList
-
 import com.snowplowanalytics.iglu.core.SchemaMap
-
 import EncodeSuggestions._
 import TypeSuggestions._
-import jsonschema.{ Schema, Pointer }
+import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
+import jsonschema.Schema
 
 /** Generates a Redshift DDL File from a Flattened JsonSchema */
 object DdlGenerator {
@@ -128,24 +126,15 @@ object DdlGenerator {
    * generates DDL object for it with it's name, constrains, attributes
    * data type, etc
    */
-  private[schemaddl] def getColumnsDdl(flatSchema: FlatSchema, varcharSize: Int): List[Column] = {
-    val columnSet = for {
-      (jsonPointer, schema) <- flatSchema.subschemas
-      columnName = getName(jsonPointer)
+  private[schemaddl] def getColumnsDdl(flatSchema: FlatSchema, varcharSize: Int): List[Column] =
+    for {
+      (jsonPointer, schema) <- FlatSchema.order(flatSchema.subschemas)
+      columnName = FlatSchema.getName(jsonPointer)
       dataType = getDataType(schema, varcharSize, columnName)
       encoding = getEncoding(schema, dataType, columnName)
-      constraints =
-        if (checkNullability(schema, flatSchema.required.contains(jsonPointer))) Set.empty[ColumnConstraint]
-        else Set[ColumnConstraint](Nullability(NotNull))
+      constraints = getConstraints(!schema.canBeNull)
     } yield Column(columnName, dataType, columnAttributes = Set(encoding), columnConstraints = constraints)
-    columnSet.toList.sortBy(c => (-c.columnConstraints.size, c.columnName))
-  }
 
-  def getName(jsonPointer: Pointer.SchemaPointer): String =
-    jsonPointer.value.map {
-      case Pointer.Cursor.DownField(f) => StringUtils.snakeCase(f)
-      case cursor => throw new IllegalArgumentException(s"Unexpected $cursor cursor in ${jsonPointer.show}")
-    } mkString "."
 
   // List of data type suggestions
   val dataTypeSuggestions: List[DataTypeSuggestion] = List(
@@ -222,21 +211,8 @@ object DdlGenerator {
     }
   }
 
-  /**
-   * Check whether field can be null.
-   * Priority of factors:
-   * - "null" in type
-   * - null in enum
-   * - property is in required array
-   *
-   * @param properties hash map of JSON Schema properties for primitive type
-   * @param required whether this field listed in required array
-   * @return nullable or not
-   */
-  private[schemaddl] def checkNullability(properties: Schema, required: Boolean): Boolean =
-    (properties.`type`, properties.enum) match {
-      case (Some(types), _) if types.nullable => true
-      case (_, Some(enum)) if enum.value.exists(_.isNull) => true
-      case _ => !required
-    }
+  private[schemaddl] def getConstraints(notNull: Boolean) = {
+    if (notNull) Set[ColumnConstraint](Nullability(NotNull))
+    else Set.empty[ColumnConstraint]
+  }
 }

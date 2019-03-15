@@ -52,6 +52,17 @@ final case class VersionTree private(models: NonEmptyList[(Model, Revisions)]) e
     VersionTree.VersionList(NonEmptyList.fromListUnsafe(list.reverse))
   }
 
+  /** Get all SchemaVers in particular MODEL (used for migrations) */
+  def modelGroupList(model: Model): Option[NonEmptyList[SchemaVer]] = {
+    val list = for {
+      (model, revisions) <- models.filter { case (m, _) => m == model }
+      (revision, additions) <- revisions.revisions.toList
+      addition <- additions.values.toList
+    } yield SchemaVer.Full(model, revision, addition)
+
+    NonEmptyList.fromList(list.reverse)
+  }
+
   /** Try to add a next version to the tree, which can be rejected if any properties don't hold */
   def add(version: SchemaVer.Full): Either[AddingError, VersionTree] = {
     for {
@@ -202,7 +213,7 @@ object VersionTree {
     private[schemaddl] def getAdditions(revision: Int): List[Addition] =
       revisions // Unlike getRevisions it can be empty list
         .collect { case (r, group) if r == revision => group }
-        .flatMap(_.value.values.toList)
+        .flatMap(_.values.toList)
 
     private def latestAddition = revisions.head._2
   }

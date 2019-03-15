@@ -20,30 +20,33 @@ import cats.syntax.either._
 import properties.NumberProperty._
 
 trait NumberDecoders {
-  implicit val multipleOfSerializer = Decoder.instance { cursor: HCursor =>
-    cursor.as[BigInt].map(MultipleOf.IntegerMultipleOf)
-      .orElse(cursor.as[BigDecimal].map(MultipleOf.NumberMultipleOf))
-  }
+  implicit val multipleOfSerializer: Decoder[MultipleOf] =
+    Decoder.instance { cursor: HCursor =>
+      cursor.as[BigInt].map(MultipleOf.IntegerMultipleOf)
+        .orElse(cursor.as[BigDecimal].map(MultipleOf.NumberMultipleOf))
+    }
 
-  implicit val minimumSerializer = Decoder.instance { cursor: HCursor =>
-    val jsonNumber = cursor.value.asNumber
-    val integer = jsonNumber
-      .flatMap(_.toBigInt)
-      .map(Minimum.IntegerMinimum)
-    integer.orElse(jsonNumber
-      .flatMap(_.toBigDecimal)
-      .map(Minimum.NumberMinimum))
-      .toRight(DecodingFailure("minimum expected to be a numeric value", cursor.history))
-  }
+  implicit val minimumSerializer: Decoder[Minimum] =
+    Decoder.instance { cursor: HCursor =>
+      val jsonNumber = cursor.value.asNumber
+      val integer = jsonNumber
+        .flatMap(_.toBigInt)
+        .map(Minimum.IntegerMinimum)
+      integer.orElse(jsonNumber
+        .flatMap(_.toBigDecimal)
+        .map(Minimum.NumberMinimum))
+        .toRight(DecodingFailure("minimum expected to be a numeric value", cursor.history))
+    }
 
-  implicit val maximumSerializer = Decoder.instance { cursor: HCursor =>
-    val jsonNumber = cursor.value.asNumber
-    val integer = jsonNumber
-      .flatMap(_.toBigInt)
-      .map(Maximum.IntegerMaximum)
-    integer.orElse(jsonNumber
-      .flatMap(_.toBigDecimal)
-      .map(Maximum.NumberMaximum))
-      .toRight(DecodingFailure("maximum expected to be a numeric value", cursor.history))
-  }
+  implicit val maximumSerializer: Decoder[Maximum] =
+    Decoder.instance { cursor: HCursor =>
+      val jsonNumber = cursor.value.asNumber
+      val integer = jsonNumber
+        .flatMap(_.toBigInt)
+        .map(Maximum.IntegerMaximum)
+      integer.orElse(jsonNumber
+        .flatMap(_.toBigDecimal)
+        .map(Maximum.NumberMaximum))
+        .toRight(DecodingFailure("maximum expected to be a numeric value", cursor.history))
+    }
 }
