@@ -13,6 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl
 
 import cats.data.NonEmptyList
+import cats.syntax.either._
 
 import com.snowplowanalytics.iglu.core.SchemaVer
 

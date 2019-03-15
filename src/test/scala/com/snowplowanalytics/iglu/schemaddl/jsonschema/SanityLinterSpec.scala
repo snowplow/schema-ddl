@@ -15,19 +15,14 @@ package jsonschema
 
 import cats.data.NonEmptyList
 
-// json4s
-import org.json4s._
-import org.json4s.jackson.JsonMethods.parse
-
 import io.circe.literal._
 
 // specs2
 import org.specs2.Specification
 
 // This libary
-import json4s.implicits._
-import SanityLinter._
 import SpecHelpers._
+import SanityLinter.lint
 
 class SanityLinterSpec extends Specification { def is = s2"""
   Check SanityLinter specification
@@ -60,32 +55,30 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e2 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |  "additionalProperties": {
-        |    "properties": {
-        |      "nestedObject": {
-        |        "properties": {
-        |          "nestedArray": {
-        |            "items": {
-        |              "type": "object"
-        |            },
-        |            "additionalItems": {
-        |              "patternProperties": {
-        |                "someInvalid": {
-        |                  "minimum": 5,
-        |                  "maximum": 0
-        |                }
-        |              }
-        |            }
-        |          }
-        |        }
-        |      }
-        |    }
-        |  }
-        |}
-      """.stripMargin)).get
+    val schema = json"""{
+          "additionalProperties": {
+            "properties": {
+              "nestedObject": {
+                "properties": {
+                  "nestedArray": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "additionalItems": {
+                      "patternProperties": {
+                        "someInvalid": {
+                          "minimum": 5,
+                          "maximum": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      """.schema
 
     val expected = Map(
       "/" ->
@@ -110,17 +103,15 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e3 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |  "additionalProperties": false,
-        |  "properties": {
-        |    "oneKey": {}
-        |  },
-        |  "required": ["oneKey", "twoKey"]
-        |}
-      """.stripMargin
-    )).get
+    val schema = json"""
+        {
+          "additionalProperties": false,
+          "properties": {
+            "oneKey": {}
+          },
+          "required": ["oneKey", "twoKey"]
+        }
+      """.schema
 
     val expected = Map(
       "/" -> NonEmptyList.of(
@@ -135,35 +126,32 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e4 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |    "type": "object",
-        |    "properties": {
-        |       "sku": {
-        |           "type": "string"
-        |       },
-        |       "name": {
-        |           "type": "string"
-        |       },
-        |       "category": {
-        |           "type": "string"
-        |       },
-        |       "unitPrice": {
-        |           "type": "number"
-        |       },
-        |       "quantity": {
-        |           "type": "number"
-        |       },
-        |       "currency": {
-        |           "type": "string"
-        |       }
-        |    },
-        |    "required": ["sku", "quantity"],
-        |    "additionalProperties": false
-        |}
-      """.stripMargin
-    )).get
+    val schema = json""" {
+            "type": "object",
+            "properties": {
+               "sku": {
+                   "type": "string"
+               },
+               "name": {
+                   "type": "string"
+               },
+               "category": {
+                   "type": "string"
+               },
+               "unitPrice": {
+                   "type": "number"
+               },
+               "quantity": {
+                   "type": "number"
+               },
+               "currency": {
+                   "type": "string"
+               }
+            },
+            "required": ["sku", "quantity"],
+            "additionalProperties": false
+        }
+      """.schema
 
     val expected = Map(
       "/properties/unitPrice" ->
@@ -193,37 +181,33 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e5 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |    "type": "object",
-        |    "properties": {
-        |       "sku": {
-        |           "type": "string"
-        |       },
-        |       "name": {
-        |           "type": "string",
-        |           "maximum": 0
-        |       },
-        |       "category": {
-        |           "type": "string",
-        |           "minimum": 0
-        |       },
-        |       "unitPrice": {
-        |           "type": "number"
-        |       },
-        |       "quantity": {
-        |           "type": "number"
-        |       },
-        |       "currency": {
-        |           "type": "string"
-        |       }
-        |    },
-        |    "required": ["sku", "quantity"],
-        |    "additionalProperties": false
-        |}
-      """.stripMargin
-    )).get
+    val schema = json"""{
+            "type": "object",
+            "properties": {
+               "sku": {
+                   "type": "string"
+               },
+               "name": {
+                   "type": "string",
+                   "maximum": 0
+               },
+               "category": {
+                   "type": "string",
+                   "minimum": 0
+               },
+               "unitPrice": {
+                   "type": "number"
+               },
+               "quantity": {
+                   "type": "number"
+               },
+               "currency": {
+                   "type": "string"
+               }
+            },
+            "required": ["sku", "quantity"],
+            "additionalProperties": false
+        }""".schema
 
     val expected = Map(
       "/properties/unitPrice" ->
@@ -245,25 +229,21 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e6 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |    "type": "array",
-        |    "items": {
-        |        "type": "object",
-        |        "properties": {
-        |            "schema": {
-        |                "type": "string",
-        |                "pattern": "^iglu:[a-zA-Z0-9-_.]+/[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+/[0-9]+-[0-9]+-[0-9]+$"
-        |            },
-        |            "data": {}
-        |        },
-        |        "required": ["schema", "data"],
-        |        "additionalProperties": false }
-        |    }
-        |}
-      """.stripMargin
-    )).get
+    val schema = json"""{
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "schema": {
+                    "type": "string",
+                    "pattern": "^iglu:[a-zA-Z0-9-_.]+/[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+/[0-9]+-[0-9]+-[0-9]+"
+                },
+                "data": {}
+            },
+            "required": ["schema", "data"],
+            "additionalProperties": false
+        }
+    }""".schema
 
     val expected = Map(
       "/items/properties/data" ->
@@ -279,22 +259,19 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e7 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |    "type": "object",
-        |    "properties": {
-        |      "name": {
-        |        "type": "string"
-        |      },
-        |      "age": {
-        |        "type": "number"
-        |      }
-        |    },
-        |    "required":["name"]
-        |}
-      """.stripMargin
-    )).get
+    val schema = json"""{
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "number"
+              }
+            },
+            "required":["name"]
+        }
+      """.schema
 
     val expected = Map(
       "/properties/age" ->
@@ -308,23 +285,21 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e8 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |    "type": "object",
-        |    "properties": {
-        |      "name": {
-        |        "type": "string",
-        |        "format": "camelCase"
-        |      },
-        |      "age": {
-        |        "type": "number"
-        |      }
-        |    },
-        |    "required":["name"]
-        |}
-      """.stripMargin
-    )).get
+    val schema = json"""
+        {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "format": "camelCase"
+              },
+              "age": {
+                "type": "number"
+              }
+            },
+            "required":["name"]
+        }
+      """.schema
 
     val expected = Map(
       "/properties/age" ->
@@ -339,14 +314,13 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e9 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |  "type": "string",
-        |  "minLength": 3,
-        |  "maxLength": 65536
-        |}
-      """.stripMargin)).get
+    val schema = json"""
+        {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 65536
+        }
+      """.schema
 
     val expected = Map(
       "/" -> NonEmptyList.of(
@@ -358,46 +332,44 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e10 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |    "type": "object",
-        |    "description": "Placeholder object",
-        |    "properties": {
-        |       "sku": {
-        |           "type": "string",
-        |           "maxLength": 10
-        |       },
-        |       "name": {
-        |           "type": "string",
-        |           "maxLength": 10
-        |       },
-        |       "category": {
-        |           "type": "string",
-        |           "maxLength": 10
-        |       },
-        |       "unitPrice": {
-        |           "type": "number",
-        |           "minimum": 0,
-        |           "maximum": 1
-        |       },
-        |       "quantity": {
-        |           "type": "number",
-        |           "minimum": 0,
-        |           "maximum": 1,
-        |           "description": "Quantity (whole number)"
-        |       },
-        |       "currency": {
-        |           "type": "string",
-        |           "maxLength": 10,
-        |           "description": "Store currency code"
-        |       }
-        |    },
-        |    "required": ["sku", "quantity"],
-        |    "additionalProperties": false
-        |}
-      """.stripMargin
-    )).get
+    val schema = json"""
+        {
+            "type": "object",
+            "description": "Placeholder object",
+            "properties": {
+               "sku": {
+                   "type": "string",
+                   "maxLength": 10
+               },
+               "name": {
+                   "type": "string",
+                   "maxLength": 10
+               },
+               "category": {
+                   "type": "string",
+                   "maxLength": 10
+               },
+               "unitPrice": {
+                   "type": "number",
+                   "minimum": 0,
+                   "maximum": 1
+               },
+               "quantity": {
+                   "type": "number",
+                   "minimum": 0,
+                   "maximum": 1,
+                   "description": "Quantity (whole number)"
+               },
+               "currency": {
+                   "type": "string",
+                   "maxLength": 10,
+                   "description": "Store currency code"
+               }
+            },
+            "required": ["sku", "quantity"],
+            "additionalProperties": false
+        }
+      """.schema
 
     val skippedLinters = List(Linter.description)
 
@@ -408,37 +380,35 @@ class SanityLinterSpec extends Specification { def is = s2"""
   }
 
   def e11 = {
-    val schema = Schema.parse(parse(
-      """
-        |{
-        |   "type": "object",
-        |   "description": "desc text",
-        |   "properties": {
-        |       "emailField": {
-        |           "type": "string",
-        |           "format": "email"
-        |       },
-        |       "dateField": {
-        |           "type": "string",
-        |           "format": "date"
-        |       },
-        |       "uriField": {
-        |           "type": "string",
-        |           "format": "uri"
-        |       },
-        |       "hostnameField": {
-        |           "type": "string",
-        |           "format": "hostname"
-        |       },
-        |       "uuidField": {
-        |           "type": "string",
-        |           "format": "uuid"
-        |       }
-        |   },
-        |   "additionalProperties": false    
-        |}
-      """.stripMargin
-    )).get
+    val schema = json"""
+        {
+           "type": "object",
+           "description": "desc text",
+           "properties": {
+               "emailField": {
+                   "type": "string",
+                   "format": "email"
+               },
+               "dateField": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "uriField": {
+                   "type": "string",
+                   "format": "uri"
+               },
+               "hostnameField": {
+                   "type": "string",
+                   "format": "hostname"
+               },
+               "uuidField": {
+                   "type": "string",
+                   "format": "uuid"
+               }
+           },
+           "additionalProperties": false
+        }
+      """.schema
  
     val skippedLinters = List(Linter.description)
  

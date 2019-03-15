@@ -15,7 +15,7 @@ package bigquery
 
 import org.json4s.jackson.JsonMethods.parse
 
-import cats.data.{ Validated, NonEmptyList }
+import cats.data.NonEmptyList
 
 import io.circe._
 import io.circe.literal._
