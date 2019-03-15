@@ -10,14 +10,15 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-package com.snowplowanalytics.iglu.schemaddl
+package com.snowplowanalytics.iglu.schemaddl.experimental
 
 import cats.data.NonEmptyList
+import cats.syntax.either._
 
 import com.snowplowanalytics.iglu.core.SchemaVer
 
-import org.specs2.{ Specification, ScalaCheck }
-import org.scalacheck.{ Arbitrary, Gen }
+import org.scalacheck.{Arbitrary, Gen}
+import org.specs2.{ScalaCheck, Specification}
 
 class VersionTreeSpec extends Specification with ScalaCheck { def is = s2"""
   add an addition after new revision $e1

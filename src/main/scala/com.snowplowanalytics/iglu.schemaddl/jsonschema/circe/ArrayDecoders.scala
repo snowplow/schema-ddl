@@ -23,14 +23,14 @@ trait ArrayDecoders {
 
   implicit def schemaDecoder: Decoder[Schema]
 
-  implicit val itemsDecoder: Decoder[Items] = Decoder.instance { cursor =>
+  implicit def itemsDecoder: Decoder[Items] = Decoder.instance { cursor =>
     cursor
       .as[List[Schema]]
       .map(Items.TupleItems)
       .orElse[DecodingFailure, Items](cursor.as[Schema].map(Items.ListItems))
   }
 
-  implicit val additionalItemsDecoder: Decoder[AdditionalItems] = Decoder.instance { cursor =>
+  implicit def additionalItemsDecoder: Decoder[AdditionalItems] = Decoder.instance { cursor =>
     cursor
       .as[Schema]
       .map(AdditionalItems.AdditionalItemsSchema.apply)

@@ -10,20 +10,19 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-package com.snowplowanalytics.iglu.schemaddl
+package com.snowplowanalytics.iglu.schemaddl.experimental
 
 import cats.data.NonEmptyList
 import cats.instances.either._
 import cats.instances.int._
 import cats.instances.list._
-import cats.syntax.functor._
 import cats.syntax.either._
 import cats.syntax.foldable._
+import cats.syntax.functor._
 import cats.syntax.reducible._
 
 import com.snowplowanalytics.iglu.core.SchemaVer
-
-import VersionTree._
+import com.snowplowanalytics.iglu.schemaddl.experimental.VersionTree._
 
 /**
   * The order preserving tree, containing all versions and satisfying following properties:
@@ -50,6 +49,17 @@ final case class VersionTree private(models: NonEmptyList[(Model, Revisions)]) e
     } yield SchemaVer.Full(model, revision, addition)
 
     VersionTree.VersionList(NonEmptyList.fromListUnsafe(list.reverse))
+  }
+
+  /** Get all SchemaVers in particular MODEL (used for migrations) */
+  def modelGroupList(model: Model): Option[NonEmptyList[SchemaVer]] = {
+    val list = for {
+      (model, revisions) <- models.filter { case (m, _) => m == model }
+      (revision, additions) <- revisions.revisions.toList
+      addition <- additions.values.toList
+    } yield SchemaVer.Full(model, revision, addition)
+
+    NonEmptyList.fromList(list.reverse)
   }
 
   /** Try to add a next version to the tree, which can be rejected if any properties don't hold */
@@ -202,7 +212,7 @@ object VersionTree {
     private[schemaddl] def getAdditions(revision: Int): List[Addition] =
       revisions // Unlike getRevisions it can be empty list
         .collect { case (r, group) if r == revision => group }
-        .flatMap(_.value.values.toList)
+        .flatMap(_.values.toList)
 
     private def latestAddition = revisions.head._2
   }

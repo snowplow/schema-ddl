@@ -12,18 +12,27 @@
  */
 package com.snowplowanalytics.iglu
 
-// Iglu Core
-import core.{ SchemaMap, SelfDescribingSchema }
+import cats.data.NonEmptyList
 
-import schemaddl.jsonschema.{ Schema, Pointer }
+import core.{SchemaMap, SelfDescribingSchema}
+
+import schemaddl.jsonschema.{Pointer, Schema}
+import com.snowplowanalytics.iglu.schemaddl.migrations.Migration
+
 
 package object schemaddl {
   /**
-   * List of Schema properties
-   * First-level key is arbitrary property (like id, name etc)
-   * Second-level is map of JSON Schema properties (type, enum etc)
-   */
-  type PropertyList = Set[(Pointer.SchemaPointer, Schema)]
+    * Set of Schemas properties attached to corresponding JSON Pointers
+    * Unlike their original Schemas, these have `null` among types if they're not required
+    */
+  type SubSchemas = Set[(Pointer.SchemaPointer, Schema)]
+
+  /**
+    * List of Schemas properties attached to corresponding JSON Pointers
+    * Unlike SubSchemas, they are ordered according to nullness of field,
+    * name of field and version which field is added
+    */
+  type Properties = List[(Pointer.SchemaPointer, Schema)]
 
   /**
    * Map of Schemas to all its possible target schemas
@@ -33,12 +42,8 @@ package object schemaddl {
    * com.acme/event/1-0-2    -> [1-0-2/1-0-3]
    * com.acme/config/1-1-0   -> [1-1-0/1-0-1]
    */
-  type MigrationMap = Map[SchemaMap, List[Migration]]
+  type MigrationMap = Map[SchemaMap, NonEmptyList[Migration]]
 
-  /**
-   * Failure-aware version of [[MigrationMap]]
-   */
-  type ValidMigrationMap = Map[SchemaMap, List[Migration]]
 
   /**
    * Schema criterion restricted to revision: vendor/name/m-r-*

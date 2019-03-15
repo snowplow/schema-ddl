@@ -13,6 +13,8 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 package properties
 
+import java.net.URI
+
 /**
   * Marker trait for properties specific *ONLY* for strings
   */
@@ -26,7 +28,7 @@ object StringProperty {
    * @see http://json-schema.org/latest/json-schema-validation.html#anchor29
    */
   case class MinLength(value: BigInt) extends JsonSchemaProperty with StringProperty {
-    def keyName = "minLength"
+    val keyword: Keyword = Keyword.MinLength
   }
 
   /**
@@ -35,7 +37,7 @@ object StringProperty {
    * @see http://json-schema.org/latest/json-schema-validation.html#anchor26
    */
   case class MaxLength(value: BigInt) extends JsonSchemaProperty with StringProperty {
-    def keyName = "maxLength"
+    val keyword: Keyword = Keyword.MaxLength
   }
 
   /**
@@ -44,7 +46,7 @@ object StringProperty {
    * @see http://json-schema.org/latest/json-schema-validation.html#anchor104
    */
   sealed trait Format extends JsonSchemaProperty with StringProperty {
-    def keyName = "format"
+    val keyword: Keyword = Keyword.Format
     def asString: String
   }
   object Format {
@@ -81,7 +83,16 @@ object StringProperty {
    * @see http://json-schema.org/latest/json-schema-validation.html#anchor33
    */
   case class Pattern(value: String) extends JsonSchemaProperty with StringProperty {
-    def keyName = "pattern"
+    val keyword: Keyword = Keyword.Pattern
+  }
+
+  /**
+    * Class representing `$schema` keyword
+    *
+    * @see https://json-schema.org/understanding-json-schema/reference/schema.html
+    */
+  case class SchemaUri(value: URI) extends JsonSchemaProperty with StringProperty {
+    val keyword: Keyword = Keyword.SchemaUri
   }
 }
 
