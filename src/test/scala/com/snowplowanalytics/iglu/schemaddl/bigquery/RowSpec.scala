@@ -13,17 +13,12 @@
 package com.snowplowanalytics.iglu.schemaddl
 package bigquery
 
-import org.json4s.jackson.JsonMethods.parse
-
-import cats.data.{ Validated, NonEmptyList }
+import cats.data.NonEmptyList
 
 import io.circe._
 import io.circe.literal._
 
 import org.specs2.matcher.ValidatedMatchers._
-
-import jsonschema.Schema
-import jsonschema.json4s.implicits._
 
 class RowSpec extends org.specs2.Specification { def is = s2"""
   castValue transforms any primitive value $e1
@@ -151,30 +146,10 @@ class RowSpec extends org.specs2.Specification { def is = s2"""
   }
 
   def e9 = {
-    val schema = Schema.parse(parse(
-      """
-        |  {
-        |    "type": "object",
-        |    "properties": {
-        |      "imp": {
-        |        "type": "array",
-        |        "items": {
-        |        }
-        |      }
-        |    }
-        |  }
-      """.stripMargin)).getOrElse(throw new RuntimeException("Invalid JSON Schema"))
-
-    // TODO: add generator test
-    // val inputField = Generator.build("array_test", schema, true)
-    val fds = List(Field("imp",Type.String,Mode.Repeated))
-    val t = Type.Record(fds)
-    val inputField = Field("array_test",t,Mode.Required)
-
-    val inputJson = json"""{}"""
+    val input = List(Field("imp",Type.String,Mode.Repeated))
 
     val expected = Row.Record(List(("imp", Row.Null)))
-    castObject(fds)(Map.empty) must beValid(expected)
+    castObject(input)(Map.empty) must beValid(expected)
   }
 
   def e10 = {

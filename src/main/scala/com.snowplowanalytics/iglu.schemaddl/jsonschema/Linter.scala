@@ -64,7 +64,7 @@ object Linter {
   /** Linter-agnostic message */
   final case class Message(jsonPointer: Pointer.SchemaPointer, message: String, level: Linter.Level)
 
-  def allLintersMap: Map[String, Linter] =
+  lazy val allLintersMap: Map[String, Linter] =
     sealedDescendants[Linter].map(x => (x.getName, x)).toMap
 
   final case object rootObject extends Linter { self =>
@@ -348,6 +348,24 @@ object Linter {
       schema.description match {
         case Some(_) => noIssues
         case None => Details.invalid
+      }
+  }
+
+  final case object schemaUri extends Linter { self =>
+
+    val level: Level = Level.Error
+
+    case class Details(message: String) extends Issue {
+      val linter = self
+      def show: String = message
+    }
+
+    def apply(jsonPointer: Pointer.SchemaPointer, schema: Schema): Validated[Issue, Unit] =
+      (jsonPointer, schema.`$schema`) match {
+        case (Pointer.Root, Some(SchemaUri(value))) =>
+          if (value == Schema.SelfDescribingUri) noIssues else Details(s"Given $$schema is not ${Schema.SelfDescribingUri}").invalid
+        case (Pointer.Root, None) => Details("No $schema field in top-level of schema").invalid
+        case _ => noIssues
       }
   }
 
