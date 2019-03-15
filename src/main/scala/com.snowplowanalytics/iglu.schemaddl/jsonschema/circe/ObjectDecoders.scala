@@ -26,7 +26,7 @@ trait ObjectDecoders {
 
   implicit def schemaDecoder: Decoder[Schema]
 
-  implicit val propertiesDecoder: Decoder[Properties] = Decoder.instance { cursor =>
+  implicit def propertiesDecoder: Decoder[Properties] = Decoder.instance { cursor =>
     cursor.value.fold(
       DecodingFailure(s"$PropertiesExpectation, null found", cursor.history).asLeft,
       _ => DecodingFailure(s"$PropertiesExpectation, boolean found", cursor.history).asLeft,
@@ -40,7 +40,7 @@ trait ObjectDecoders {
     )
   }
 
-  implicit val additionalPropertiesDecoder: Decoder[AdditionalProperties] = Decoder.instance { cursor =>
+  implicit def additionalPropertiesDecoder: Decoder[AdditionalProperties] = Decoder.instance { cursor =>
     cursor
       .as[Schema]
       .map(AdditionalProperties.AdditionalPropertiesSchema)
@@ -58,7 +58,7 @@ trait ObjectDecoders {
     )
   }
 
-  implicit val patternPropertiesDecoder: Decoder[PatternProperties] = Decoder.instance { cursor =>
+  implicit def patternPropertiesDecoder: Decoder[PatternProperties] = Decoder.instance { cursor =>
     cursor.value.fold(
       DecodingFailure(s"$PatternPropertiesExpectation, null found", cursor.history).asLeft,
       _ => DecodingFailure(s"$PatternPropertiesExpectation, boolean found", cursor.history).asLeft,

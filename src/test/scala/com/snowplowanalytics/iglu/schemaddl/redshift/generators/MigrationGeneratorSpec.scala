@@ -13,6 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl.redshift
 package generators
 
+import com.snowplowanalytics.iglu.schemaddl.migrations.{Migration, SchemaDiff}
 import io.circe.literal._
 
 // specs2
@@ -22,7 +23,6 @@ import org.specs2.Specification
 import com.snowplowanalytics.iglu.core.SchemaVer
 
 // This library
-import com.snowplowanalytics.iglu.schemaddl.Migration
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{ Pointer, Schema }
 
@@ -33,12 +33,13 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
     generate addition migration with three new columns $e3
   """
 
-  val empty = Set.empty[(Pointer.SchemaPointer, Schema)]
+  val emptyModified = Set.empty[SchemaDiff.Modified]
+  val emptySubschemas = List.empty[(Pointer.SchemaPointer, Schema)]
 
   def e1 = {
-    val diff = Migration.SchemaDiff(List("status".jsonPointer -> json"""{"type": "string"}""".schema), empty, Set.empty[Pointer.SchemaPointer])
+    val diff = SchemaDiff(List("status".jsonPointer -> json"""{"type": ["string", "null"]}""".schema), emptyModified, emptySubschemas)
     val schemaMigration = Migration("com.acme", "launch_missles", SchemaVer.Full(1,0,0), SchemaVer.Full(1,0,1), diff)
-    val ddlMigration = MigrationGenerator.generateMigration(schemaMigration).render
+    val ddlMigration = MigrationGenerator.generateMigration(schemaMigration, 4096, Some("atomic")).render
 
     val result =
       """|-- WARNING: only apply this file to your database if the following SQL returns the expected:
@@ -62,9 +63,9 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
   }
 
   def e2 = {
-    val diff = Migration.SchemaDiff(List.empty, empty, Set.empty[Pointer.SchemaPointer])
+    val diff = SchemaDiff.empty
     val schemaMigration = Migration("com.acme", "launch_missles", SchemaVer.Full(2,0,0), SchemaVer.Full(2,0,1), diff)
-    val ddlMigration = MigrationGenerator.generateMigration(schemaMigration).render
+    val ddlMigration = MigrationGenerator.generateMigration(schemaMigration, 4096, Some("atomic")).render
 
     val result =
       """|-- WARNING: only apply this file to your database if the following SQL returns the expected:
@@ -88,15 +89,16 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
 
   def e3 = {
     val newProps = List(
-      "/status".jsonPointer -> json"""{"type": "string"}""".schema,
-      "/launch_time".jsonPointer -> json"""{"type": "string", "format": "date-time"}""".schema,
+      "/status".jsonPointer -> json"""{"type": ["string", "null"]}""".schema,
+      "/launch_time".jsonPointer -> json"""{"type": ["string", "null"], "format": "date-time"}""".schema,
       "/latitude".jsonPointer -> json"""{"type": "number", "minimum": -90, "maximum": 90}""".schema,
       "/longitude".jsonPointer ->json"""{"type": "number", "minimum": -180, "maximum": 180}""".schema)
 
-    val diff = Migration.SchemaDiff(newProps, empty, Set.empty[Pointer.SchemaPointer])
+    val diff = SchemaDiff(newProps, emptyModified, emptySubschemas)
     val schemaMigration = Migration("com.acme", "launch_missles", SchemaVer.Full(1,0,2), SchemaVer.Full(1,0,3), diff)
-    val ddlMigration = MigrationGenerator.generateMigration(schemaMigration).render
+    val ddlMigration = MigrationGenerator.generateMigration(schemaMigration, 4096, Some("atomic")).render
 
+    // TODO: NOT NULL columns should be first
     val result =
       """|-- WARNING: only apply this file to your database if the following SQL returns the expected:
          |--
@@ -113,9 +115,9 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
          |  ALTER TABLE atomic.com_acme_launch_missles_1
          |    ADD COLUMN "launch_time" TIMESTAMP ENCODE ZSTD;
          |  ALTER TABLE atomic.com_acme_launch_missles_1
-         |    ADD COLUMN "latitude" DOUBLE PRECISION ENCODE RAW;
+         |    ADD COLUMN "latitude" DOUBLE PRECISION NOT NULL ENCODE RAW;
          |  ALTER TABLE atomic.com_acme_launch_missles_1
-         |    ADD COLUMN "longitude" DOUBLE PRECISION ENCODE RAW;
+         |    ADD COLUMN "longitude" DOUBLE PRECISION NOT NULL ENCODE RAW;
          |
          |  COMMENT ON TABLE atomic.com_acme_launch_missles_1 IS 'iglu:com.acme/launch_missles/jsonschema/1-0-3';
          |

@@ -64,7 +64,7 @@ object Linter {
   /** Linter-agnostic message */
   final case class Message(jsonPointer: Pointer.SchemaPointer, message: String, level: Linter.Level)
 
-  def allLintersMap: Map[String, Linter] =
+  lazy val allLintersMap: Map[String, Linter] =
     sealedDescendants[Linter].map(x => (x.getName, x)).toMap
 
   final case object rootObject extends Linter { self =>
