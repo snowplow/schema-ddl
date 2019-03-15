@@ -15,6 +15,7 @@ package jsonschema
 
 // Shadow Java Enum
 import java.lang.{ Enum => _}
+import java.net.URI
 
 import cats.Monad
 import cats.instances.list._
@@ -37,6 +38,7 @@ case class Schema(multipleOf:           Option[NumberProperty.MultipleOf]       
                   minLength:            Option[StringProperty.MinLength]            = None,
                   pattern:              Option[StringProperty.Pattern]              = None,
                   format:               Option[StringProperty.Format]               = None,
+                  `$schema`:            Option[StringProperty.SchemaUri]            = None,
 
                   items:                Option[ArrayProperty.Items]                 = None,
                   additionalItems:      Option[ArrayProperty.AdditionalItems]       = None,
@@ -59,6 +61,8 @@ case class Schema(multipleOf:           Option[NumberProperty.MultipleOf]       
 }
 
 object Schema {
+
+  val SelfDescribingUri: URI = URI.create("http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#")
 
   /** Schema not containing any other child schemas */
   case class Primitive(schema: Schema) extends AnyVal

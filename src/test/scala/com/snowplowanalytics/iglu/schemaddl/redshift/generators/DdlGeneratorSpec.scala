@@ -17,11 +17,14 @@ package generators
 import org.specs2.Specification
 
 import cats.data.NonEmptyList
+
 import io.circe.literal._
 
 // This library
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
-import com.snowplowanalytics.iglu.schemaddl.FlatSchema
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 
 // TODO: union type specs (string, object)
 
@@ -29,15 +32,14 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
   Check DDL generation specification
     Generate correct DDL for atomic table $e1
     Generate correct DDL for with runlength encoding for booleans $e2
+    Generate correct DDL when enum schema is nullable $e3
+    Generate correct DDL when only pointer is root pointer $e4
   """
 
   def e1 = {
-    val flatSchema = FlatSchema(
-      Set(
-        "/foo".jsonPointer -> json"""{"type": "string", "maxLength": 30}""".schema,
-        "/bar".jsonPointer -> json"""{"enum": ["one","two","three"]}""".schema
-      ),
-      Set("/foo".jsonPointer)
+    val orderedSubSchemas = List(
+      "/foo".jsonPointer -> json"""{"type": "string", "maxLength": 30}""".schema,
+      "/bar".jsonPointer -> json"""{"enum": ["one","two","three",null]}""".schema
     )
 
     val resultDdl = CreateTable(
@@ -52,19 +54,16 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
     )
 
-    val ddl = DdlGenerator.generateTableDdl(flatSchema, "launch_missles", None, 4096, false)
+    val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
 
     ddl must beEqualTo(resultDdl)
   }
 
   def e2 = {
-    val flatSchema = FlatSchema(
-      Set(
-        "/foo".jsonPointer -> json"""{"type": "boolean"}""".schema,
-        "/baz".jsonPointer -> json"""{"type": "boolean"}""".schema,
-        "/bar".jsonPointer -> json"""{"enum": ["one","two","three"]}""".schema
-      ),
-      Set("/foo".jsonPointer)
+    val orderedSubSchemas = List(
+      "/foo".jsonPointer -> json"""{"type": "boolean"}""".schema,
+      "/baz".jsonPointer -> json"""{"type": "boolean"}""".schema,
+      "/bar".jsonPointer -> json"""{"enum": ["one","two","three"]}""".schema
     )
 
     val resultDdl = CreateTable(
@@ -73,14 +72,58 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       DdlGenerator.parentageColumns ++
       List(
         Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
-        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set()),
-        Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set())
+        Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull)))
       ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
     )
 
-    val ddl = DdlGenerator.generateTableDdl(flatSchema, "launch_missles", None, 4096, false)
+    val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
+
+    ddl must beEqualTo(resultDdl)
+  }
+
+  def e3 = {
+    val enumSchemaWithNull = json"""{"enum": ["one","two","three"]}""".schema.copy(`type` = Some(Type.Null))
+    val orderedSubSchemas = List(
+      "/foo".jsonPointer -> json"""{"type": "boolean"}""".schema,
+      "/baz".jsonPointer -> json"""{"type": "boolean"}""".schema,
+      "/enumField".jsonPointer -> enumSchemaWithNull
+    )
+
+    val resultDdl = CreateTable(
+      "atomic.launch_missles",
+      DdlGenerator.selfDescSchemaColumns ++
+        DdlGenerator.parentageColumns ++
+        List(
+          Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+          Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+          Column("enum_field",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set())
+        ),
+      Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
+      Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
+    )
+
+    val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
+
+    ddl must beEqualTo(resultDdl)
+  }
+
+  def e4 = {
+    val orderedSubSchemas = List(
+      Pointer.Root -> Schema.empty
+    )
+
+    val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
+
+    val resultDdl = CreateTable(
+      "atomic.launch_missles",
+      DdlGenerator.selfDescSchemaColumns ++
+        DdlGenerator.parentageColumns,
+      Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
+      Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
+    )
 
     ddl must beEqualTo(resultDdl)
   }

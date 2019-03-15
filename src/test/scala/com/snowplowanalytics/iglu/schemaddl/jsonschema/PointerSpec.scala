@@ -10,7 +10,7 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-package com.snowplowanalytics.iglu.schemaddl
+package com.snowplowanalytics.iglu.schemaddl.jsonschema
 
 import cats.data.State
 
@@ -18,20 +18,22 @@ import io.circe.literal._
 
 import org.specs2.Specification
 
-import jsonschema.{Pointer, Schema}
-import jsonschema.circe.implicits._
+import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.circe.implicits._
 
-class JsonPointerSpec extends Specification { def is = s2"""
+class PointerSpec extends Specification { def is = s2"""
   traverse goes through items property $e1
   traverse goes through additionalItems property $e2
   traverse goes through properties property $e3
   traverse goes through oneOf property $e4
+  isParentOf recognizes its parents $e5
   """
 
   case class SchemaTypes(list: List[(Pointer.SchemaPointer, String)]) {
     def add(pointer: Pointer.SchemaPointer, schemaType: String) = SchemaTypes((pointer, schemaType) :: list)
     def toMap: Map[String, String] = list.toMap.map { case (k ,v) => (k.show, v)}
   }
+
   val empty = SchemaTypes(Nil)
   def saveType(pointer: Pointer.SchemaPointer, schema: Schema): State[SchemaTypes, Unit] =
     State.modify[SchemaTypes](schemaTypes => schemaTypes.add(pointer, schema.`type`.fold("unknown")(_.toString)))
@@ -147,5 +149,12 @@ class JsonPointerSpec extends Specification { def is = s2"""
     )
 
     result must beEqualTo(expected)
+  }
+
+  def e5 = {
+    "/".jsonPointer.isParentOf("/foo".jsonPointer) and
+      "/".jsonPointer.isParentOf("/foo/bar".jsonPointer) and
+      (!"/foobar".jsonPointer.isParentOf("/foo/bar".jsonPointer)) and
+      "/foo/bar".jsonPointer.isParentOf("/foo/bar/baz".jsonPointer)
   }
 }

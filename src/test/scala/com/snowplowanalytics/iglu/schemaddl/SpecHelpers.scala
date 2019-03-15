@@ -20,12 +20,19 @@ import jsonschema.{ Schema, Pointer }
 import jsonschema.json4s.implicits._
 import jsonschema.circe.implicits._
 
+import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
+
 object SpecHelpers {
   def parseSchema(string: String): Schema = {
     Schema
       .parse(parseJson(string))
       .getOrElse(throw new RuntimeException("SpecHelpers.parseSchema received invalid JSON Schema"))
   }
+
+  def extractOrder(orderedSubSchemas: Properties): List[String] =
+    orderedSubSchemas.map {
+      case (p, _) => FlatSchema.getName(p)
+    }
 
   implicit class JsonOps(json: Json) {
     def schema: Schema =
