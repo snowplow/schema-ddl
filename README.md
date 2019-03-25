@@ -1,6 +1,8 @@
 # Schema DDL
 
-[![Release][release-image]][releases] [![License][license-image]][license]
+[![Maven Central][maven-badge]][maven-link]
+[![Build Status][travis-image]][travis] 
+[![License][license-image]][license]
 
 Schema DDL is a set of Abstract Syntax Trees and generators for producing various DDL and Schema formats.
 It's tightly coupled with other tools from **[Snowplow Platform][snowplow]** like
@@ -13,35 +15,15 @@ Schema DDL itself does not provide any CLI and expose only Scala API.
 Schema DDL is compiled against Scala 2.11 and 2.12 and availble on Maven Central. In order to use it with SBT, include following module:
 
 ```scala
-libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.8.0"
+libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.9.0"
 ```
 
-## Current features
 
-### Flatten Schema
+## Find out more
 
-To process JSON Schema in typesafe manner sometimes it's necessary to represent it's nested structure as map of paths to properties.
-``schemaddl.generators.SchemaFlattener.flattenJsonSchema`` can be used for that.
-It accepts JSON Schema as ``json4s.JValue`` and returns ``schemaddl.FlatSchema``.
-
-### Redshift DDL
-
-Current main feature of Schema DDL is to produce Redshift table DDL (with or without Snowplow-specific data).
-``schemaddl.generators.redshift.getTableDdl`` method can be used for that.
-It accepts ``schemaddl.FlatSchema`` and produces Redshift DDL file with warnings like product types
-(eg. boolean, string) which cannot be correctly translated into DDL without some manual labor.
-
-Also there's ``schemaddl.generators.redshift.Ddl`` module providing AST-like structures for generating DDL in flexible and type-safe manner.
-
-### JSON Paths
-
-Amazon Redshift uses **[COPY][redshift-copy]** command to load data into table.
-To map data into columns JSONPaths file used.
-It may be generated with ``schemaddl.generators.redshift.JsonPathGenerator.getJsonPathsFile`` method.
-Which accepts list of ``schemaddl.generators.redshift.Ddl.Column`` objects (which can be taken from ``Table`` DDL object) and returns JSONPaths file as a string.
-It's coupled with ``Table`` object to preserve structure of the table.
-For example, you may want to modify list of your ``Column``s by rearranging it depending on some properties,
-but JSONPaths file always should have the same order of fields and thus we cannot rely on ``FlatSchema`` object.
+| **[Technical Docs][techdocs]**     | **[Setup Guide][setup]**     | **[Roadmap][roadmap]**           | **[Contributing][contributing]**           |
+|-------------------------------------|-------------------------------|-----------------------------------|---------------------------------------------|
+| [![i1][techdocs-image]][techdocs] | [![i2][setup-image]][setup] | [![i3][roadmap-image]][roadmap] | [![i4][contributing-image]][contributing] |
 
 
 ## Copyright and License
@@ -61,10 +43,22 @@ limitations under the License.
 [license-image]: http://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
 [license]: http://www.apache.org/licenses/LICENSE-2.0
 
-[release-image]: http://img.shields.io/badge/release-0.6.0-blue.svg?style=flat
-[releases]: https://github.com/snowplow/iglu/releases
+[maven-badge]: https://maven-badges.herokuapp.com/maven-central/com.snowplowanalytics/schema-ddl_2.12/badge.svg
+[maven-link]: https://maven-badges.herokuapp.com/maven-central/com.snowplowanalytics/schema-ddl_2.12
+
+[travis]: https://travis-ci.org/snowplow-incubator/schema-ddl
+[travis-image]: https://travis-ci.org/snowplow-incubator/schema-ddl.png?branch=master
 
 [snowplow]: https://github.com/snowplow/snowplow
 [iglu]: https://github.com/snowplow/iglu
 [self-describing]: http://snowplowanalytics.com/blog/2014/05/15/introducing-self-describing-jsons/
-[redshift-copy]: http://docs.aws.amazon.com/redshift/latest/dg/r_COPY.html
+
+[techdocs]: https://github.com/snowplow/iglu/wiki/
+[roadmap]: https://github.com/snowplow/iglu/wiki/Product-roadmap
+[setup]: https://github.com/snowplow/iglu/wiki/
+[contributing]: https://github.com/snowplow/iglu/wiki/Contributing
+
+[techdocs-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/techdocs.png
+[setup-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/setup.png
+[roadmap-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/roadmap.png
+[contributing-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/contributing.png
