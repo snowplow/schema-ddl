@@ -1,0 +1,76 @@
+Version 0.9.0 (2019-01-16)
+--------------------------
+Bump sbt-bintray to 0.5.4 (snowplow/iglu#470)
+Bump SBT to 1.2.8 (snowplow/iglu#466)
+Fix nullable array casting into string in BigQuery AST (snowplow/iglu#461)
+Bump iglu-core to 0.4.0 (snowplow/iglu#456)
+Rename Product type to Union in jsonschema (snowplow/iglu#387)
+Add support for BigQuery numeric type (snowplow/iglu#426)
+Add JSON Pointers to linter messages (snowplow/iglu#330)
+Add circe support (snowplow/iglu#455)
+Port to cats (snowplow/iglu#454)
+Bump Scala to 2.12.8 (snowplow/iglu#453)
+
+Version 0.8.0 (2018-08-24)
+--------------------------
+Bump iglu-core-json4s to 0.3.0 (snowplow/iglu#384)
+Bump SBT to 1.1.6 (snowplow/iglu#334)
+Add BigQuery table Schema AST (snowplow/iglu#169)
+Add quickstart guide to README.md (snowplow/iglu#393)
+
+Version 0.7.0 (2018-02-07)
+--------------------------
+Add linter for missing schema versions (snowplow/iglu#307)
+Add support for ZSTD encoding (snowplow/iglu#237)
+
+Version 0.6.0 (2017-12-27)
+--------------------------
+Add linter for upper maxLength (snowplow/iglu#220)
+Add check that root of JSON Schema has type object (snowplow/iglu#224)
+Add linter for optional fields (snowplow/iglu#252)
+Bump iglu-core-json4s to 0.2.0 (snowplow/iglu#297)
+Generate fixed length for 'email' fields (snowplow/iglu#257)
+Add support for 'date' format (snowplow/iglu#256)
+Add uuid format (snowplow/iglu#305)
+Add Scala 2.12 support (snowplow/iglu#288)
+
+Version 0.5.0 (2016-10-05)
+--------------------------
+Add severity levels to linter (snowplow/iglu#215)
+
+Version 0.4.0 (2016-08-01)
+--------------------------
+Change Redshift encoding for boolean to runlength (snowplow/iglu#173)
+Add JSON Schema AST (snowplow/iglu#172)
+Initial commit (snowplow/iglu#158)
+
+Version 0.3.1 (2016-05-14)
+--------------------------
+Fixed incorrect type suggestion for integer with null (snowplow-archive/schema-ddl#50)
+Added handling an object with no properties or patternProperties specified as VARCHAR (snowplow-archive/schema-ddl#56)
+Added handling of anything-* schemas as tables without custom columns (snowplow-archive/schema-ddl#43)
+
+Version 0.3.0 (2016-02-08)
+--------------------------
+Removed OpenJDK from .travis.yml (snowplow-archive/schema-ddl#48)
+Added Java interop (snowplow-archive/schema-ddl#45)
+Added recognition of multipleOf == 1 as integer (snowplow-archive/schema-ddl#42)
+Fixed nullable string with minLength == maxLength resulted to VARCHAR (snowplow-archive/schema-ddl#40)
+Fixed recognition of Decimal with multipleOf (snowplow-archive/schema-ddl#41)
+
+Version 0.2.0 (2015-09-14)
+--------------------------
+Added Scala 2.11 support (snowplow-archive/schema-ddl#28)
+Added compression encodings (snowplow-archive/schema-ddl#29)
+Default varchar size changed to 4096 (snowplow-archive/schema-ddl#30)
+Added initial test suite (snowplow-archive/schema-ddl#31)
+Now handling an object without a "properties" field if "patternProperties" defined  (snowplow-archive/schema-ddl#32)
+Now handling an object without a "properties" field if "additionalProperties" set to "false" (snowplow-archive/schema-ddl#33)
+Fixed handling enums containing different types (snowplow-archive/schema-ddl#34)
+Fixed ignoring maxLength for a type enum (snowplow-archive/schema-ddl#35)
+Now handling nested non-required properties (snowplow-archive/schema-ddl#36)
+Added COMMENT ON in Redshift DDL (snowplow-archive/schema-ddl#38)
+
+Version 0.1.0 (2015-07-29)
+--------------------------
+Initial release
