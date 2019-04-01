@@ -4,7 +4,7 @@ scala:
 jdk:
 - oraclejdk8
 script:
-- .travis/publish_local.sh
+- ".travis/publish_local.sh"
 - sbt +test
 before_deploy:
 - pip install --user release-manager==0.4.1.rc2
@@ -14,3 +14,7 @@ deploy:
   script: ".travis/deploy.sh $TRAVIS_TAG"
   on:
     tags: true
+env:
+  global:
+  - secure: TvbtqxvZ5pfIXUsKuPErGmtecC7xF3Ycn/yi1Uk0zN2wWuDhe75QkRnm07TKl7KYsifnPnirCuPx4yf8xsPF6LPnx08rDfESTs9bhCoQF5ZC4C8KLThFnsDEbEm48270WR7g0ZMW+EiJu0mQdJGz/p49reVSbqCafTKSkIVITqDWSZ/8v+/55te7PXEXMyn8VXgoDitF+YnIPBjafAajekkCj9gaOALX4Z/9D28g4ZhJvq+YFVLF/qlg7FTvnsTipU/GUMSLbDiXWwZzNDKtCLkJFyUYzqUyvKlRwmf6E/I5HftEZmMhpHxs95OWxo4Vb/sPt+478fIOo2WrOr/CVZxi+OuSlUgk+dsixlMA8cl1zgJ7iqBGwYA1C70przgoZfjQz059YLrcauk4/ACWENC1zlEa/CfBI0mfST6KwxF6klt0B6mVSNyKUnYtvZaVv95Bnj83fDK9qdLqxURefjcLE2vzDDMleeCVqYCn00rsubsckNEjKlIRRdS6hcfGkZ21kpu0hwdr5rC5rvaN4pn4A7KIzfA6cUHlIPi/wSgP1SDMkutGgOb54axStdgcnet/nfH9PljmXihtLn5nqYNsrHmc33lPTDXz+UEOuE5kvgCvsL8+hguTRAaR3T6hYopn/GQNRI1Kw0Vc3uyZe+sfQjwdNu3piRN0ODux9to=
+  - secure: KOkwuqHIajIXQRCxwEFiBns/yi7m1lIeO0uKbPk3xvwe8EIlHrN/nKm0M7x5gXp1sBhxJ2whwV66Puheqg+4LlkqiHbCAugjvvkwCgq14NOc4Y91guBxUp1GxWC7FJWVT43hXyORw7SRoeRR2YFzutQF5v0waJE1dHYL9S6lvOZlsCzaebq7X6QVZwXWXGp0jgXht4Wbxq+Utn/Nmlqxylz/5aNZfVgH/cMBwoigpE3/dMeCfu+iElUgKodtUKreO/HvScpd0H9XRx1JSuUoIuiD4euDfM/JU051YazIcXuGWw5abN0BClZnlvrL0Ix1F0MDabNwDHIBFzYGsvKhC1l5qrANSDLyjZqlNgCYCpk7zamWTvghP6ETL5AW/PC+IQOzXoZ2vHTpG7+j0n4tBSbnRJ0FBmSyUUkDPo2NQ9+mrqeeZ6h+N5/NcM57CN96ZxjNzu8P8w+vCwLBbCMZE1WFIr3uG4OIqZFzDmn/hhBW+T+sWzO8ul/fetq1MrrFbqVltsTxkmWpLU62xn8GzDIfsD5goAwNyg8UA923ZHNFczatfJNtKbvRlnKcbXSbyDnGz4fWu+eye8u9L6UK/MFAI2vtNS2H+9CmYidsPbcf91rS9DCoQ+x7usvXTIMDLByGgX9shmon+n3pLfnoGuHmV+CcliJKKR5TM6n0ZIA=
