@@ -2,5 +2,5 @@
 
 set -e
 
-cd "${TRAVIS_BUILD_DIR}/0-common/schema-ddl"
+cd "${TRAVIS_BUILD_DIR}"
 sbt +publishLocal --warn
