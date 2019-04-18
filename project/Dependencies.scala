@@ -16,8 +16,8 @@ import sbt._
 object Dependencies {
   object V {
     // Scala
-    val igluCore         = "0.4.0"
-    val circe            = "0.10.1"
+    val igluCore         = "0.5.0"
+    val circe            = "0.11.1"
     val jsonValidator    = "2.2.10"
 
     // Scala (test only)
