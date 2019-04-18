@@ -16,8 +16,9 @@ import sbt._
 object Dependencies {
   object V {
     // Scala
-    val igluCore         = "0.4.0"
-    val circe            = "0.10.1"
+    val igluCore         = "0.5.1"
+    val igluCoreJson4s   = "0.5.0"
+    val circe            = "0.11.1"
     val jsonValidator    = "2.2.10"
 
     // Scala (test only)
@@ -27,7 +28,7 @@ object Dependencies {
 
   object Libraries {
     // Scala
-    val igluCoreJson4s   = "com.snowplowanalytics"      %% "iglu-core-json4s"       % V.igluCore
+    val igluCoreJson4s   = "com.snowplowanalytics"      %% "iglu-core-json4s"       % V.igluCoreJson4s
     val igluCoreCirce    = "com.snowplowanalytics"      %% "iglu-core-circe"        % V.igluCore
     val circeGeneric     = "io.circe"                   %% "circe-generic"          % V.circe
     // Java
