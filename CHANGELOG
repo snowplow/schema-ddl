@@ -1,3 +1,14 @@
+Version 0.10.0 (2019-04-XX)
+-------------------------------------
+Add data-flattening algorithm (#9)
+Refactor JsonSchema-to-Redsfhit transformation using new schema flattener (snowplow/iglu#213)
+Add VersionTree (#7)
+Add Sonatype credentials to .travis.yml (#4)
+Add Bintray credentials to .travis.yml (#3)
+Add CI/CD to project (#2)
+Bump iglu-core to 0.5.0 (#8)
+Move into schema-ddl repo (#1)
+
 Version 0.9.0 (2019-01-16)
 -------------------------------------
 Bump sbt-bintray to 0.5.4 (snowplow/iglu#470)
