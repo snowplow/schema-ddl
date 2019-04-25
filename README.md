@@ -15,7 +15,7 @@ Schema DDL itself does not provide any CLI and expose only Scala API.
 Schema DDL is compiled against Scala 2.11 and 2.12 and availble on Maven Central. In order to use it with SBT, include following module:
 
 ```scala
-libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.9.0"
+libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.10.0"
 ```
 
 
@@ -28,7 +28,7 @@ libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.9.0"
 
 ## Copyright and License
 
-Schema DDL is copyright 2014-2017 Snowplow Analytics Ltd.
+Schema DDL is copyright 2014-2020 Snowplow Analytics Ltd.
 
 Licensed under the **[Apache License, Version 2.0][license]** (the "License");
 you may not use this software except in compliance with the License.
