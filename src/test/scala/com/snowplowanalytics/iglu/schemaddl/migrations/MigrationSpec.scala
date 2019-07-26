@@ -13,13 +13,9 @@
 package com.snowplowanalytics.iglu.schemaddl.migrations
 
 import io.circe.literal._
-
 import cats.data.NonEmptyList
-
 import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer, SelfDescribingSchema}
-
 import org.specs2.Specification
-
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 
 class MigrationSpec extends Specification { def is = s2"""
@@ -27,7 +23,15 @@ class MigrationSpec extends Specification { def is = s2"""
     create correct addition migration from 1-0-0 to 1-0-1 $e1
     create correct addition migrations from 1-0-0 to 1-0-2 $e2
     create correct addition/modification migrations from 1-0-0 to 1-0-2 $e3
+    create correct ordered subschemas from 1-0-0 to 1-0-1 $e4
+    create correct ordered subschemas from 1-0-0 to 1-0-2 $e5
+    create correct ordered subschemas for complex schema $e6
+    create correct ordered subschemas for complex schema $e7
+    create correct ordered subschemas for complex schema $e8
   """
+
+  // TODO Enes:
+  // Add more tests for ordering
 
   def e1 = {
     val initial = json"""
@@ -229,5 +233,491 @@ class MigrationSpec extends Specification { def is = s2"""
     )
 
     Migration.buildMigrationMap(List(initialSchema, secondSchema)) must beEqualTo(migrationMap)
+  }
+
+  def e4 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "a_field": {
+              "type": "integer"
+            },
+            "b_field": {
+              "type": "integer"
+            }
+          },
+          "required": ["b_field"],
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+
+    val schemas = List(initialSchema, secondSchema)
+    val migrationMap = Migration.buildMigrationMap(schemas)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+
+    val expected = Map(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)) -> List("foo", "b_field", "a_field"))
+
+    val res = extractOrder(orderedSubSchemasMap)
+
+    res must beEqualTo(expected)
+  }
+
+  def e5 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val third = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            },
+            "aField": {
+              "type": "integer"
+            },
+            "cField": {
+              "type": "integer"
+            },
+            "dField": {
+              "type": "string"
+            }
+          },
+          "required": ["bar", "cField"],
+          "additionalProperties": false
+        }
+      """.schema
+    val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)), third)
+
+
+    val schemas = List(initialSchema, secondSchema, thirdSchema)
+    val migrationMap = Migration.buildMigrationMap(schemas)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+
+    val expected = Map(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)) -> List("foo", "bar", "c_field", "a_field", "d_field"))
+
+    val res = extractOrder(orderedSubSchemasMap)
+
+    res must beEqualTo(expected)
+  }
+
+  def e6 = {
+    val initial = json"""
+      {
+      	"type":"object",
+      	"properties":{
+      		"functionName":{
+      			"type":"string"
+      		},
+      		"logStreamName":{
+      			"type":"string"
+      		},
+      		"awsRequestId":{
+      			"type":"string"
+      		},
+      		"remainingTimeMillis":{
+      			"type":"integer",
+      			"minimum":0
+      		},
+      		"logGroupName":{
+      			"type":"string"
+      		},
+      		"memoryLimitInMB":{
+      			"type":"integer",
+      			"minimum":0
+      		},
+      		"clientContext":{
+      			"type":"object",
+      			"properties":{
+      				"client":{
+      					"type":"object",
+      					"properties":{
+      						"appTitle":{
+      							"type":"string"
+      						},
+      						"appVersionName":{
+      							"type":"string"
+      						},
+      						"appVersionCode":{
+      							"type":"string"
+      						},
+      						"appPackageName":{
+      							"type":"string"
+      						}
+      					},
+      					"additionalProperties":false
+      				},
+      				"custom":{
+      					"type":"object",
+      					"patternProperties":{
+      						".*":{
+      							"type":"string"
+      						}
+      					}
+      				},
+      				"environment":{
+      					"type":"object",
+      					"patternProperties":{
+      						".*":{
+      							"type":"string"
+      						}
+      					}
+      				}
+      			},
+      			"additionalProperties":false
+      		},
+      		"identity":{
+      			"type":"object",
+      			"properties":{
+      				"identityId":{
+      					"type":"string"
+      				},
+      				"identityPoolId":{
+      					"type":"string"
+      				}
+      			},
+      			"additionalProperties":false
+      		}
+      	},
+      	"additionalProperties":false
+      }
+    """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.amazon.aws.lambda", "java_context", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val schemas = List(initialSchema)
+    val migrationMap = Migration.buildMigrationMap(schemas)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+
+    val expected = Map(
+      SchemaMap("com.amazon.aws.lambda", "java_context", "jsonschema", SchemaVer.Full(1,0,0)) ->
+        List(
+          "aws_request_id",
+          "client_context.client.app_package_name",
+          "client_context.client.app_title",
+          "client_context.client.app_version_code",
+          "client_context.client.app_version_name",
+          "client_context.custom",
+          "client_context.environment",
+          "function_name",
+          "identity.identity_id",
+          "identity.identity_pool_id",
+          "log_group_name",
+          "log_stream_name",
+          "memory_limit_in_mb",
+          "remaining_time_millis"
+        )
+    )
+
+    val res = extractOrder(orderedSubSchemasMap)
+
+    res must beEqualTo(expected)
+  }
+
+  def e7 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "a_field": {
+              "type": "object",
+              "properties": {
+                "b_field": {
+                  "type": "string"
+                },
+                "c_field": {
+                  "type": "object",
+                  "properties": {
+                    "d_field": {
+                      "type": "string"
+                    },
+                    "e_field": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "d_field": {
+                  "type": "object"
+                }
+              },
+              "required": ["d_field"]
+            },
+            "b_field": {
+              "type": "integer"
+            },
+            "c_field": {
+              "type": "integer"
+            },
+            "d_field": {
+              "type": "object",
+              "properties": {
+                "e_field": {
+                  "type": "string"
+                },
+                "f_field": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": ["a_field"],
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val schemas = List(initialSchema, secondSchema)
+    val migrationMap = Migration.buildMigrationMap(schemas)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+
+    val expected = Map(
+      SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)) ->
+        List(
+          "foo",
+          "a_field.d_field",
+          "a_field.b_field",
+          "a_field.c_field.d_field",
+          "a_field.c_field.e_field",
+          "b_field",
+          "c_field",
+          "d_field.e_field",
+          "d_field.f_field"
+        )
+    )
+
+    val res = extractOrder(orderedSubSchemasMap)
+
+    res must beEqualTo(expected)
+  }
+
+  def e8 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "a_field": {
+              "type": "object",
+              "properties": {
+                "b_field": {
+                  "type": "string"
+                },
+                "c_field": {
+                  "type": "object",
+                  "properties": {
+                    "d_field": {
+                      "type": "string"
+                    },
+                    "e_field": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "d_field": {
+                  "type": "object"
+                }
+              },
+              "required": ["d_field"]
+            },
+            "b_field": {
+              "type": "integer"
+            },
+            "c_field": {
+              "type": "integer"
+            },
+            "d_field": {
+              "type": "object",
+              "properties": {
+                "e_field": {
+                  "type": "string"
+                },
+                "f_field": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": ["a_field"],
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val third = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "a_field": {
+              "type": "object",
+              "properties": {
+                "b_field": {
+                  "type": "string"
+                },
+                "c_field": {
+                  "type": "object",
+                  "properties": {
+                    "e_field": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "d_field": {
+                  "type": "object"
+                }
+              },
+              "required": ["d_field"]
+            },
+            "d_field": {
+              "type": "object",
+              "properties": {
+                "f_field": {
+                  "type": "string"
+                }
+              }
+            },
+            "e_field": {
+              "type": "object",
+              "properties": {
+                "f_field": {
+                  "type": "string"
+                },
+                "g_field": {
+                  "type": "string"
+                }
+              },
+              "required": ["g_field"]
+            },
+            "f_field": {
+              "type": "string"
+            },
+            "g_field": {
+              "type": "string"
+            }
+          },
+          "required": ["a_field", "f_field", "e_field"],
+          "additionalProperties": false
+        }
+      """.schema
+    val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,1,0)), third)
+
+    val schemas = List(initialSchema, secondSchema, thirdSchema)
+    val migrationMap = Migration.buildMigrationMap(schemas)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+
+    val expected = Map(
+      SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,1,0)) ->
+        List(
+          "foo",
+          "a_field.d_field",
+          "a_field.b_field",
+          "a_field.c_field.e_field",
+          "d_field.f_field",
+          "e_field.g_field",
+          "f_field",
+          "e_field.f_field",
+          "g_field"
+        )
+    )
+
+    val res = extractOrder(orderedSubSchemasMap)
+
+    res must beEqualTo(expected)
   }
 }

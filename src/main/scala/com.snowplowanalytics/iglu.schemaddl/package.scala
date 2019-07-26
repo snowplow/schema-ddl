@@ -27,6 +27,8 @@ package object schemaddl {
     */
   type SubSchemas = Set[(Pointer.SchemaPointer, Schema)]
 
+  type OrderedSubSchemas = List[(Pointer.SchemaPointer, Schema)]
+
   /**
    * Map of Schemas to all its possible target schemas
    * Examples:

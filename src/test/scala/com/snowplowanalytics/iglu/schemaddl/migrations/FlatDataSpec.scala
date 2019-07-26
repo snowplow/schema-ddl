@@ -65,7 +65,7 @@ class FlatDataSpec extends Specification { def is = s2"""
 
     val expected = List("one", "two", "three", "four")
 
-    val source = Migration.buildMigrationMatrix(schemas).toList.maxBy(_.schemas.length)
+    val source = Migration.buildMigrationMatrix(schemas).right.get.toList.maxBy(_.schemas.length)
     val data = json"""{"a": "one", "b": {"ba": "two", "bb": "four"}, "c": "three"}"""
     val result = FlatData.flatten(data, source, None)
 

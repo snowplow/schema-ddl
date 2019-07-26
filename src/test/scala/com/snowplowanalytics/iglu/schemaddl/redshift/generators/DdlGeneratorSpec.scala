@@ -31,13 +31,9 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
   """
 
   def e1 = {
-    val flatSchema = FlatSchema(
-      Set(
-        "/foo".jsonPointer -> json"""{"type": "string", "maxLength": 30}""".schema,
-        "/bar".jsonPointer -> json"""{"enum": ["one","two","three",null]}""".schema
-      ),
-      Set("/foo".jsonPointer),
-      Set.empty
+    val orderedSubSchemas = List(
+      "/foo".jsonPointer -> json"""{"type": "string", "maxLength": 30}""".schema,
+      "/bar".jsonPointer -> json"""{"enum": ["one","two","three",null]}""".schema
     )
 
     val resultDdl = CreateTable(
@@ -52,20 +48,16 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
     )
 
-    val ddl = DdlGenerator.generateTableDdl(flatSchema, "launch_missles", None, 4096, false)
+    val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
 
     ddl must beEqualTo(resultDdl)
   }
 
   def e2 = {
-    val flatSchema = FlatSchema(
-      Set(
-        "/foo".jsonPointer -> json"""{"type": "boolean"}""".schema,
-        "/baz".jsonPointer -> json"""{"type": "boolean"}""".schema,
-        "/bar".jsonPointer -> json"""{"enum": ["one","two","three"]}""".schema
-      ),
-      Set("/foo".jsonPointer),
-      Set.empty
+    val orderedSubSchemas = List(
+      "/foo".jsonPointer -> json"""{"type": "boolean"}""".schema,
+      "/baz".jsonPointer -> json"""{"type": "boolean"}""".schema,
+      "/bar".jsonPointer -> json"""{"enum": ["one","two","three"]}""".schema
     )
 
     val resultDdl = CreateTable(
@@ -73,15 +65,15 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       DdlGenerator.selfDescSchemaColumns ++
       DdlGenerator.parentageColumns ++
       List(
-        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
         Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
-        Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull)))
+        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull)))
       ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
     )
 
-    val ddl = DdlGenerator.generateTableDdl(flatSchema, "launch_missles", None, 4096, false)
+    val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
 
     ddl must beEqualTo(resultDdl)
   }

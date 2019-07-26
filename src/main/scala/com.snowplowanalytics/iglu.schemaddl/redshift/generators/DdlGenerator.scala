@@ -40,15 +40,15 @@ object DdlGenerator {
   /**
    * Generates Redshift CreateTable object with all columns, attributes and constraints
    *
-   * @param flatSchema flat schema produced by the Schema flattening process
+   * @param orderedSubSchemas subschemas which are ordered wrt to updates, nullness and alphabetic order
    * @param name table name
    * @param dbSchema optional redshift schema name
    * @param raw do not produce any Snowplow specific columns (like root_id)
    * @param size default length for VARCHAR
    * @return CreateTable object with all data about table creation
    */
-  def generateTableDdl(flatSchema: FlatSchema, name: String, dbSchema: Option[String], size: Int, raw: Boolean): CreateTable = {
-    val columns = getColumnsDdl(flatSchema, size)
+  def generateTableDdl(orderedSubSchemas: OrderedSubSchemas, name: String, dbSchema: Option[String], size: Int, raw: Boolean): CreateTable = {
+    val columns = getColumnsDdl(orderedSubSchemas, size)
     if (raw) getRawTableDdl(dbSchema, name, columns)
     else getAtomicTableDdl(dbSchema, name, columns)
   }
@@ -126,9 +126,9 @@ object DdlGenerator {
    * generates DDL object for it with it's name, constrains, attributes
    * data type, etc
    */
-  private[schemaddl] def getColumnsDdl(flatSchema: FlatSchema, varcharSize: Int): List[Column] =
+  private[schemaddl] def getColumnsDdl(orderedSubSchemas: OrderedSubSchemas, varcharSize: Int): List[Column] =
     for {
-      (jsonPointer, schema) <- FlatSchema.order(flatSchema.subschemas)
+      (jsonPointer, schema) <- orderedSubSchemas
       columnName = FlatSchema.getName(jsonPointer)
       dataType = getDataType(schema, varcharSize, columnName)
       encoding = getEncoding(schema, dataType, columnName)
