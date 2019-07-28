@@ -15,6 +15,8 @@ package generators
 
 // This project
 import DdlGenerator._
+import com.snowplowanalytics.iglu.schemaddl.OrderedSubSchemas
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer
 
 /**
  * Converts lists of keys into a JsonPath file.
@@ -57,17 +59,18 @@ object JsonPathGenerator {
    * This function should be tied to constructed CreateTable's DDL to preserve
    * correct order of columns (for example they could be rearranged).
    *
-   * @param columns ordered list of table columns
+   * @param orderedSubSchemas subschemas which are ordered wrt to updates, nullness and alphabetic order
    * @param rawMode decide whether snowplow-specific columns expected
    * @return a JsonPath String containing all of the relevant fields
    */
-  def getJsonPathsFile(columns: List[Column], rawMode: Boolean = false): String = {
+  def getJsonPathsFile(orderedSubSchemas: OrderedSubSchemas, rawMode: Boolean = false): String = {
     val columnNames: List[String] =
-      if (rawMode) { columns.map(JsonPathPrefix.Data + _.columnName) }    // everything is data in raw mode
+      if (rawMode) { orderedSubSchemas.map { case (p, _) => JsonPathPrefix.Data + pointerToJsonPath(p) } }    // everything is data in raw mode
       else {                                                              // add schema and hierarchy otherwise
-        val dataColumns = columns.filterNot(selfDescSchemaColumns.contains(_))
-                                 .filterNot(parentageColumns.contains(_))
-                                 .map(_.columnName)
+        val dataColumns = orderedSubSchemas
+          .map { case (p, _) => pointerToJsonPath(p) }
+          .filterNot(selfDescSchemaColumns.map(_.columnName).contains(_))
+          .filterNot(parentageColumns.map(_.columnName).contains(_))
 
         val schemaFieldList    = JsonPathSchemaFields.map(JsonPathPrefix.Schema + _)
         val hierarchyFieldList = JsonPathHierarchyFields.map(JsonPathPrefix.Hierarchy + _)
@@ -105,4 +108,11 @@ object JsonPathGenerator {
    */
   private[schemaddl] def isLast(list: List[String], test: String): Boolean =
     if (list.last == test) true else false
+
+
+  /**
+    * Convert SchemaPointer to json path
+    */
+  def pointerToJsonPath(jsonPointer: Pointer.SchemaPointer): String =
+    jsonPointer.forData.path.mkString(".")
 }
