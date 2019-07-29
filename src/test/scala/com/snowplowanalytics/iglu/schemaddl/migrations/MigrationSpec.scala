@@ -15,8 +15,8 @@ package com.snowplowanalytics.iglu.schemaddl.migrations
 import io.circe.literal._
 import cats.data.NonEmptyList
 import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer, SelfDescribingSchema}
-import org.specs2.Specification
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
+import org.specs2.Specification
 
 class MigrationSpec extends Specification { def is = s2"""
   Check common Schema migrations
@@ -28,10 +28,8 @@ class MigrationSpec extends Specification { def is = s2"""
     create correct ordered subschemas for complex schema $e6
     create correct ordered subschemas for complex schema $e7
     create correct ordered subschemas for complex schema $e8
+    create correct migrations when there are schemas with different vendor and name $e9
   """
-
-  // TODO Enes:
-  // Add more tests for ordering
 
   def e1 = {
     val initial = json"""
@@ -719,5 +717,55 @@ class MigrationSpec extends Specification { def is = s2"""
     val res = extractOrder(orderedSubSchemasMap)
 
     res must beEqualTo(expected)
+  }
+
+  def e9 = {
+    val initial = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val second = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer",
+            "maximum": 4000
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+
+    val schema11 = SchemaMap("com.acme", "example1", "jsonschema", SchemaVer.Full(1,0,0))
+    val schema12 = SchemaMap("com.acme", "example1", "jsonschema", SchemaVer.Full(1,0,1))
+
+    val schema21 = SchemaMap("com.acme", "example2", "jsonschema", SchemaVer.Full(1,0,0))
+    val schema22 = SchemaMap("com.acme", "example2", "jsonschema", SchemaVer.Full(1,0,1))
+
+    val schema31 = SchemaMap("com.acme", "example3", "jsonschema", SchemaVer.Full(1,0,0))
+    val schema32 = SchemaMap("com.acme", "example3", "jsonschema", SchemaVer.Full(1,0,1))
+
+    val schemas = List(
+      SelfDescribingSchema(schema11, initial),
+      SelfDescribingSchema(schema12, second),
+      SelfDescribingSchema(schema21, initial),
+      SelfDescribingSchema(schema22, second),
+      SelfDescribingSchema(schema31, initial),
+      SelfDescribingSchema(schema32, second)
+    )
+    val migrationMap = Migration.buildMigrationMap(schemas)
+
+    migrationMap.keySet must beEqualTo(Set(schema11, schema21, schema31))
   }
 }

@@ -120,9 +120,12 @@ object Migration {
   def buildMigrationMap(schemas: List[IgluSchema]): MigrationMap =
     buildMigrationMatrix(NonEmptyList.fromListUnsafe(schemas)).right match {
       case None => Map.empty[SchemaMap, NonEmptyList[Migration]]
-      case Some(l) => l.map(source => (source.schemas.head.self, buildMigration(source)))
+      // TODO Enes:
+      // groupBy of NonEmptyList requires Order implementation of SchemaMap
+      // Add its implementation
+      case Some(l) => l.toList.map(source => (source.schemas.head.self, buildMigration(source)))
         .groupBy(_._1)
-        .mapValues(_.map(_._2))
+        .mapValues(m => NonEmptyList.fromListUnsafe(m.map(_._2)))
     }
 
 
