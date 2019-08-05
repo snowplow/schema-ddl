@@ -21,6 +21,8 @@ import EncodeSuggestions._
 import TypeSuggestions._
 import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
 import jsonschema.Schema
+import jsonschema.Pointer
+
 
 /** Generates a Redshift DDL File from a Flattened JsonSchema */
 object DdlGenerator {
@@ -128,7 +130,7 @@ object DdlGenerator {
    */
   private[schemaddl] def getColumnsDdl(orderedSubSchemas: OrderedSubSchemas, varcharSize: Int): List[Column] =
     for {
-      (jsonPointer, schema) <- orderedSubSchemas
+      (jsonPointer, schema) <- orderedSubSchemas.filter { case (p, _) => !p.equals(Pointer.Root) }
       columnName = FlatSchema.getName(jsonPointer)
       dataType = getDataType(schema, varcharSize, columnName)
       encoding = getEncoding(schema, dataType, columnName)

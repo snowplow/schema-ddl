@@ -23,6 +23,8 @@ import io.circe.literal._
 // This library
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 
 // TODO: union type specs (string, object)
 
@@ -31,6 +33,7 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
     Generate correct DDL for atomic table $e1
     Generate correct DDL for with runlength encoding for booleans $e2
     Generate correct DDL when enum schema is nullable $e3
+    Generate correct DDL when only pointer is root pointer $e4
   """
 
   def e1 = {
@@ -103,6 +106,24 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
     )
 
     val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
+
+    ddl must beEqualTo(resultDdl)
+  }
+
+  def e4 = {
+    val orderedSubSchemas = List(
+      Pointer.Root -> Schema.empty
+    )
+
+    val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
+
+    val resultDdl = CreateTable(
+      "atomic.launch_missles",
+      DdlGenerator.selfDescSchemaColumns ++
+        DdlGenerator.parentageColumns,
+      Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
+      Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
+    )
 
     ddl must beEqualTo(resultDdl)
   }
