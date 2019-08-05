@@ -25,6 +25,7 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.SchemaPointer
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.json4s.implicits._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
 
 import io.circe.Json
 
@@ -42,8 +43,13 @@ final case class FlatSchema(subschemas: SubSchemas, required: Set[SchemaPointer]
 
   def withLeaf(pointer: SchemaPointer, schema: Schema): FlatSchema = {
     val updatedSchema =
-      if (!required.contains(pointer) || schema.canBeNull)
-        schema.copy(`type` = schema.`type`.map(_.withNull))
+      if ((pointer.value.nonEmpty && !required.contains(pointer)) || schema.canBeNull)
+        schema.copy(
+          `type` = schema.`type` match {
+            case None => Some(Type.Null)
+            case Some(t) => Some(t.withNull)
+          }
+        )
       else schema
     FlatSchema(subschemas + (pointer -> updatedSchema), required, parents)
   }

@@ -36,12 +36,15 @@ class FlatSchemaSpec extends Specification { def is = s2"""
     build skips properties inside patternProperties $e8
     build recognizes oneOf with object and string as primitive $e9
     isHeterogeneousUnion recognizes a Schema with oneOf $e10
+    build recognizes optional enum field $e11
+    build recognizes optional nested enum field $e12
+    build recognizes field without type $e13
   """
 
   def e1 = {
     val schema = json"""{"type": "object"}""".schema
     val expected = FlatSchema(
-      Set(Pointer.Root -> Schema.empty.copy(`type` = Some(Type.Union(Set(Type.Object, Type.Null))))),
+      Set(Pointer.Root -> Schema.empty.copy(`type` = Some(Type.Object))),
       Set.empty,
       Set.empty)
 
@@ -94,7 +97,9 @@ class FlatSchemaSpec extends Specification { def is = s2"""
       Set.empty,
       Set.empty)
 
-    FlatSchema.build(json) must beEqualTo(expected)
+    val res = FlatSchema.build(json)
+
+    res must beEqualTo(expected)
   }
 
   def e4 = {
@@ -316,6 +321,95 @@ class FlatSchemaSpec extends Specification { def is = s2"""
       """.schema
 
     FlatSchema.isHeterogeneousUnion(json) must beTrue
+  }
+
+  def e11 = {
+    val schema = json"""
+        {
+         "type": "object",
+         "properties": {
+           "enum_field": {
+             "enum": [
+               "event",
+               "exception",
+               "item"
+             ]
+           },
+           "nonInteractionHit": {
+             "type": ["boolean", "null"]
+           }
+         },
+         "additionalProperties": false
+        }
+      """.schema
+
+    val expectedSubSchemas = Set(
+      "/properties/enum_field".jsonPointer ->
+        json"""{"enum": ["event","exception","item"]}""".schema.copy(`type` = Some(Type.Null)),
+      "/properties/nonInteractionHit".jsonPointer ->
+        json"""{"type": ["boolean", "null"]}""".schema)
+
+    val result = FlatSchema.build(schema)
+
+    (result.subschemas must beEqualTo(expectedSubSchemas)) and (result.required must beEmpty)
+  }
+
+
+  def e12 = {
+    val schema = json"""
+        {
+         "type": "object",
+         "properties": {
+           "a_field": {
+            "type": "object",
+            "properties": {
+             "enum_field": {
+               "enum": [
+                 "event",
+                 "exception",
+                 "item"
+               ]
+             }
+            }
+           },
+           "nonInteractionHit": {
+             "type": ["boolean", "null"]
+           }
+         },
+         "additionalProperties": false
+        }
+      """.schema
+
+    val expectedSubSchemas = Set(
+      "/properties/a_field/properties/enum_field".jsonPointer ->
+        json"""{"enum": ["event","exception","item"]}""".schema.copy(`type` = Some(Type.Null)),
+      "/properties/nonInteractionHit".jsonPointer ->
+        json"""{"type": ["boolean", "null"]}""".schema)
+
+    val result = FlatSchema.build(schema)
+
+    (result.subschemas must beEqualTo(expectedSubSchemas)) and (result.required must beEmpty)
+  }
+
+  def e13 = {
+    val schema = json"""
+        {
+          "type": "object",
+          "properties": {
+            "a_field": { "type": "string" },
+            "b_field": {}
+          }
+        }
+      """.schema
+
+    val expectedSubSchemas = Set(
+      "/properties/a_field".jsonPointer -> json"""{"type": ["string", "null"]}""".schema,
+      "/properties/b_field".jsonPointer -> Schema.empty.copy(`type` = Some(Type.Null))
+    )
+
+    val result = FlatSchema.build(schema)
+
+    (result.subschemas must beEqualTo(expectedSubSchemas)) and (result.required must beEmpty)
   }
 
   def bePointers(expected: Set[Pointer.SchemaPointer]): Matcher[Set[Pointer.SchemaPointer]] = { actual: Set[Pointer.SchemaPointer] =>

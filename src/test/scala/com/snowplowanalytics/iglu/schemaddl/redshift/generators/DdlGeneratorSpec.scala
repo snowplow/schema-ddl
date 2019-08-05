@@ -15,12 +15,14 @@ package generators
 
 // Specs2
 import org.specs2.Specification
+
 import cats.data.NonEmptyList
-import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
+
 import io.circe.literal._
 
 // This library
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
 
 // TODO: union type specs (string, object)
 
@@ -28,6 +30,7 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
   Check DDL generation specification
     Generate correct DDL for atomic table $e1
     Generate correct DDL for with runlength encoding for booleans $e2
+    Generate correct DDL when enum schema is nullable $e3
   """
 
   def e1 = {
@@ -69,6 +72,32 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
         Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
         Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull)))
       ),
+      Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
+      Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
+    )
+
+    val ddl = DdlGenerator.generateTableDdl(orderedSubSchemas, "launch_missles", None, 4096, false)
+
+    ddl must beEqualTo(resultDdl)
+  }
+
+  def e3 = {
+    val enumSchemaWithNull = json"""{"enum": ["one","two","three"]}""".schema.copy(`type` = Some(Type.Null))
+    val orderedSubSchemas = List(
+      "/foo".jsonPointer -> json"""{"type": "boolean"}""".schema,
+      "/baz".jsonPointer -> json"""{"type": "boolean"}""".schema,
+      "/enumField".jsonPointer -> enumSchemaWithNull
+    )
+
+    val resultDdl = CreateTable(
+      "atomic.launch_missles",
+      DdlGenerator.selfDescSchemaColumns ++
+        DdlGenerator.parentageColumns ++
+        List(
+          Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+          Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+          Column("enum_field",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set())
+        ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
     )
