@@ -98,6 +98,14 @@ object Migration {
     } yield cell
   }
 
+  /**
+    * Creates model groups of schemas and returns them as OrderedSchemas
+    * @param schemas List of schema to create migration matrix
+    * @return List of IgluSchema as Ior.left if some groups in schemas contain
+    *         only one schema and no meaningful migrations can be provided
+    *         or List of OrderedSchemas as Ior.right if there are more than
+    *         one schemas in some groups and migrations can be provided
+    */
   def buildMigrationMatrix(schemas: NonEmptyList[IgluSchema]): Ior[NonEmptyList[IgluSchema], NonEmptyList[OrderedSchemas]] = {
     schemas
       .groupByNem { case SelfDescribingSchema(SchemaMap(SchemaKey(v, n, _, SchemaVer.Full(model, _, _))), _) => (v, n, model) }
@@ -115,28 +123,31 @@ object Migration {
    * where all source Schemas belong to a single model-revision Schema criterion
    *
    * @param schemas source Schemas belong to a single model-revision criterion
-   * @return migration map of each Schema to list of all available migrations
+   * @return List of IgluSchema as Ior.left if some groups in schemas contain
+    *        only one schema and no meaningful migrations can be provided
+    *        or Ior.right of migration map of each Schema to list of all available
+    *        migrations if there are more than one schemas in some groups and
+    *        migrations can be provided
    */
-  def buildMigrationMap(schemas: List[IgluSchema]): MigrationMap =
-    buildMigrationMatrix(NonEmptyList.fromListUnsafe(schemas)).right match {
-      case None => Map.empty[SchemaMap, NonEmptyList[Migration]]
-      // TODO Enes:
-      // groupBy of NonEmptyList requires Order implementation of SchemaMap
-      // Add its implementation
-      case Some(l) => l.toList.map(source => (source.schemas.head.self, buildMigration(source)))
+  def buildMigrationMap(schemas: NonEmptyList[IgluSchema]): Ior[NonEmptyList[IgluSchema], MigrationMap] =
+    buildMigrationMatrix(schemas).map { l =>
+      // groupBy of NonEmptyList requires cats.Order of SchemaMap
+      // however there is no dependency like this in groupBy of Scala List.
+      // Therefore, it is converted to Scala List initially and reconverted
+      // to NonEmptyList afterward.
+      l.toList.map(source => (source.schemas.head.self, buildMigration(source)))
         .groupBy(_._1)
         .mapValues(m => NonEmptyList.fromListUnsafe(m.map(_._2)))
     }
-
 
   /**
     * Build a map of source Schema to its OrderedSubSchemas, where all source Schemas
     * are last version of their model group
     * @param schemas source Schemas
-    * @param migrationMap migration map of each Schema to list of all available migrations
     * @return map of last version of Schema model group to its OrderedSubSchemas
     */
-  def buildOrderedSubSchemasMap(schemas: List[IgluSchema], migrationMap: MigrationMap): Map[SchemaMap, OrderedSubSchemas] = {
+  def buildOrderedSubSchemasMap(schemas: NonEmptyList[IgluSchema]): Map[SchemaMap, OrderedSubSchemas] = {
+    val migrationMap = buildMigrationMap(schemas).right.getOrElse(Map.empty)
     val flatSchemaMap = groupWithLastFlatSchema(schemas)
     val orderingMap = createOrderingMap(migrationMap)
     flatSchemaMap.map {
@@ -152,7 +163,7 @@ object Migration {
     * @param schemas source Schemas
     * @return map of last version of Schema model group to its FlatSchema
     */
-  private def groupWithLastFlatSchema(schemas: List[IgluSchema]): Map[SchemaMap, FlatSchema] = {
+  private def groupWithLastFlatSchema(schemas: NonEmptyList[IgluSchema]): Map[SchemaMap, FlatSchema] = {
     val aggregated = schemas.foldLeft(Map.empty[ModelGroup, (SchemaMap, FlatSchema)]) {
       case (acc, igluSchema) =>
         acc.get(modelGroup(igluSchema.self)) match {

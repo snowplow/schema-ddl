@@ -13,9 +13,10 @@
 package com.snowplowanalytics.iglu.schemaddl.migrations
 
 import io.circe.literal._
-import cats.data.NonEmptyList
+import cats.data._
 import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer, SelfDescribingSchema}
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
+import com.snowplowanalytics.iglu.schemaddl.migrations.Migration.OrderedSchemas
 import org.specs2.Specification
 
 class MigrationSpec extends Specification { def is = s2"""
@@ -29,6 +30,12 @@ class MigrationSpec extends Specification { def is = s2"""
     create correct ordered subschemas for complex schema $e7
     create correct ordered subschemas for complex schema $e8
     create correct migrations when there are schemas with different vendor and name $e9
+    return Ior.left all given schemas are single in their model groups $e10
+    return Ior.both if there are both single schemas and more than one schemas in their model groups in given schemas $e11
+  buildMigrationMatrix function in Migration
+    return Ior.left all given schemas are single in their model groups $e12
+    return Ior.both if there are both single schemas and more than one schemas in their model groups in given schemas $e13
+    return Ior.right if there are only more than one schemas in their model groups in given schemas $e14
   """
 
   def e1 = {
@@ -81,7 +88,7 @@ class MigrationSpec extends Specification { def is = s2"""
       SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)) -> migrations
     )
 
-    Migration.buildMigrationMap(List(initialSchema, secondSchema)) must beEqualTo(migrationMap)
+    Migration.buildMigrationMap(NonEmptyList.of(initialSchema, secondSchema)) must beEqualTo(Ior.right(migrationMap))
   }
 
   def e2 = {
@@ -174,7 +181,7 @@ class MigrationSpec extends Specification { def is = s2"""
       SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)) -> migrations2
     )
 
-    Migration.buildMigrationMap(List(initialSchema, secondSchema, thirdSchema)) must beEqualTo(migrationMap)
+    Migration.buildMigrationMap(NonEmptyList.of(initialSchema, secondSchema, thirdSchema)) must beEqualTo(Ior.right(migrationMap))
   }
 
   def e3 = {
@@ -230,7 +237,7 @@ class MigrationSpec extends Specification { def is = s2"""
       SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)) -> migrations1
     )
 
-    Migration.buildMigrationMap(List(initialSchema, secondSchema)) must beEqualTo(migrationMap)
+    Migration.buildMigrationMap(NonEmptyList.of(initialSchema, secondSchema)) must beEqualTo(Ior.right(migrationMap))
   }
 
   def e4 = {
@@ -269,9 +276,9 @@ class MigrationSpec extends Specification { def is = s2"""
     val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
 
 
-    val schemas = List(initialSchema, secondSchema)
+    val schemas = NonEmptyList.of(initialSchema, secondSchema)
     val migrationMap = Migration.buildMigrationMap(schemas)
-    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)) -> List("foo", "b_field", "a_field"))
 
@@ -341,9 +348,9 @@ class MigrationSpec extends Specification { def is = s2"""
     val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)), third)
 
 
-    val schemas = List(initialSchema, secondSchema, thirdSchema)
+    val schemas = NonEmptyList.of(initialSchema, secondSchema, thirdSchema)
     val migrationMap = Migration.buildMigrationMap(schemas)
-    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)) -> List("foo", "bar", "c_field", "a_field", "d_field"))
 
@@ -435,9 +442,8 @@ class MigrationSpec extends Specification { def is = s2"""
     """.schema
     val initialSchema = SelfDescribingSchema(SchemaMap("com.amazon.aws.lambda", "java_context", "jsonschema", SchemaVer.Full(1,0,0)), initial)
 
-    val schemas = List(initialSchema)
-    val migrationMap = Migration.buildMigrationMap(schemas)
-    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+    val schemas = NonEmptyList.of(initialSchema)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(
       SchemaMap("com.amazon.aws.lambda", "java_context", "jsonschema", SchemaVer.Full(1,0,0)) ->
@@ -537,9 +543,9 @@ class MigrationSpec extends Specification { def is = s2"""
       """.schema
     val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
 
-    val schemas = List(initialSchema, secondSchema)
+    val schemas = NonEmptyList.of(initialSchema, secondSchema)
     val migrationMap = Migration.buildMigrationMap(schemas)
-    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(
       SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)) ->
@@ -695,9 +701,9 @@ class MigrationSpec extends Specification { def is = s2"""
       """.schema
     val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,1,0)), third)
 
-    val schemas = List(initialSchema, secondSchema, thirdSchema)
+    val schemas = NonEmptyList.of(initialSchema, secondSchema, thirdSchema)
     val migrationMap = Migration.buildMigrationMap(schemas)
-    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas, migrationMap)
+    val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(
       SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,1,0)) ->
@@ -756,7 +762,7 @@ class MigrationSpec extends Specification { def is = s2"""
     val schema31 = SchemaMap("com.acme", "example3", "jsonschema", SchemaVer.Full(1,0,0))
     val schema32 = SchemaMap("com.acme", "example3", "jsonschema", SchemaVer.Full(1,0,1))
 
-    val schemas = List(
+    val schemas = NonEmptyList.of(
       SelfDescribingSchema(schema11, initial),
       SelfDescribingSchema(schema12, second),
       SelfDescribingSchema(schema21, initial),
@@ -766,6 +772,208 @@ class MigrationSpec extends Specification { def is = s2"""
     )
     val migrationMap = Migration.buildMigrationMap(schemas)
 
-    migrationMap.keySet must beEqualTo(Set(schema11, schema21, schema31))
+    migrationMap.right.get.keySet must beEqualTo(Set(schema11, schema21, schema31))
+  }
+
+  def e10 = {
+    val schemaData = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+
+    val schema1 = SchemaMap("com.acme", "example1", "jsonschema", SchemaVer.Full(1,0,0))
+    val schema2 = SchemaMap("com.acme", "example2", "jsonschema", SchemaVer.Full(1,0,0))
+
+    val schemas = NonEmptyList.of(
+      SelfDescribingSchema(schema1, schemaData),
+      SelfDescribingSchema(schema2, schemaData)
+    )
+
+    val res = Migration.buildMigrationMap(schemas)
+
+    (res.right must beNone) and (res.left must beSome(schemas))
+  }
+
+  def e11 = {
+    val initial = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer",
+            "maximum": 4000
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+
+    val singleSchemaInGroup1 = SelfDescribingSchema(SchemaMap("com.acme", "example2", "jsonschema", SchemaVer.Full(1,0,0)), second)
+    val singleSchemaInGroup2 = SelfDescribingSchema(SchemaMap("com.acme", "example3", "jsonschema", SchemaVer.Full(1,0,0)), second)
+
+
+    val fromSchema = json"""{"type": ["integer", "null"], "maximum": 4000}""".schema
+    val fromPointer = "/properties/bar".jsonPointer
+
+    val migrations = NonEmptyList.of(
+      Migration(
+        "com.acme",
+        "example",
+        SchemaVer.Full(1,0,0),
+        SchemaVer.Full(1,0,1),
+        SchemaDiff(
+          List(fromPointer -> fromSchema),
+          Set.empty,
+          List.empty)))
+
+    val migrationMap = Map(
+      SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)) -> migrations
+    )
+
+    val res = Migration.buildMigrationMap(NonEmptyList.of(initialSchema, secondSchema, singleSchemaInGroup1, singleSchemaInGroup2))
+    res must beEqualTo(Ior.both(NonEmptyList.of(singleSchemaInGroup1, singleSchemaInGroup2), migrationMap))
+  }
+
+  def e12 = {
+    val schemaData = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+
+    val schema1 = SchemaMap("com.acme", "example1", "jsonschema", SchemaVer.Full(1,0,0))
+    val schema2 = SchemaMap("com.acme", "example2", "jsonschema", SchemaVer.Full(1,0,0))
+
+    val schemas = NonEmptyList.of(
+      SelfDescribingSchema(schema1, schemaData),
+      SelfDescribingSchema(schema2, schemaData)
+    )
+
+    val res = Migration.buildMigrationMatrix(schemas)
+
+    (res.right must beNone) and (res.left must beSome(schemas))
+  }
+
+  def e13 = {
+    val initial = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer",
+            "maximum": 4000
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+
+    val singleSchemaInGroup1 = SelfDescribingSchema(SchemaMap("com.acme", "example2", "jsonschema", SchemaVer.Full(1,0,0)), second)
+    val singleSchemaInGroup2 = SelfDescribingSchema(SchemaMap("com.acme", "example3", "jsonschema", SchemaVer.Full(1,0,0)), second)
+
+    val expected = Ior.both(
+      NonEmptyList.of(singleSchemaInGroup1, singleSchemaInGroup2),
+      NonEmptyList.of(
+        OrderedSchemas(
+          NonEmptyList.of(initialSchema, secondSchema)
+        )
+      )
+    )
+    val res = Migration.buildMigrationMatrix(NonEmptyList.of(initialSchema, secondSchema, singleSchemaInGroup1, singleSchemaInGroup2))
+
+    res must beEqualTo(expected)
+  }
+
+  def e14 = {
+    val initial = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer",
+            "maximum": 4000
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val expected = Ior.right(
+      NonEmptyList.of(
+        OrderedSchemas(
+          NonEmptyList.of(initialSchema, secondSchema)
+        )
+      )
+    )
+    val res = Migration.buildMigrationMatrix(NonEmptyList.of(initialSchema, secondSchema))
+
+    res must beEqualTo(expected)
   }
 }
