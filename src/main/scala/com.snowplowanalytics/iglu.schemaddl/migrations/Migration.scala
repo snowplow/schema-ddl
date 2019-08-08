@@ -13,7 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl.migrations
 
 // cats
-import cats.{Order, Monad}
+import cats.Monad
 import cats.data._
 import cats.implicits._
 
@@ -43,6 +43,23 @@ object Migration {
     */
   case class OrderedSchemas private(schemas: NonEmptyList[IgluSchema]) extends AnyVal
 
+  /** Represents error cases which can be get from `MigrateFrom` function */
+  sealed trait MigrateFromError extends Product with Serializable
+  case object MigrateFromError {
+
+    /**
+      * Returned when current schema is not found in the
+      * given schemas
+      */
+    case object SchemaKeyNotFoundInSchemas extends MigrateFromError
+
+    /**
+      * Returned when current schema is last version of
+      * given schemas
+      */
+    case object SchemaInLatestState extends MigrateFromError
+  }
+
   object OrderedSchemas {
     /**
       * Filter out a single `SchemaList` containing all schemas
@@ -64,15 +81,6 @@ object Migration {
         schemas <- keys.schemas.traverse { key => fetch(key) }
       } yield OrderedSchemas(NonEmptyList.fromListUnsafe(schemas))
   }
-
-  implicit val schemaMapOrdering: Order[SchemaMap] =
-    implicitly[Order[(Int, Int)]].contramap[SchemaMap] {
-      s => (s.schemaKey.version.revision, s.schemaKey.version.addition)
-    }
-
-  implicit val schemaOrdering: Order[IgluSchema] =
-    implicitly[Order[SchemaMap]].contramap[IgluSchema](_.self)
-
 
   /**
    * Build migration from a `sourceSchema` to the last schema in list of `successiveSchemas`
@@ -159,6 +167,34 @@ object Migration {
   }
 
   /**
+    * Get a migration from current state to the latest known schema
+    * where error can be if schema key does not belong to these schemas
+    * or schema key is already a latest state
+    * @param current schemaKey of current state
+    * @param schemas schemas of model group which ordered according to
+    *                their version
+    * @return return Either.left in case of error cases which is specified
+    *         above or Migration as Either.right
+    */
+  def migrateFrom(current: SchemaKey, schemas: OrderedSchemas): Either[MigrateFromError, Migration] = {
+    if (!schemas.schemas.map(_.self).toList.contains(SchemaMap(current)))
+      MigrateFromError.SchemaKeyNotFoundInSchemas.asLeft
+    else {
+      val newerSchemas = schemas.schemas.filter { schema =>
+        val schemaKey = schema.self.schemaKey
+        val haveSameModelGroup = modelGroup(SchemaMap(schemaKey)).equals(modelGroup(SchemaMap(current)))
+        val sameOrNewerThanCurrent = Ordering[SchemaVer].gteq(schemaKey.version, current.version)
+        haveSameModelGroup && sameOrNewerThanCurrent
+      }
+      NonEmptyList.fromList(newerSchemas) match {
+        case None => MigrateFromError.SchemaKeyNotFoundInSchemas.asLeft
+        case Some(NonEmptyList(_, Nil)) => MigrateFromError.SchemaInLatestState.asLeft
+        case Some(l) => buildMigration(OrderedSchemas(l)).asRight
+      }
+    }
+  }
+
+  /**
     * Groups given schemas with last version of their model group and its corresponding FlatSchema
     * @param schemas source Schemas
     * @return map of last version of Schema model group to its FlatSchema
@@ -221,4 +257,5 @@ object Migration {
     */
   private def modelGroup(schemaMap: SchemaMap): ModelGroup =
     (schemaMap.schemaKey.vendor, schemaMap.schemaKey.name, schemaMap.schemaKey.version.model)
+
 }

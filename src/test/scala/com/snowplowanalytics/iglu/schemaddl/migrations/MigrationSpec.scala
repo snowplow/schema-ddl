@@ -14,9 +14,9 @@ package com.snowplowanalytics.iglu.schemaddl.migrations
 
 import io.circe.literal._
 import cats.data._
-import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer, SelfDescribingSchema}
+import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer, SelfDescribingSchema, SchemaKey}
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
-import com.snowplowanalytics.iglu.schemaddl.migrations.Migration.OrderedSchemas
+import com.snowplowanalytics.iglu.schemaddl.migrations.Migration.{OrderedSchemas, MigrateFromError}
 import org.specs2.Specification
 
 class MigrationSpec extends Specification { def is = s2"""
@@ -36,6 +36,11 @@ class MigrationSpec extends Specification { def is = s2"""
     return Ior.left all given schemas are single in their model groups $e12
     return Ior.both if there are both single schemas and more than one schemas in their model groups in given schemas $e13
     return Ior.right if there are only more than one schemas in their model groups in given schemas $e14
+  migrateFrom function in Migration
+    return error when schemaKey not found in given schemas $e15
+    return error when schemaKey is latest state of given schemas $e16
+    create migration as expected when schemaKey is initial version of given schemas $e17
+    create migration as expected when schemaKey is second version of given schemas $e18
   """
 
   def e1 = {
@@ -277,7 +282,6 @@ class MigrationSpec extends Specification { def is = s2"""
 
 
     val schemas = NonEmptyList.of(initialSchema, secondSchema)
-    val migrationMap = Migration.buildMigrationMap(schemas)
     val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)) -> List("foo", "b_field", "a_field"))
@@ -349,7 +353,6 @@ class MigrationSpec extends Specification { def is = s2"""
 
 
     val schemas = NonEmptyList.of(initialSchema, secondSchema, thirdSchema)
-    val migrationMap = Migration.buildMigrationMap(schemas)
     val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)) -> List("foo", "bar", "c_field", "a_field", "d_field"))
@@ -544,7 +547,6 @@ class MigrationSpec extends Specification { def is = s2"""
     val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
 
     val schemas = NonEmptyList.of(initialSchema, secondSchema)
-    val migrationMap = Migration.buildMigrationMap(schemas)
     val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(
@@ -702,7 +704,6 @@ class MigrationSpec extends Specification { def is = s2"""
     val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,1,0)), third)
 
     val schemas = NonEmptyList.of(initialSchema, secondSchema, thirdSchema)
-    val migrationMap = Migration.buildMigrationMap(schemas)
     val orderedSubSchemasMap = Migration.buildOrderedSubSchemasMap(schemas)
 
     val expected = Map(
@@ -975,5 +976,263 @@ class MigrationSpec extends Specification { def is = s2"""
     val res = Migration.buildMigrationMatrix(NonEmptyList.of(initialSchema, secondSchema))
 
     res must beEqualTo(expected)
+  }
+
+
+  def e15 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val third = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer",
+            "maximum": 4000
+          },
+          "baz": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)), third)
+
+    val nonExistingSchemaKey = SchemaKey("com.acme", "non-existing", "jsonschema", SchemaVer.Full(1,0,0))
+    val orderedSchemas = OrderedSchemas(NonEmptyList.of(initialSchema, secondSchema, thirdSchema))
+
+    val res = Migration.migrateFrom(nonExistingSchemaKey, orderedSchemas)
+
+    res must beLeft(MigrateFromError.SchemaKeyNotFoundInSchemas)
+  }
+
+  def e16 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val third = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer",
+            "maximum": 4000
+          },
+          "baz": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)), third)
+
+    val orderedSchemas = OrderedSchemas(NonEmptyList.of(initialSchema, secondSchema, thirdSchema))
+
+    val res = Migration.migrateFrom(thirdSchema.self.schemaKey, orderedSchemas)
+
+    res must beLeft(MigrateFromError.SchemaInLatestState)
+  }
+
+  def e17 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val third = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer",
+            "maximum": 4000
+          },
+          "baz": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)), third)
+
+    val migration = Migration(
+      "com.acme",
+      "example",
+      SchemaVer.Full(1,0,0),
+      SchemaVer.Full(1,0,2),
+      SchemaDiff(
+        List(
+          "/properties/bar".jsonPointer -> json"""{"type": ["integer", "null"], "maximum": 4000}""".schema,
+          "/properties/baz".jsonPointer -> json"""{"type": ["array", "null"]}""".schema),
+        Set.empty,
+        List.empty)
+    )
+
+    val orderedSchemas = OrderedSchemas(NonEmptyList.of(initialSchema, secondSchema, thirdSchema))
+
+    val res = Migration.migrateFrom(initialSchema.self.schemaKey, orderedSchemas)
+
+    res must beRight(migration)
+  }
+
+  def e18 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val third = json"""
+      {
+        "type": "object",
+        "properties": {
+          "foo": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer",
+            "maximum": 4000
+          },
+          "baz": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)), third)
+
+    val migration = Migration(
+      "com.acme",
+      "example",
+      SchemaVer.Full(1,0,1),
+      SchemaVer.Full(1,0,2),
+      SchemaDiff(
+        List("/properties/baz".jsonPointer -> json"""{"type": ["array", "null"]}""".schema),
+        Set.empty,
+        List.empty)
+    )
+
+    val orderedSchemas = OrderedSchemas(NonEmptyList.of(initialSchema, secondSchema, thirdSchema))
+
+    val res = Migration.migrateFrom(secondSchema.self.schemaKey, orderedSchemas)
+
+    res must beRight(migration)
   }
 }
