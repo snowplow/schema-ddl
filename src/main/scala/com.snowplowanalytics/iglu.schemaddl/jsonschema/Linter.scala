@@ -351,6 +351,25 @@ object Linter {
       }
   }
 
+  final case object schemaUri extends Linter {
+    self =>
+
+    val level: Level = Level.Error
+
+    case class Details(message: String) extends Issue {
+      val linter = self
+      def show: String = message
+    }
+
+    def apply(jsonPointer: Pointer.SchemaPointer, schema: Schema): Validated[Issue, Unit] =
+      (jsonPointer, schema.`$schema`) match {
+        case (Pointer.Root, Some(SchemaUri(value))) =>
+          if (value == Schema.SelfDescribingUri) noIssues else Details(s"Given $$schema is not ${Schema.SelfDescribingUri}").invalid
+        case (Pointer.Root, None) => Details("No $schema field in top-level of schema").invalid
+        case _ => noIssues
+      }
+  }
+
   private val m = ru.runtimeMirror(getClass.getClassLoader)
 
   /**

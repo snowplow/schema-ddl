@@ -45,6 +45,10 @@ object Keyword {
     val name = 'format
     val recursive = false
   }
+  case object SchemaUri extends Keyword {
+    val name = '$schema
+    val recursive = false
+  }
 
   case object Items extends Keyword {
     val name = 'items

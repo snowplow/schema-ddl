@@ -13,7 +13,11 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 package circe
 
+import java.net.URI
+
 import io.circe._
+
+import cats.implicits._
 
 import properties.StringProperty._
 
@@ -29,4 +33,15 @@ trait StringDecoders {
 
   implicit val patterDecoder: Decoder[Pattern] =
     Decoder[String].map(Pattern.apply)
+
+  implicit val stringDecodersJavaUriDecoder: Decoder[URI] =
+    Decoder.instance { cursor =>
+      cursor.as[String].flatMap { str =>
+        Either.catchNonFatal(URI.create(str))
+          .leftMap(e => DecodingFailure(e.toString, cursor.history))
+      }
+    }
+
+  implicit val schemaUriDecoder: Decoder[SchemaUri] =
+    Decoder[URI].map(SchemaUri.apply)
 }

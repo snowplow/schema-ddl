@@ -37,13 +37,18 @@ class SanityLinterSpec extends Specification { def is = s2"""
     recognize maxLength is greater than Redshift VARCHAR(max) $e9
     recognize skipped checks (description) $e10
     selected formats will not fail with warning for 'no maxLength' $e11
+    recognize missing $$schema field $e12
+    recognize incorrect $$schema field $e13
   """
 
   def showReport(kv: (Pointer.SchemaPointer, NonEmptyList[Linter.Issue])): (String, NonEmptyList[String]) =
     kv match { case (k, v) => (k.show, v.map(_.show)) }
 
   def e1 = {
-    val schema = json"""{ "type": "object", "minLength": 3 }""".schema
+    val schema = json"""{
+      "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+      "type": "object", "minLength": 3
+    }""".schema
 
     lint(schema, Linter.allLintersMap.values.toList).map(showReport) must beEqualTo(
       Map(
@@ -56,6 +61,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
 
   def e2 = {
     val schema = json"""{
+          "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
           "additionalProperties": {
             "properties": {
               "nestedObject": {
@@ -105,6 +111,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
   def e3 = {
     val schema = json"""
         {
+          "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
           "additionalProperties": false,
           "properties": {
             "oneKey": {}
@@ -127,6 +134,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
 
   def e4 = {
     val schema = json""" {
+            "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
             "type": "object",
             "properties": {
                "sku": {
@@ -182,6 +190,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
 
   def e5 = {
     val schema = json"""{
+            "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
             "type": "object",
             "properties": {
                "sku": {
@@ -230,6 +239,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
 
   def e6 = {
     val schema = json"""{
+        "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
         "type": "array",
         "items": {
             "type": "object",
@@ -260,6 +270,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
 
   def e7 = {
     val schema = json"""{
+            "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
             "type": "object",
             "properties": {
               "name": {
@@ -287,6 +298,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
   def e8 = {
     val schema = json"""
         {
+            "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
             "type": "object",
             "properties": {
               "name": {
@@ -316,6 +328,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
   def e9 = {
     val schema = json"""
         {
+          "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
           "type": "string",
           "minLength": 3,
           "maxLength": 65536
@@ -334,6 +347,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
   def e10 = {
     val schema = json"""
         {
+            "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
             "type": "object",
             "description": "Placeholder object",
             "properties": {
@@ -382,6 +396,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
   def e11 = {
     val schema = json"""
         {
+          "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
            "type": "object",
            "description": "desc text",
            "properties": {
@@ -413,5 +428,100 @@ class SanityLinterSpec extends Specification { def is = s2"""
     val skippedLinters = List(Linter.description)
  
     lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)) must beEqualTo(Map())
+  }
+
+  def e12 = {
+    val schema = json"""
+        {
+           "self": {
+             "vendor": "com.test.valid",
+             "name": "test_schema",
+             "format": "jsonschema",
+             "version": "1-0-0"
+           },
+           "type": "object",
+           "description": "desc text",
+           "properties": {
+               "emailField": {
+                   "type": "string",
+                   "format": "email"
+               },
+               "dateField": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "uriField": {
+                   "type": "string",
+                   "format": "uri"
+               },
+               "hostnameField": {
+                   "type": "string",
+                   "format": "hostname"
+               },
+               "uuidField": {
+                   "type": "string",
+                   "format": "uuid"
+               }
+           },
+           "additionalProperties": false
+        }
+      """.schema
+
+    val skippedLinters = List(Linter.description)
+
+    val expected = Map("/" ->
+      NonEmptyList.of("No $schema field in top-level of schema"))
+
+    val res = lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)).map { case (k, v) => (k.show, v.map(_.show)) }
+
+    res must beEqualTo(expected)
+  }
+
+  def e13 = {
+    val schema = json"""
+        {
+           "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self/schema/jsonschema/1-0-0#",
+           "self": {
+             "vendor": "com.test.valid",
+             "name": "test_schema",
+             "format": "jsonschema",
+             "version": "1-0-0"
+           },
+           "type": "object",
+           "description": "desc text",
+           "properties": {
+               "emailField": {
+                   "type": "string",
+                   "format": "email"
+               },
+               "dateField": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "uriField": {
+                   "type": "string",
+                   "format": "uri"
+               },
+               "hostnameField": {
+                   "type": "string",
+                   "format": "hostname"
+               },
+               "uuidField": {
+                   "type": "string",
+                   "format": "uuid"
+               }
+           },
+           "additionalProperties": false
+        }
+      """.schema
+
+    val skippedLinters = List(Linter.description)
+
+    val expected = Map("/" ->
+      NonEmptyList.of("Given $schema is not http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#"))
+
+    val res = lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)).map { case (k, v) => (k.show, v.map(_.show)) }
+
+    res must beEqualTo(expected)
   }
 }

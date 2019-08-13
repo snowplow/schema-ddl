@@ -13,6 +13,8 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 package properties
 
+import java.net.URI
+
 /**
   * Marker trait for properties specific *ONLY* for strings
   */
@@ -82,6 +84,15 @@ object StringProperty {
    */
   case class Pattern(value: String) extends JsonSchemaProperty with StringProperty {
     val keyword: Keyword = Keyword.Pattern
+  }
+
+  /**
+    * Class representing `$schema` keyword
+    *
+    * @see https://json-schema.org/understanding-json-schema/reference/schema.html
+    */
+  case class SchemaUri(value: URI) extends JsonSchemaProperty with StringProperty {
+    val keyword: Keyword = Keyword.SchemaUri
   }
 }
 
