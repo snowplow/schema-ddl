@@ -57,17 +57,18 @@ class FlatDataSpec extends Specification { def is = s2"""
       }}""".schema
 
     val schemas = NonEmptyList.of(
-      SelfDescribingSchema(SchemaMap(SchemaKey("com.acme", "test", "jsonschema", SchemaVer.Full(1,0,0))), schemaA),
-      SelfDescribingSchema(SchemaMap(SchemaKey("com.acme", "test", "jsonschema", SchemaVer.Full(1,0,1))), schemaB),
-      SelfDescribingSchema(SchemaMap(SchemaKey("com.acme", "test", "jsonschema", SchemaVer.Full(1,0,2))), schemaC),
-      SelfDescribingSchema(SchemaMap(SchemaKey("com.acme", "test", "jsonschema", SchemaVer.Full(1,0,3))), schemaD)
-    )
+        SelfDescribingSchema(SchemaMap(SchemaKey("com.acme", "test", "jsonschema", SchemaVer.Full(1,0,0))), schemaA),
+        SelfDescribingSchema(SchemaMap(SchemaKey("com.acme", "test", "jsonschema", SchemaVer.Full(1,0,1))), schemaB),
+        SelfDescribingSchema(SchemaMap(SchemaKey("com.acme", "test", "jsonschema", SchemaVer.Full(1,0,2))), schemaC),
+        SelfDescribingSchema(SchemaMap(SchemaKey("com.acme", "test", "jsonschema", SchemaVer.Full(1,0,3))), schemaD)
+      )
+
+    val schemaList = SchemaList.buildMultiple(schemas).right.get.head
 
     val expected = List("one", "two", "three", "four")
 
-    val source = Migration.buildMigrationMatrix(schemas).right.get.toList.maxBy(_.schemas.length)
     val data = json"""{"a": "one", "b": {"ba": "two", "bb": "four"}, "c": "three"}"""
-    val result = FlatData.flatten(data, source, None)
+    val result = FlatData.flatten(data, schemaList, None)
 
     result must beEqualTo(expected)
   }

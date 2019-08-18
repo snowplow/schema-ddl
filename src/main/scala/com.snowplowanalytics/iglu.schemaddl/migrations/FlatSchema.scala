@@ -20,16 +20,18 @@ import cats.instances.list._
 import cats.instances.option._
 import cats.syntax.alternative._
 
-import com.snowplowanalytics.iglu.schemaddl.{ SubSchemas, StringUtils }
+import io.circe.Json
+
+import org.json4s.jackson.JsonMethods.compact
+
+
+import com.snowplowanalytics.iglu.schemaddl.{ SubSchemas, StringUtils, OrderedSubSchemas }
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.SchemaPointer
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.json4s.implicits._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
-
-import io.circe.Json
-
-import org.json4s.jackson.JsonMethods.compact
+import SchemaList._
 
 /**
   *
@@ -138,6 +140,18 @@ object FlatSchema {
   def order(subschemas: SubSchemas): List[(Pointer.SchemaPointer, Schema)] =
     subschemas.toList.sortBy { case (pointer, schema) =>
       (schema.canBeNull, getName(pointer))
+    }
+
+  def buildOrderedSubSchemas(source: SchemaList): OrderedSubSchemas =
+    source match {
+      case s: SingleSchema =>
+        val origin = build(s.schema.schema)
+        order(origin.subschemas)
+      case s: SchemaListFull =>
+        val origin = build(s.schemas.head.schema)
+        val originColumns = order(origin.subschemas)
+        val addedColumns = Migration.buildMigration(s.toSegment).diff.added
+        originColumns ++ addedColumns
     }
 
   /** Get normalized name */

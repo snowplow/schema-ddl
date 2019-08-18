@@ -17,7 +17,7 @@ import com.snowplowanalytics.iglu.core.SelfDescribingSchema
 import com.snowplowanalytics.iglu.schemaddl._
 import com.snowplowanalytics.iglu.schemaddl.Core.VersionPoint
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Delta, Pointer, Schema}
-
+import com.snowplowanalytics.iglu.schemaddl.migrations.SchemaList._
 
 /**
   * This class represents differences between *two* Schemas
@@ -64,7 +64,7 @@ object SchemaDiff {
   }
 
   /** Build `SchemaDiff` from list of schemas */
-  def build(source: Migration.OrderedSchemas): SchemaDiff = {
+  def build(source: SchemaListSegment): SchemaDiff = {
     val result = source.schemas.tail.foldLeft(DiffMerge.init(source.schemas.head)) {
       case (acc, SelfDescribingSchema(_, schema)) =>
         val subschemas = FlatSchema.build(schema).subschemas

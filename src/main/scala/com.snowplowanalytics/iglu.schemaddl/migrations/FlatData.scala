@@ -16,9 +16,8 @@ import io.circe.{ACursor, Json, JsonObject}
 
 import cats.syntax.show._
 
-import com.snowplowanalytics.iglu.schemaddl.migrations.Migration.OrderedSchemas
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.{JsonPointer, SchemaPointer}
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.JsonPointer
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer
 
 object FlatData {
 
@@ -28,16 +27,8 @@ object FlatData {
     * @param source state of schema, providing proper order
     * @param escape function used to escape string values, e.g. to fix newlines
     */
-  def flatten(data: Json, source: OrderedSchemas, escape: Option[String => String]): List[String] =
-    get(source).map(_._1.forData).map(pointer => getPath(pointer, data, escape))
-
-
-  def get(source: OrderedSchemas): List[(SchemaPointer, Schema)] = {
-    val origin = FlatSchema.build(source.schemas.head.schema)
-    val originColumns = FlatSchema.order(origin.subschemas)
-    val addedColumns = Migration.buildMigration(source).diff.added
-    originColumns ++ addedColumns
-  }
+  def flatten(data: Json, source: SchemaList, escape: Option[String => String]): List[String] =
+    FlatSchema.buildOrderedSubSchemas(source).map(_._1.forData).map(pointer => getPath(pointer, data, escape))
 
   /** Extract data from JSON payload using JsonPointer */
   def getPath(pointer: JsonPointer, json: Json, escape: Option[String => String]): String = {
