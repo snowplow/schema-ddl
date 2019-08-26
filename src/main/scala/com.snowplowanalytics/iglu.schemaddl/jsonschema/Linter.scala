@@ -351,8 +351,7 @@ object Linter {
       }
   }
 
-  final case object schemaUri extends Linter {
-    self =>
+  final case object schemaUri extends Linter { self =>
 
     val level: Level = Level.Error
 

@@ -38,7 +38,7 @@ trait StringDecoders {
     Decoder.instance { cursor =>
       cursor.as[String].flatMap { str =>
         Either.catchNonFatal(URI.create(str))
-          .leftMap(e => DecodingFailure(e.toString, cursor.history))
+          .leftMap(e => DecodingFailure(e.getMessage, cursor.history))
       }
     }
 
