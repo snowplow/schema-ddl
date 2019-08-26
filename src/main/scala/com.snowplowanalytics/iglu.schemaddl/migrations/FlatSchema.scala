@@ -24,14 +24,12 @@ import io.circe.Json
 
 import org.json4s.jackson.JsonMethods.compact
 
-
 import com.snowplowanalytics.iglu.schemaddl.{ SubSchemas, StringUtils, OrderedSubSchemas }
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.SchemaPointer
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.json4s.implicits._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
-import SchemaList._
 
 /**
   *
@@ -142,12 +140,19 @@ object FlatSchema {
       (schema.canBeNull, getName(pointer))
     }
 
+  /**
+    * Build subschemas which are ordered according to nullness of field,
+    * name of field and which version field is added
+    * @param source List of ordered schemas to create ordered subschemas
+    * @return subschemas which are ordered according to criterias specified
+    *         above
+    */
   def buildOrderedSubSchemas(source: SchemaList): OrderedSubSchemas =
     source match {
-      case s: SingleSchema =>
+      case s: SchemaList.Single =>
         val origin = build(s.schema.schema)
         order(origin.subschemas)
-      case s: SchemaListFull =>
+      case s: SchemaList.Full =>
         val origin = build(s.schemas.head.schema)
         val originColumns = order(origin.subschemas)
         val addedColumns = Migration.buildMigration(s.toSegment).diff.added

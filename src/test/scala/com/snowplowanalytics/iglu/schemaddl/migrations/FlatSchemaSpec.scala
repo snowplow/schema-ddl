@@ -13,12 +13,15 @@
 package com.snowplowanalytics.iglu.schemaddl.migrations
 
 import cats.implicits._
+import cats.data._
 
 import io.circe.literal._
 
 import org.specs2.Specification
 import org.specs2.matcher.Matcher
 
+import com.snowplowanalytics.iglu.core.SelfDescribingSchema
+import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer}
 import com.snowplowanalytics.iglu.schemaddl.SubSchemas
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.{Description, Type}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
@@ -39,6 +42,10 @@ class FlatSchemaSpec extends Specification { def is = s2"""
     build recognizes optional enum field $e11
     build recognizes optional nested enum field $e12
     build recognizes field without type $e13
+    create correct ordered subschemas from 1-0-0 to 1-0-1 $e14
+    create correct ordered subschemas from 1-0-0 to 1-0-2 $e15
+    create correct ordered subschemas for complex schema $e16
+    create correct ordered subschemas for complex schema $e17
   """
 
   def e1 = {
@@ -410,6 +417,394 @@ class FlatSchemaSpec extends Specification { def is = s2"""
     val result = FlatSchema.build(schema)
 
     (result.subschemas must beEqualTo(expectedSubSchemas)) and (result.required must beEmpty)
+  }
+
+  def e14 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "a_field": {
+              "type": "integer"
+            },
+            "b_field": {
+              "type": "integer"
+            }
+          },
+          "required": ["b_field"],
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val schemaList = SchemaList.Full(NonEmptyList.of(initialSchema, secondSchema))
+
+    val res = extractOrder(FlatSchema.buildOrderedSubSchemas(schemaList))
+
+    val expected = List("foo", "b_field", "a_field")
+
+    res must beEqualTo(expected)
+  }
+
+  def e15 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val third = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            },
+            "aField": {
+              "type": "integer"
+            },
+            "cField": {
+              "type": "integer"
+            },
+            "dField": {
+              "type": "string"
+            }
+          },
+          "required": ["bar", "cField"],
+          "additionalProperties": false
+        }
+      """.schema
+    val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)), third)
+
+    val schemaList = SchemaList.Full(NonEmptyList.of(initialSchema, secondSchema, thirdSchema))
+
+    val res = extractOrder(FlatSchema.buildOrderedSubSchemas(schemaList))
+
+    val expected = List("foo", "bar", "c_field", "a_field", "d_field")
+
+    res must beEqualTo(expected)
+  }
+
+  def e16 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            },
+            "a_field": {
+              "type": "object",
+              "properties": {
+                "b_field": {
+                  "type": "string"
+                },
+                "c_field": {
+                  "type": "object",
+                  "properties": {
+                    "d_field": {
+                      "type": "string"
+                    },
+                    "e_field": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "d_field": {
+                  "type": "object"
+                }
+              },
+              "required": ["d_field"]
+            },
+            "b_field": {
+              "type": "integer"
+            },
+            "c_field": {
+              "type": "integer"
+            },
+            "d_field": {
+              "type": "object",
+              "properties": {
+                "e_field": {
+                  "type": "string"
+                },
+                "f_field": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": ["a_field"],
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val schemaList = SchemaList.Full(NonEmptyList.of(initialSchema, secondSchema))
+
+    val res = extractOrder(FlatSchema.buildOrderedSubSchemas(schemaList))
+
+    val expected = List(
+      "bar",
+      "foo",
+      "a_field.d_field",
+      "a_field.b_field",
+      "a_field.c_field.d_field",
+      "a_field.c_field.e_field",
+      "b_field",
+      "c_field",
+      "d_field.e_field",
+      "d_field.f_field"
+    )
+
+    res must beEqualTo(expected)
+  }
+
+  def e17 = {
+    val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string"
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+    val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+    val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            },
+            "a_field": {
+              "type": "object",
+              "properties": {
+                "b_field": {
+                  "type": "string"
+                },
+                "c_field": {
+                  "type": "object",
+                  "properties": {
+                    "d_field": {
+                      "type": "string"
+                    },
+                    "e_field": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "d_field": {
+                  "type": "object"
+                }
+              },
+              "required": ["d_field"]
+            },
+            "b_field": {
+              "type": "integer"
+            },
+            "c_field": {
+              "type": "integer"
+            },
+            "d_field": {
+              "type": "object",
+              "properties": {
+                "e_field": {
+                  "type": "string"
+                },
+                "f_field": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": ["a_field"],
+          "additionalProperties": false
+        }
+      """.schema
+    val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+    val third = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "bar": {
+              "type": "integer",
+              "maximum": 4000
+            },
+            "a_field": {
+              "type": "object",
+              "properties": {
+                "b_field": {
+                  "type": "string"
+                },
+                "c_field": {
+                  "type": "object",
+                  "properties": {
+                    "d_field": {
+                      "type": "string"
+                    },
+                    "e_field": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "d_field": {
+                  "type": "object"
+                }
+              },
+              "required": ["d_field"]
+            },
+            "b_field": {
+              "type": "integer"
+            },
+            "c_field": {
+              "type": "integer"
+            },
+            "d_field": {
+              "type": "object",
+              "properties": {
+                "e_field": {
+                  "type": "string"
+                },
+                "f_field": {
+                  "type": "string"
+                }
+              }
+            },
+            "e_field": {
+              "type": "object",
+              "properties": {
+                "f_field": {
+                  "type": "string"
+                },
+                "g_field": {
+                  "type": "string"
+                }
+              },
+              "required": ["g_field"]
+            },
+            "f_field": {
+              "type": "string"
+            },
+            "g_field": {
+              "type": "string"
+            }
+          },
+          "required": ["a_field", "f_field", "e_field"],
+          "additionalProperties": false
+        }
+      """.schema
+    val thirdSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,2)), third)
+
+    val schemaList = SchemaList.Full(NonEmptyList.of(initialSchema, secondSchema, thirdSchema))
+
+    val res = extractOrder(FlatSchema.buildOrderedSubSchemas(schemaList))
+
+    val expected = List(
+      "bar",
+      "foo",
+      "a_field.d_field",
+      "a_field.b_field",
+      "a_field.c_field.d_field",
+      "a_field.c_field.e_field",
+      "b_field",
+      "c_field",
+      "d_field.e_field",
+      "d_field.f_field",
+      "e_field.g_field",
+      "f_field",
+      "e_field.f_field",
+      "g_field"
+    )
+
+    res must beEqualTo(expected)
   }
 
   def bePointers(expected: Set[Pointer.SchemaPointer]): Matcher[Set[Pointer.SchemaPointer]] = { actual: Set[Pointer.SchemaPointer] =>

@@ -18,7 +18,7 @@ import io.circe.literal._
 import cats.data._
 import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer, SelfDescribingSchema}
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
-import com.snowplowanalytics.iglu.schemaddl.migrations.SchemaList.FullListCreationError._
+import com.snowplowanalytics.iglu.schemaddl.migrations.SchemaList.BuildError._
 import SchemaList._
 import org.specs2.Specification
 
@@ -39,7 +39,7 @@ class SchemaListSpec extends Specification { def is = s2"""
   def e1 = {
     val schemaMap = SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0))
 
-    val schemaListFull1 = SchemaListFull(createSchemas(schemaMap, 2))
+    val schemaListFull1 = Full(createSchemas(schemaMap, 2))
 
     val expected1 = NonEmptyList.of(
       NonEmptyList.of(
@@ -50,7 +50,7 @@ class SchemaListSpec extends Specification { def is = s2"""
 
     val comp1 = schemaListFull1.extractSegments.extractSchemaMaps must beEqualTo(expected1)
 
-    val schemaListFull2 = SchemaListFull(createSchemas(schemaMap, 4))
+    val schemaListFull2 = Full(createSchemas(schemaMap, 4))
 
     val expected2 = NonEmptyList.of(
       NonEmptyList.of(
@@ -92,7 +92,7 @@ class SchemaListSpec extends Specification { def is = s2"""
     val schemaMap = SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0))
     val schemas = createSchemas(schemaMap, 4)
 
-    val schemaListFull = SchemaListFull(schemas)
+    val schemaListFull = Full(schemas)
 
     val res1 = schemaListFull.afterIndex(1).extractSchemaMaps must beSome(
       NonEmptyList.of(
@@ -172,10 +172,10 @@ class SchemaListSpec extends Specification { def is = s2"""
     val schemaMap = SchemaMap("com.acme", "example1", "jsonschema", SchemaVer.Full(1,0,0))
 
     val modelGroup1 = ModelGroupList.groupSchemas(createSchemas(schemaMap, 4)).head
-    val schemaListFullComp = SchemaList.fromUnambiguous(modelGroup1) must beRight(SchemaListFull(modelGroup1.schemas))
+    val schemaListFullComp = SchemaList.fromUnambiguous(modelGroup1) must beRight(Full(modelGroup1.schemas))
 
     val modelGroup2 = ModelGroupList.groupSchemas(createSchemas(schemaMap, 1)).head
-    val singleSchemaComp = SchemaList.fromUnambiguous(modelGroup2) must beRight(SingleSchema(modelGroup2.schemas.head))
+    val singleSchemaComp = SchemaList.fromUnambiguous(modelGroup2) must beRight(Single(modelGroup2.schemas.head))
 
     schemaListFullComp and singleSchemaComp
   }
@@ -214,10 +214,10 @@ class SchemaListSpec extends Specification { def is = s2"""
     val shuffled = NonEmptyList.fromListUnsafe(Random.shuffle(group.toList))
     val shuffledModelGroup = ModelGroupList.groupSchemas(shuffled).head
     val notShuffledModelGroup = ModelGroupList.groupSchemas(group).head
-    val comp1 = SchemaList.unsafeBuildWithReorder(shuffledModelGroup) must beRight(SchemaListFull(notShuffledModelGroup.schemas))
+    val comp1 = SchemaList.unsafeBuildWithReorder(shuffledModelGroup) must beRight(Full(notShuffledModelGroup.schemas))
 
     val modelGroupWithSingleItem = ModelGroupList.groupSchemas(createSchemas(schemaMap, 1)).head
-    val comp2 = SchemaList.unsafeBuildWithReorder(modelGroupWithSingleItem) must beRight(SingleSchema(modelGroupWithSingleItem.schemas.head))
+    val comp2 = SchemaList.unsafeBuildWithReorder(modelGroupWithSingleItem) must beRight(Single(modelGroupWithSingleItem.schemas.head))
 
     comp1 and comp2
   }
@@ -251,8 +251,8 @@ class SchemaListSpec extends Specification { def is = s2"""
         GapInModelGroup(modelGroupWithGap)
       ),
       NonEmptyList.of(
-        SchemaListFull(correctMultiple),
-        SingleSchema(correctSingle.head)
+        Full(correctMultiple),
+        Single(correctSingle.head)
       )
     )
 
@@ -273,7 +273,7 @@ class SchemaListSpec extends Specification { def is = s2"""
     val schemaWithNonZeroAdditionComp = SchemaList.buildSingleSchema(schemaWithNonZeroAddition) must beNone
 
     val schemaWithCorrectVersion = schema.copy(self = schemaMap.version(SchemaVer.Full(1,0,0)))
-    val schemaWithCorrectVersionComp = SchemaList.buildSingleSchema(schemaWithCorrectVersion) must beSome(SingleSchema(schemaWithCorrectVersion))
+    val schemaWithCorrectVersionComp = SchemaList.buildSingleSchema(schemaWithCorrectVersion) must beSome(Single(schemaWithCorrectVersion))
 
     schemaWithModelZeroComp
       .and(schemaWithNonZeroRevisionComp)
@@ -305,12 +305,12 @@ class SchemaListSpec extends Specification { def is = s2"""
       SchemaMap(schemaMap.schemaKey.copy(version = version))
   }
 
-  private implicit class ExtractSchemaMapsFromSegments(val schemaListSegments: NonEmptyList[SchemaListSegment]) {
+  private implicit class ExtractSchemaMapsFromSegments(val schemaListSegments: NonEmptyList[Segment]) {
     def extractSchemaMaps: NonEmptyList[NonEmptyList[SchemaMap]] =
       schemaListSegments.map(_.schemas.map(_.self))
   }
 
-  private implicit class ExtractSchemaMapsFromOptionalSegment(val schemaListSegment: Option[SchemaListSegment]) {
+  private implicit class ExtractSchemaMapsFromOptionalSegment(val schemaListSegment: Option[Segment]) {
     def extractSchemaMaps: Option[NonEmptyList[SchemaMap]] =
       schemaListSegment.map(_.schemas.map(_.self))
   }

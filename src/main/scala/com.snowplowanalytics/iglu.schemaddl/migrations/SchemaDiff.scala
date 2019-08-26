@@ -64,7 +64,7 @@ object SchemaDiff {
   }
 
   /** Build `SchemaDiff` from list of schemas */
-  def build(source: SchemaListSegment): SchemaDiff = {
+  def build(source: Segment): SchemaDiff = {
     val result = source.schemas.tail.foldLeft(DiffMerge.init(source.schemas.head)) {
       case (acc, SelfDescribingSchema(_, schema)) =>
         val subschemas = FlatSchema.build(schema).subschemas

@@ -27,6 +27,11 @@ package object schemaddl {
     */
   type SubSchemas = Set[(Pointer.SchemaPointer, Schema)]
 
+  /**
+    * List of Schemas properties attached to corresponding JSON Pointers
+    * Unlike SubSchemas, they are ordered according to nullness of field,
+    * name of field and version which field is added
+    */
   type OrderedSubSchemas = List[(Pointer.SchemaPointer, Schema)]
 
   /**

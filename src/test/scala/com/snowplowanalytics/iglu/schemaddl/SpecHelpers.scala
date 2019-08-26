@@ -30,13 +30,9 @@ object SpecHelpers {
       .getOrElse(throw new RuntimeException("SpecHelpers.parseSchema received invalid JSON Schema"))
   }
 
-  def extractOrder(orderedSubSchemasMap: Map[SchemaMap, OrderedSubSchemas]): Map[SchemaMap, List[String]] =
-    orderedSubSchemasMap.map {
-      case(schemaMap, orderedSubSchemas) =>
-        val res = orderedSubSchemas.map {
-          case (p, _) => FlatSchema.getName(p)
-        }
-        (schemaMap, res)
+  def extractOrder(orderedSubSchemas: OrderedSubSchemas): List[String] =
+    orderedSubSchemas.map {
+      case (p, _) => FlatSchema.getName(p)
     }
 
   implicit class JsonOps(json: Json) {

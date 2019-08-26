@@ -28,7 +28,7 @@ object FlatData {
     * @param escape function used to escape string values, e.g. to fix newlines
     */
   def flatten(data: Json, source: SchemaList, escape: Option[String => String]): List[String] =
-    FlatSchema.buildOrderedSubSchemas(source).map(_._1.forData).map(pointer => getPath(pointer, data, escape))
+    FlatSchema.buildOrderedSubSchemas(source).map { case (pointer, _) => getPath(pointer.forData, data, escape) }
 
   /** Extract data from JSON payload using JsonPointer */
   def getPath(pointer: JsonPointer, json: Json, escape: Option[String => String]): String = {

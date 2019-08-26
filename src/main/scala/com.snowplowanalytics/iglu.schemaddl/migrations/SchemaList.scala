@@ -18,11 +18,12 @@ import cats.Monad
 import cats.data._
 import cats.implicits._
 import cats.kernel.Order
+import cats.Functor
 
 import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaList => SchemaKeyList, SchemaMap, SchemaVer}
 
 import com.snowplowanalytics.iglu.schemaddl.{IgluSchema, ModelGroup, VersionTree}
-import SchemaList.FullListCreationError._
+import SchemaList.BuildError._
 
 /**
   * Always belong to the same vendor/name/model triple.
@@ -35,53 +36,61 @@ object SchemaList {
   /**
     * Always belong to the same vendor/name/model triple,
     * always have at least two elements: head (initial x-0-0 schema) and latest schema
+    * It is isomorphic to Core SchemaList.
     */
-  case class SchemaListFull private(schemas: NonEmptyList[IgluSchema]) extends SchemaList {
+  sealed abstract case class Full(schemas: NonEmptyList[IgluSchema]) extends SchemaList {
 
     /**
       * Create SchemaListSegment from schemas in current SchemaListFull
       */
-    def toSegment: SchemaListSegment = SchemaListSegment(schemas)
+    def toSegment: Segment = Segment(schemas)
 
     /**
       * Create segments from all possible combinations of NonEmptyList(source,between,destination),
       */
-    def extractSegments: NonEmptyList[SchemaListSegment] = {
-      val res = SchemaList.buildMatrix(schemas.toList).map { case(_, _, nel) => SchemaListSegment(nel) }
+    def extractSegments: NonEmptyList[Segment] = {
+      val res = SchemaList.buildMatrix(schemas.toList).map { case (_, _, nel) => Segment(nel) }
       NonEmptyList.fromListUnsafe(res)
     }
 
     /**
       * Create new segment with items after index
       */
-    def afterIndex(i: Int): Option[SchemaListSegment] =
-      schemas.zipWithIndex.filter { case (_, c) => c >= i }.map(_._1) match {
-        case h :: t => Some(SchemaListSegment(NonEmptyList(h, t)))
+    private[migrations] def afterIndex(i: Int): Option[Segment] =
+      schemas.zipWithIndex.collect { case (s, c) if c >= i => s } match {
+        case h :: t => Some(Segment(NonEmptyList(h, t)))
         case _ => None
       }
   }
-  private[migrations] object SchemaListFull
+  object Full {
+    private[migrations] def apply(schemas: NonEmptyList[IgluSchema]) = new Full(schemas) {}
+  }
 
   /**
     * Represents schema list with single item.
     * It's version is always first of the model group
     * such that 1-0-0, 2-0-0 etc.
     */
-  case class SingleSchema private(schema: IgluSchema) extends SchemaList
-  private[migrations] object SingleSchema
+  sealed abstract case class Single(schema: IgluSchema) extends SchemaList
+  object Single {
+    private[migrations] def apply(schema: IgluSchema) = new Single(schema) {}
+  }
 
   /**
     * Has all properties of SchemaListFull except that it can miss initial or last schemas
     */
-  case class SchemaListSegment private(schemas: NonEmptyList[IgluSchema]) extends AnyVal
-  private[migrations] object SchemaListSegment
+  sealed abstract case class Segment(schemas: NonEmptyList[IgluSchema])
+
+  object Segment {
+    private[migrations] def apply(schemas: NonEmptyList[IgluSchema]) = new Segment(schemas) {}
+  }
 
   /**
     * Represents errors while creating SchemaFullList
     */
-  sealed trait FullListCreationError extends Product with Serializable
+  sealed trait BuildError extends Product with Serializable
 
-  object FullListCreationError {
+  object BuildError {
 
     /**
       * Returned when given model group have schemas which
@@ -90,42 +99,32 @@ object SchemaList {
       * could not be ordered unambiguously because it could be
       * either [1-0-0, 1-0-2, 1-1-0] or [1-0-0, 1-1-0, 1-0-2]
       */
-    case class AmbiguousOrder(schemas: ModelGroupList) extends FullListCreationError
+    case class AmbiguousOrder(schemas: ModelGroupList) extends BuildError
 
     /**
       * Returned when there is a gap in the schema list.
       * [1-0-0, 1-0-1, 1-0-3] is missing 1-0-2 version,
       * therefore gap error will be returned in this case
       */
-    case class GapInModelGroup(schemas: ModelGroupList) extends FullListCreationError
+    case class GapInModelGroup(schemas: ModelGroupList) extends BuildError
 
     /**
       * Represents unexpected error cases while creating SchemaFullList
       */
-    case class UnexpectedError(schemas: ModelGroupList) extends FullListCreationError
+    case class UnexpectedError(schemas: ModelGroupList) extends BuildError
   }
 
   /**
     * Always belong to the same vendor/name/model triple,
     * however different from SchemaList, no ordering is implied.
     */
-  sealed trait ModelGroupList {
-    val schemas: NonEmptyList[IgluSchema]
-
-    override def equals(that: Any): Boolean =
-      that match {
-        case that: ModelGroupList => {
-          that.schemas == schemas
-        }
-        case _ => false
-      }
-  }
+  sealed abstract case class ModelGroupList(schemas: NonEmptyList[IgluSchema])
 
   object ModelGroupList {
 
     /** Split schemas into a lists grouped by model group (still no order implied) */
     def groupSchemas(schemas: NonEmptyList[IgluSchema]): NonEmptyList[ModelGroupList] =
-      schemas.groupByNem(schema => getModelGroup(schema.self)).toNel.map { case (_, nel) => new ModelGroupList { val schemas = nel } }
+      schemas.groupByNem(schema => getModelGroup(schema.self)).toNel.map { case (_, nel) => new ModelGroupList(nel) {} }
   }
 
   /**
@@ -136,27 +135,21 @@ object SchemaList {
     * @return properly ordered list of parsed JSON Schemas
     */
   def fromSchemaList[F[_]: Monad, E](keys: SchemaKeyList, fetch: SchemaKey => EitherT[F, E, IgluSchema]): EitherT[F, E, SchemaList] =
-    for {
-      schemas <- keys.schemas.traverse { key => fetch(key) }
-    } yield {
-      schemas match {
-        case Nil => throw new IllegalStateException("Result list can not be empty")
-        case h :: Nil => SingleSchema(h)
-        case h :: t => SchemaListFull(NonEmptyList(h, t))
-      }
+    keys.schemas.traverse(key => fetch(key)).map {
+      case Nil => throw new IllegalStateException("Result list can not be empty")
+      case h :: Nil => Single(h)
+      case h :: t => Full(NonEmptyList(h, t))
     }
 
   /**
-    * Fetch NonEmptyList of IgluSchemas from Iglu Server, using generic resolution function
-    * @param fetch resolution function
+    * Build SchemaLists from fetched IgluSchemas. Given EitherT should
+    * wrap fetching schemas from /schemas endpoint of Iglu Server
+    * because they need to ordered.
+    * @param fetch EitherT which wraps list of ordered Iglu Schemas
     * @return list of SchemaLists which created from fetched schemas
     */
-  def buildMultipleFromFetchedSchemas[F[_]: Monad, E](fetch: => EitherT[F, E,  NonEmptyList[IgluSchema]]): EitherT[F, E, NonEmptyList[SchemaList]] =
-    for {
-      schemas <- fetch
-      res = ModelGroupList.groupSchemas(schemas)
-        .map(buildWithoutReorder)
-    } yield res
+  def fromFetchedSchemas[F[_]: Functor, E](fetch: EitherT[F, E,  NonEmptyList[IgluSchema]]): EitherT[F, E, NonEmptyList[SchemaList]] =
+    fetch.map(ModelGroupList.groupSchemas(_).map(buildWithoutReorder))
 
   /**
     * Construct `SchemaList` from list of schemas, but only if order is unambiguous (and no gaps)
@@ -167,13 +160,13 @@ object SchemaList {
     * @return error object as Either.left in case of transformation is not successful or
     *         created SchemaList as Either.right if everything is okay
     */
-  def fromUnambiguous(modelGroup: ModelGroupList): Either[FullListCreationError, SchemaList] = {
+  def fromUnambiguous(modelGroup: ModelGroupList): Either[BuildError, SchemaList] = {
     modelGroup.schemas match {
-      case NonEmptyList(h, Nil) => SingleSchema(h).asRight
+      case NonEmptyList(h, Nil) => Single(h).asRight
       case schemas if ambiguos(schemas.map(key)) => AmbiguousOrder(modelGroup).asLeft
       case schemas if !noGapsInModelGroup(schemas.map(key)) => GapInModelGroup(modelGroup).asLeft
-      case schemas if withinRevision(schemas.map(key)) => SchemaListFull(schemas.sortBy(_.self.schemaKey.version.addition)).asRight
-      case schemas if onlyInits(schemas.map(key)) => SchemaListFull(schemas.sortBy(_.self.schemaKey.version.revision)).asRight
+      case schemas if withinRevision(schemas.map(key)) => Full(schemas.sortBy(_.self.schemaKey.version.addition)).asRight
+      case schemas if onlyInits(schemas.map(key)) => Full(schemas.sortBy(_.self.schemaKey.version.revision)).asRight
       case _ => UnexpectedError(modelGroup).asLeft
     }
   }
@@ -187,12 +180,12 @@ object SchemaList {
     * @return error object as Either.left in case of transformation is not successful or
     *         created SchemaList as Either.right if everything is okay
     */
-  def unsafeBuildWithReorder(modelGroup: ModelGroupList): Either[FullListCreationError, SchemaList] = {
+  def unsafeBuildWithReorder(modelGroup: ModelGroupList): Either[BuildError, SchemaList] = {
     val sortedSchemas = modelGroup.schemas.sortBy(_.self.schemaKey)(Order.fromOrdering(SchemaKey.ordering))
     sortedSchemas match {
-      case NonEmptyList(h, Nil) => SingleSchema(h).asRight
+      case NonEmptyList(h, Nil) => Single(h).asRight
       case schemas if !noGapsInModelGroup(schemas.map(key)) => GapInModelGroup(modelGroup).asLeft
-      case _ => SchemaListFull(sortedSchemas).asRight
+      case _ => Full(sortedSchemas).asRight
     }
   }
 
@@ -203,7 +196,7 @@ object SchemaList {
     * @return non-empty list of errors while creating SchemaLists in Ior.left and
     *         non-empty list of SchemaList which created from given schemas in Ior.right
     */
-  def buildMultiple(schemas: NonEmptyList[IgluSchema]): Ior[NonEmptyList[FullListCreationError], NonEmptyList[SchemaList]] =
+  def buildMultiple(schemas: NonEmptyList[IgluSchema]): Ior[NonEmptyList[BuildError], NonEmptyList[SchemaList]] =
     ModelGroupList.groupSchemas(schemas).nonEmptyPartition(fromUnambiguous)
 
   /**
@@ -215,7 +208,7 @@ object SchemaList {
   def buildSingleSchema(schema: IgluSchema): Option[SchemaList] = {
     val version = schema.self.schemaKey.version
     if (version.model >= 1 && version.revision == 0 && version.addition == 0)
-      Some(SingleSchema(schema))
+      Some(Single(schema))
     else
       None
   }
@@ -228,8 +221,8 @@ object SchemaList {
     */
   private def buildWithoutReorder(modelGroup: ModelGroupList): SchemaList = {
     modelGroup.schemas match {
-      case NonEmptyList(h, Nil) => SingleSchema(h)
-      case schemas => SchemaListFull(schemas)
+      case NonEmptyList(h, Nil) => Single(h)
+      case schemas => Full(schemas)
     }
   }
 
