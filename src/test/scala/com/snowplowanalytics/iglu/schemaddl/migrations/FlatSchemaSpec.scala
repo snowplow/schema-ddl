@@ -154,6 +154,31 @@ class FlatSchemaSpec extends Specification { def is = s2"""
                 "type": "integer"
               }
             }
+          },
+          "a_field": {
+            "type": ["string", "integer"]
+          },
+          "b_field": {
+            "type": "string"
+          },
+          "c_field": {
+            "type": ["integer", "number"]
+          },
+          "d_field": {
+            "type": "object",
+            "properties": {
+              "one": {
+                "type": ["integer", "object"],
+                "properties": {
+                  "two": {
+                    "type": "string"
+                  },
+                  "three": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
           }
         },
         "additionalProperties": false
@@ -163,8 +188,34 @@ class FlatSchemaSpec extends Specification { def is = s2"""
     val result = FlatSchema.build(schema)
 
     val expectedSubschemas = Set(
-      "/properties/foo/properties/two".jsonPointer -> json"""{"type": ["integer", "null"]}""".schema,
-      "/properties/foo/properties/one".jsonPointer -> json"""{"type": ["string", "null"]}""".schema)
+      "/properties/foo".jsonPointer ->
+        json"""{
+          "type": ["string", "object", "null"],
+          "properties": {
+            "one": {
+              "type": "string"
+            },
+            "two": {
+              "type": "integer"
+            }
+          }
+        }""".schema,
+      "/properties/d_field/properties/one".jsonPointer ->
+        json"""{
+          "type": ["integer", "object", "null"],
+          "properties": {
+            "two": {
+              "type": "string"
+            },
+            "three": {
+              "type": "integer"
+            }
+          }
+        }""".schema,
+      "/properties/a_field".jsonPointer -> json"""{"type": ["string", "integer", "null"]}""".schema,
+      "/properties/b_field".jsonPointer -> json"""{"type": ["string", "null"]}""".schema,
+      "/properties/c_field".jsonPointer -> json"""{"type": ["integer", "number", "null"]}""".schema
+    )
 
     result.subschemas must beEqualTo(expectedSubschemas) and (result.required must beEmpty)
   }
@@ -298,16 +349,25 @@ class FlatSchemaSpec extends Specification { def is = s2"""
     """.schema
 
     val subSchemas = Set(
-      "/properties/union/properties/object_without_properties".jsonPointer ->
-        json"""{"type": ["object", "null"]}""".schema,
-      "/propertis/union".jsonPointer ->
-        json"""{"type": ["string", "null"]}""".schema)
+      "/properties/union".jsonPointer ->
+        json"""{
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "object_without_properties": { "type": "object" }
+              }
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }""".schema.copy(`type` = Some(Type.Null))
+    )
 
     val result = FlatSchema.build(json)
 
-
     (result.subschemas must beEqualTo(subSchemas)) and (result.required must beEmpty)
-    skipped("Should be improved")
   }
 
   def e10 = {

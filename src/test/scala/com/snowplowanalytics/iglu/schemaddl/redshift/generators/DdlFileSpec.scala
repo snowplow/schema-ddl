@@ -13,14 +13,21 @@
 package com.snowplowanalytics.iglu.schemaddl.redshift
 package generators
 
+import io.circe.literal._
+
 // specs2
 import org.specs2.Specification
 
 import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer}
+import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
+import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
 
 class DdlFileSpec extends Specification { def is = s2"""
   Check DDL File specification
     render correct table definition $e1
+    render correct table definition when given schema contains oneOf $e2
+    render correct table definition when given schema contains oneOf $e3
+    render correct table definition when given schema contains union type $e4
   """
 
   def e1 = {
@@ -66,5 +73,145 @@ class DdlFileSpec extends Specification { def is = s2"""
          |    "rocket.series" INT                      NULL
          |);
          |COMMENT ON TABLE atomic.launch_missles_1 IS 'iglu:com.acme/event/jsonschema/1-2-1';""".stripMargin)
+  }
+
+  def e2 = {
+    val json = json"""
+      {
+        "type": "object",
+        "properties": {
+          "union": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "object_without_properties": { "type": "object" }
+                }
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val expected =
+      """CREATE TABLE IF NOT EXISTS atomic.table_name (
+        |    "schema_vendor"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_name"    VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_format"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_version" VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "root_id"        CHAR(36)      ENCODE RAW  NOT NULL,
+        |    "root_tstamp"    TIMESTAMP     ENCODE ZSTD NOT NULL,
+        |    "ref_root"       VARCHAR(255)  ENCODE ZSTD NOT NULL,
+        |    "ref_tree"       VARCHAR(1500) ENCODE ZSTD NOT NULL,
+        |    "ref_parent"     VARCHAR(255)  ENCODE ZSTD NOT NULL,
+        |    "union"          VARCHAR(1024) ENCODE ZSTD,
+        |    FOREIGN KEY (root_id) REFERENCES atomic.events(event_id)
+        |)
+        |DISTSTYLE KEY
+        |DISTKEY (root_id)
+        |SORTKEY (root_tstamp);""".stripMargin
+
+    val flatSchema = FlatSchema.build(json)
+    val orderedSubSchemas = FlatSchema.order(flatSchema.subschemas)
+    val schemaCreate = DdlGenerator.generateTableDdl(orderedSubSchemas, "table_name", None, 1024, false)
+    val ddl = DdlFile(List(schemaCreate)).render(Nil)
+    ddl must beEqualTo(expected)
+  }
+
+  def e3 = {
+    val json = json"""
+      {
+        "type": "object",
+        "properties": {
+          "union": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val expected =
+      """CREATE TABLE IF NOT EXISTS atomic.table_name (
+        |    "schema_vendor"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_name"    VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_format"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_version" VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "root_id"        CHAR(36)      ENCODE RAW  NOT NULL,
+        |    "root_tstamp"    TIMESTAMP     ENCODE ZSTD NOT NULL,
+        |    "ref_root"       VARCHAR(255)  ENCODE ZSTD NOT NULL,
+        |    "ref_tree"       VARCHAR(1500) ENCODE ZSTD NOT NULL,
+        |    "ref_parent"     VARCHAR(255)  ENCODE ZSTD NOT NULL,
+        |    "union"          VARCHAR(1024) ENCODE ZSTD,
+        |    FOREIGN KEY (root_id) REFERENCES atomic.events(event_id)
+        |)
+        |DISTSTYLE KEY
+        |DISTKEY (root_id)
+        |SORTKEY (root_tstamp);""".stripMargin
+
+    val flatSchema = FlatSchema.build(json)
+    val orderedSubSchemas = FlatSchema.order(flatSchema.subschemas)
+    val schemaCreate = DdlGenerator.generateTableDdl(orderedSubSchemas, "table_name", None, 1024, false)
+    val ddl = DdlFile(List(schemaCreate)).render(Nil)
+    ddl must beEqualTo(expected)
+  }
+
+  def e4 = {
+    val json = json"""
+      {
+        "type": "object",
+        "properties": {
+          "union": {
+            "type": ["string", "object"],
+            "properties": {
+              "one": { "type": "string" },
+              "second": { "type": "string" }
+            }
+          },
+          "union2": {
+           "type": ["string", "object"],
+           "properties": {
+             "one": { "type": "string" },
+             "second": { "type": "string" }
+           }
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+    val expected =
+      """CREATE TABLE IF NOT EXISTS atomic.table_name (
+        |    "schema_vendor"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_name"    VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_format"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_version" VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "root_id"        CHAR(36)      ENCODE RAW  NOT NULL,
+        |    "root_tstamp"    TIMESTAMP     ENCODE ZSTD NOT NULL,
+        |    "ref_root"       VARCHAR(255)  ENCODE ZSTD NOT NULL,
+        |    "ref_tree"       VARCHAR(1500) ENCODE ZSTD NOT NULL,
+        |    "ref_parent"     VARCHAR(255)  ENCODE ZSTD NOT NULL,
+        |    "union"          VARCHAR(4096) ENCODE ZSTD,
+        |    "union2"         VARCHAR(4096) ENCODE ZSTD,
+        |    FOREIGN KEY (root_id) REFERENCES atomic.events(event_id)
+        |)
+        |DISTSTYLE KEY
+        |DISTKEY (root_id)
+        |SORTKEY (root_tstamp);""".stripMargin
+
+    val flatSchema = FlatSchema.build(json)
+    val orderedSubSchemas = FlatSchema.order(flatSchema.subschemas)
+    val schemaCreate = DdlGenerator.generateTableDdl(orderedSubSchemas, "table_name", None, 1024, false)
+    val ddl = DdlFile(List(schemaCreate)).render(Nil)
+    ddl must beEqualTo(expected)
   }
 }

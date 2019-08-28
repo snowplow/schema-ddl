@@ -77,6 +77,13 @@ final case class FlatSchema(subschemas: SubSchemas, required: Set[SchemaPointer]
         schema.`type`.exists(_.nullable) || schema.enum.exists(_.value.contains(Json.Null)) || acc
       }
 
+  def checkUnionSubSchema(pointer: SchemaPointer): Boolean =
+    subschemas
+      .filter { case (p, _) => p.isParentOf(pointer) }
+      .foldLeft(false) { case (acc, (_, schema)) =>
+        schema.`type`.exists(_.isUnion) || acc
+      }
+
   def toMap: Map[SchemaPointer, Schema] = ListMap(subschemas.toList: _*)
 
   def show: String = subschemas
@@ -102,17 +109,17 @@ object FlatSchema {
   }
 
   /** This property shouldn't have been added (FlatSchemaSpec.e4) */
-  def shouldBeIgnored(pointer: SchemaPointer): Boolean =
+  def shouldBeIgnored(pointer: SchemaPointer, flatSchema: FlatSchema): Boolean =
     pointer.value.exists {
       case Pointer.Cursor.DownProperty(Pointer.SchemaProperty.Items) => true
       case Pointer.Cursor.DownProperty(Pointer.SchemaProperty.PatternProperties) => true
+      case Pointer.Cursor.DownProperty(Pointer.SchemaProperty.OneOf) => true
       case _ => false
     } || (pointer.value.lastOption match {
       case Some(Pointer.Cursor.DownProperty(Pointer.SchemaProperty.OneOf)) =>
-        println("IGNORE")
         true
       case _ => false
-    })
+    }) || flatSchema.checkUnionSubSchema(pointer)
 
   def getRequired(cur: SchemaPointer, schema: Schema): Set[SchemaPointer] =
     schema
@@ -124,15 +131,17 @@ object FlatSchema {
 
   def save(pointer: SchemaPointer, schema: Schema): State[FlatSchema, Unit] =
     State.modify[FlatSchema] { flatSchema =>
-      if (shouldBeIgnored(pointer))
+      if (shouldBeIgnored(pointer, flatSchema))
         flatSchema
       else if (isLeaf(schema))
         flatSchema
           .withRequired(pointer, schema)
           .withLeaf(pointer, schema)
-      else flatSchema
-        .withRequired(pointer, schema)
-        .withParent(pointer, schema)
+      else {
+        flatSchema
+          .withRequired(pointer, schema)
+          .withParent(pointer, schema)
+      }
     }
 
   def order(subschemas: SubSchemas): List[(Pointer.SchemaPointer, Schema)] =
@@ -165,7 +174,7 @@ object FlatSchema {
 
   /** Check if schema contains `oneOf` with different types */
   private[schemaddl] def isHeterogeneousUnion(schema: Schema): Boolean = {
-    schema.oneOf match {
+    val oneOfCheck = schema.oneOf match {
       case Some(oneOf) =>
         val types = oneOf.value.map(_.`type`).unite.flatMap {
           case CommonProperties.Type.Union(set) => set.toList
@@ -174,5 +183,7 @@ object FlatSchema {
         types.distinct .filterNot(_ == CommonProperties.Type.Null) .length > 1
       case None => false
     }
+    val unionTypeCheck = schema.`type`.forall(t => t.isUnion)
+    oneOfCheck || unionTypeCheck
   }
 }
