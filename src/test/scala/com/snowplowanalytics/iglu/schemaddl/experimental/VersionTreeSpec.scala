@@ -34,9 +34,6 @@ class VersionTreeSpec extends Specification with ScalaCheck { def is = s2"""
   VersionTree.build builds an isomorphic VersionList $e11
   """
 
-  """
-  """.stripMargin
-
   def e1 = {
     val next = for {
       one <- VersionTree.Root.add(SchemaVer.Full(1,0,1))

@@ -902,6 +902,82 @@ class FlatSchemaSpec extends Specification {
 
       res must beEqualTo(expected)
     }
+
+    "duplicate columns if convention has been changed between camelCase and snake_case" >> {
+      // Cases like this should not be ADDITIONs in a first place and filtered out at schema creation time,
+      // but there are legacy schemas with cases like this
+      val initial = json"""
+        {
+          "type": "object",
+          "properties": {
+            "foo_bar": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+      val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+
+      val second = json"""
+        {
+          "type": "object",
+          "properties": {
+            "fooBar": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      """.schema
+      val secondSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,1)), second)
+
+      val schemaList = SchemaList.Full(NonEmptyList.of(initialSchema, secondSchema))
+
+      val res = extractOrder(FlatSchema.extractProperties(schemaList))
+
+      val expected = List("foo_bar", "foo_bar")
+
+      res must beEqualTo(expected)
+    }
+
+    "shred object-only oneOf into multiple columns" >> {
+      val input = json"""{
+        "type": "object",
+          "properties": {
+          "errors": {
+            "oneOf": [
+              {
+                "required": ["type", "parsingError"],
+                "properties": {
+                  "parsingError": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "enum": ["Parsing"]
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "resolutionError": { },
+                  "type": {
+                    "enum": ["SchemaResolution", "SchemaListResolution"]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }""".schema
+
+      val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), input)
+      val schemaList = SchemaList.Full(NonEmptyList.of(initialSchema))
+      val res = extractOrder(FlatSchema.extractProperties(schemaList))
+
+      skipped("Not supported yet")
+      res must beEqualTo(List("errors.parsingError", "errors.resolutionError", "errors.type"))
+    }
   }
 
   def bePointers(expected: Set[Pointer.SchemaPointer]): Matcher[Set[Pointer.SchemaPointer]] = { actual: Set[Pointer.SchemaPointer] =>
