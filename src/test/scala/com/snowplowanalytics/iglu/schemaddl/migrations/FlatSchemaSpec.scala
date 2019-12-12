@@ -978,6 +978,16 @@ class FlatSchemaSpec extends Specification {
       skipped("Not supported yet")
       res must beEqualTo(List("errors.parsingError", "errors.resolutionError", "errors.type"))
     }
+
+    "shred an empty schema into 0 columns" >> {
+      val initial = json""" {"type": "object"}""".schema
+      val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
+      val schemaList = SchemaList.Full(NonEmptyList.of(initialSchema))
+      val properties = FlatSchema.extractProperties(schemaList)
+      println(properties)
+      val res = extractOrder(properties)
+      res must beEmpty
+    }
   }
 
   def bePointers(expected: Set[Pointer.SchemaPointer]): Matcher[Set[Pointer.SchemaPointer]] = { actual: Set[Pointer.SchemaPointer] =>

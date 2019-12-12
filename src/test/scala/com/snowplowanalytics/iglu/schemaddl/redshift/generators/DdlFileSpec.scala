@@ -116,7 +116,7 @@ class DdlFileSpec extends Specification { def is = s2"""
         |SORTKEY (root_tstamp);""".stripMargin
 
     val flatSchema = FlatSchema.build(json)
-    val orderedSubSchemas = FlatSchema.order(flatSchema.subschemas)
+    val orderedSubSchemas = FlatSchema.postProcess(flatSchema.subschemas)
     val schemaCreate = DdlGenerator.generateTableDdl(orderedSubSchemas, "table_name", None, 1024, false)
     val ddl = DdlFile(List(schemaCreate)).render(Nil)
     ddl must beEqualTo(expected)
@@ -160,7 +160,7 @@ class DdlFileSpec extends Specification { def is = s2"""
         |SORTKEY (root_tstamp);""".stripMargin
 
     val flatSchema = FlatSchema.build(json)
-    val orderedSubSchemas = FlatSchema.order(flatSchema.subschemas)
+    val orderedSubSchemas = FlatSchema.postProcess(flatSchema.subschemas)
     val schemaCreate = DdlGenerator.generateTableDdl(orderedSubSchemas, "table_name", None, 1024, false)
     val ddl = DdlFile(List(schemaCreate)).render(Nil)
     ddl must beEqualTo(expected)
@@ -209,7 +209,7 @@ class DdlFileSpec extends Specification { def is = s2"""
         |SORTKEY (root_tstamp);""".stripMargin
 
     val flatSchema = FlatSchema.build(json)
-    val orderedSubSchemas = FlatSchema.order(flatSchema.subschemas)
+    val orderedSubSchemas = FlatSchema.postProcess(flatSchema.subschemas)
     val schemaCreate = DdlGenerator.generateTableDdl(orderedSubSchemas, "table_name", None, 1024, false)
     val ddl = DdlFile(List(schemaCreate)).render(Nil)
     ddl must beEqualTo(expected)

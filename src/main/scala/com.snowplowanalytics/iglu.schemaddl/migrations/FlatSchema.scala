@@ -144,9 +144,13 @@ object FlatSchema {
       }
     }
 
-  def order(subschemas: SubSchemas): List[(Pointer.SchemaPointer, Schema)] =
+  def postProcess(subschemas: SubSchemas): List[(Pointer.SchemaPointer, Schema)] =
     subschemas.toList.sortBy { case (pointer, schema) =>
       (schema.canBeNull, getName(pointer))
+    } match {
+      case List((SchemaPointer(Nil), s)) if s.properties.forall(_.value.isEmpty) =>
+        List()
+      case other => other
     }
 
   /**
@@ -160,10 +164,10 @@ object FlatSchema {
     source match {
       case s: SchemaList.Single =>
         val origin = build(s.schema.schema)
-        order(origin.subschemas)
+        postProcess(origin.subschemas)
       case s: SchemaList.Full =>
         val origin = build(s.schemas.head.schema)
-        val originColumns = order(origin.subschemas)
+        val originColumns = postProcess(origin.subschemas)
         val addedColumns = Migration.fromSegment(s.toSegment).diff.added
         originColumns ++ addedColumns
     }

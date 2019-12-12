@@ -33,7 +33,7 @@ case class SchemaDiff(added: List[(Pointer.SchemaPointer, Schema)],
                       removed: List[(Pointer.SchemaPointer, Schema)]) {
 
   def merge(other: SchemaDiff): SchemaDiff =
-    SchemaDiff(added ++ FlatSchema.order(other.added.toSet), modified ++ other.modified, removed ++ other.removed)
+    SchemaDiff(added ++ FlatSchema.postProcess(other.added.toSet), modified ++ other.modified, removed ++ other.removed)
 }
 
 object SchemaDiff {
