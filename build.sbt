@@ -15,7 +15,7 @@ lazy val root = project.in(file("."))
   .settings(
     organization       := "com.snowplowanalytics",
     name               := "schema-ddl",
-    version            := "0.11.0",
+    version            := "0.11.0-M2",
     description        := "Set of Abstract Syntax Trees for various DDL and Schema formats",
     scalaVersion       := "2.12.8",
     crossScalaVersions := Seq("2.12.8", "2.13.2"),
