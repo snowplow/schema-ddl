@@ -19,7 +19,7 @@ import cats.data.{ EitherT, NonEmptyList, Ior }
 import cats.implicits._
 import cats.kernel.Order
 
-import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaList => SchemaKeyList, SchemaMap, SchemaVer}
+import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaMap, SchemaVer, SchemaList => SchemaKeyList}
 
 import com.snowplowanalytics.iglu.schemaddl.{IgluSchema, ModelGroup}
 import com.snowplowanalytics.iglu.schemaddl.experimental.VersionTree
@@ -30,13 +30,30 @@ import com.snowplowanalytics.iglu.schemaddl.experimental.VersionTree
   * without knowing it Schemas should always belong to the same vendor/name/model
   * and sorted by schema-creation time (static order can be known only for
   * unambiguous groups) and have all known versions (no gaps) Isomorphic to
-  * Iglu Core's [[SchemaList]]
+  * Iglu Core's `SchemaList`
   */
 sealed trait SchemaList extends Product with Serializable {
   /** Get the latest [[SchemaMap]] in a group */
   def latest: SchemaMap = this match {
     case SchemaList.Full(schemas) => schemas.last.self
     case SchemaList.Single(schema) => schema.self
+  }
+
+  /** Drop all schemas *after* certain version; Return `None` if vendor/name do not match */
+  def until(schemaKey: SchemaKey): Option[SchemaList] = {
+    val vendor = latest.schemaKey.vendor
+    val name = latest.schemaKey.name
+    val model = latest.schemaKey.version.model
+
+    if (vendor != schemaKey.vendor || name != schemaKey.name || model != schemaKey.version.model) None
+    else this match {
+      case _: SchemaList.Single => this.some
+      case SchemaList.Full(schemas) =>
+        val list = schemas.toList.span(_.self.schemaKey != schemaKey) match {
+          case (before, after) => NonEmptyList.fromListUnsafe(before ::: after.take(1))
+        }
+        SchemaList.Full(list).some
+    }
   }
 }
 
