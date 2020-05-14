@@ -12,13 +12,14 @@
  */
 
 import sbt._
+import Keys._
 
 object Dependencies {
   object V {
     // Scala
-    val igluCore         = "0.5.1"
-    val igluCoreJson4s   = "0.5.0"
-    val circe            = "0.11.1"
+    val igluCore         = "1.0.0"
+    val igluCoreJson4s   = "1.0.0"
+    val circe            = "0.13.0"
     val jsonValidator    = "2.2.10"
 
     // Scala (test only)

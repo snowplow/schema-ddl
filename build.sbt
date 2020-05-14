@@ -18,12 +18,13 @@ lazy val root = project.in(file("."))
     version            := "0.10.0",
     description        := "Set of Abstract Syntax Trees for various DDL and Schema formats",
     scalaVersion       := "2.12.8",
-    crossScalaVersions := Seq("2.11.12", "2.12.8"),
+    crossScalaVersions := Seq("2.12.8"),
     scalacOptions      := BuildSettings.compilerOptions,
     javacOptions       := BuildSettings.javaCompilerOptions
   )
   .settings(BuildSettings.buildSettings)
   .settings(libraryDependencies ++= Seq(
+    "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     Dependencies.Libraries.igluCoreJson4s,
     Dependencies.Libraries.igluCoreCirce,
     Dependencies.Libraries.circeGeneric,
