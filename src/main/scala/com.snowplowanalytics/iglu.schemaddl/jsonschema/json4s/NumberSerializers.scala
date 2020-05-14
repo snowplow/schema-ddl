@@ -15,6 +15,7 @@ package jsonschema.json4s
 
 // json4s
 import org.json4s._
+import org.json4s.jackson.JsonMethods.compact
 
 // This library
 import jsonschema.properties.NumberProperty._
@@ -25,7 +26,7 @@ object NumberSerializers {
     {
       case JInt(value)    => MultipleOf.IntegerMultipleOf(value)
       case JDouble(value) => MultipleOf.NumberMultipleOf(value)
-      case x => throw new MappingException(x + " isn't a numeric value")
+      case x => throw new MappingException(compact(x) + " isn't a numeric value")
     },
 
     {
@@ -38,7 +39,7 @@ object NumberSerializers {
     {
       case JInt(value)    => Maximum.IntegerMaximum(value)
       case JDouble(value) => Maximum.NumberMaximum(value)
-      case x => throw new MappingException(x + " isn't a numeric value")
+      case x => throw new MappingException(compact(x) + " isn't a numeric value")
     },
 
     {
@@ -51,7 +52,7 @@ object NumberSerializers {
     {
       case JInt(value)    => Minimum.IntegerMinimum(value)
       case JDouble(value) => Minimum.NumberMinimum(value)
-      case x => throw new MappingException(x + " isn't numeric value")
+      case x => throw new MappingException(compact(x) + " isn't numeric value")
     },
 
     {

@@ -13,13 +13,17 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 package circe
 
-import io.circe._
-
 import cats.syntax.either._
+
+import io.circe._
 
 import properties.NumberProperty._
 
 trait NumberDecoders {
+
+  // Delete after 2.12 dropped
+  private[circe] val unusedImportHack2 = "".asRight
+
   implicit val multipleOfSerializer: Decoder[MultipleOf] =
     Decoder.instance { cursor: HCursor =>
       cursor.as[BigInt].map(MultipleOf.IntegerMultipleOf)

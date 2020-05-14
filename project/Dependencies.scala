@@ -21,9 +21,10 @@ object Dependencies {
     val igluCoreJson4s   = "1.0.0"
     val circe            = "0.13.0"
     val jsonValidator    = "2.2.10"
+    val libCompat        = "2.1.6"
 
     // Scala (test only)
-    val specs2           = "4.3.2"
+    val specs2           = "4.8.0"
     val scalaCheck       = "1.14.0"
   }
 
@@ -32,6 +33,7 @@ object Dependencies {
     val igluCoreJson4s   = "com.snowplowanalytics"      %% "iglu-core-json4s"       % V.igluCoreJson4s
     val igluCoreCirce    = "com.snowplowanalytics"      %% "iglu-core-circe"        % V.igluCore
     val circeGeneric     = "io.circe"                   %% "circe-generic"          % V.circe
+    val libCompat        = "org.scala-lang.modules"     %% "scala-collection-compat" % V.libCompat
     // Java
     val jsonValidator    = "com.github.java-json-tools" %  "json-schema-validator"  % V.jsonValidator
     // Scala (test only)

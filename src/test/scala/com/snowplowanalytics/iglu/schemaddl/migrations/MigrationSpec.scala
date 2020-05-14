@@ -293,7 +293,7 @@ class MigrationSpec extends Specification { def is = s2"""
 
     val res = Migration.migrateFrom(nonExistingSchemaKey, orderedSchemas)
 
-    res must beLeft(BuildError.UnknownSchemaKey)
+    res must beLeft(BuildError.UnknownSchemaKey: BuildError)
   }
 
   def e10 = {
@@ -351,7 +351,7 @@ class MigrationSpec extends Specification { def is = s2"""
 
     val res = Migration.migrateFrom(thirdSchema.self.schemaKey, orderedSchemas)
 
-    res must beLeft(BuildError.NoOp)
+    res must beLeft(BuildError.NoOp: BuildError)
   }
 
   def e11 = {

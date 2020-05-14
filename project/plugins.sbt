@@ -1,3 +1,4 @@
 addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.4")
-addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.7")
+addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.1.11")
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.0")
+

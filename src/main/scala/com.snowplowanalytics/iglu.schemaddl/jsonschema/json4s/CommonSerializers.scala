@@ -40,8 +40,10 @@ object CommonSerializers {
     json match {
       case JString(string) => Json.fromString(string)
       case JInt(int) => Json.fromBigInt(int)
+      case JLong(long) => Json.fromBigInt(long)
       case JBool(bool) => Json.fromBoolean(bool)
       case JArray(arr) => Json.fromValues(arr.map(toCirce))
+      case JSet(set) => Json.fromValues(set.map(toCirce))
       case JDouble(num) => Json.fromDoubleOrNull(num)
       case JDecimal(decimal) => Json.fromBigDecimal(decimal)
       case JObject(fields) => Json.fromFields(fields.map { case (k, v) => (k, toCirce(v)) })
@@ -66,7 +68,7 @@ object CommonSerializers {
           case Right(singleType) => singleType
           case Left(invalid)             => throw new MappingException(invalid + " is not valid list of types")
         }
-      case x => throw new MappingException(x + " is not valid list of types")
+      case x => throw new MappingException(compact(x) + " is not valid list of types")
     },
 
     {
@@ -77,7 +79,7 @@ object CommonSerializers {
   object DescriptionSerializer extends CustomSerializer[Description](_ => (
     {
       case JString(value) => Description(value)
-      case x => throw new MappingException(x + " isn't valid description")
+      case x => throw new MappingException(compact(x) + " isn't valid description")
     },
 
     {
@@ -89,7 +91,7 @@ object CommonSerializers {
   object EnumSerializer extends CustomSerializer[Enum](_ => (
     {
       case JArray(values) => Enum(values.map(toCirce))
-      case x => throw new MappingException(x + " isn't valid enum")
+      case x => throw new MappingException(compact(x) + " isn't valid enum")
     },
 
     {
@@ -102,7 +104,7 @@ object CommonSerializers {
       case JArray(values) =>
         val schemas: List[Option[Schema]] = values.map(Schema.parse(_))
         if (schemas.forall(_.isDefined)) OneOf(schemas.map(_.get))
-        else throw new MappingException(values + " need to be array of Schemas")
+        else throw new MappingException(compact(JArray(values)) + " need to be array of Schemas")
     },
 
     {

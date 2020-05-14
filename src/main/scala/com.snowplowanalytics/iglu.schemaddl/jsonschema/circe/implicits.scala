@@ -13,8 +13,6 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 package circe
 
-import cats.syntax.either._
-
 import io.circe.{ Decoder, Json }
 import io.circe.generic.semiauto._
 

@@ -13,13 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl.experimental
 
 import cats.data.NonEmptyList
-import cats.instances.either._
-import cats.instances.int._
-import cats.instances.list._
-import cats.syntax.either._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.reducible._
+import cats.implicits._
 
 import com.snowplowanalytics.iglu.core.SchemaVer
 import com.snowplowanalytics.iglu.schemaddl.experimental.VersionTree._
@@ -224,7 +218,7 @@ object VersionTree {
       * @param addition version to add
       */
     private[schemaddl] def add(aggregated: List[Int], addition: Int): Either[AddingError, Additions] = {
-      getAdditionPosition(aggregated, addition).as { Additions(addition :: values) }
+      getAdditionPosition(aggregated, addition).as(Additions(addition :: values))
     }
 
     def show: String = values.mkString_("[", ",", "]")
@@ -260,7 +254,7 @@ object VersionTree {
       result <- if (addition == set.maximumOption.getOrElse(0) + 1) ().asRight else AddingError.AlreadyExists.asLeft
     } yield result
 
-  private def gapCheck(elements: NonEmptyList[Int], zeroBased: Boolean) = {
+  private def gapCheck(elements: NonEmptyList[Int], zeroBased: Boolean): Either[NonEmptyList[Int], Unit] = {
     val start = if (zeroBased) 0 else 1
     val max = elements.maximum
     val diff = Range(start, max).diff(elements.toList).toList

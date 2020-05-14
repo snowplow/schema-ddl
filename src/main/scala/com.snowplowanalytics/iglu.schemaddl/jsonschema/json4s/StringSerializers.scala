@@ -15,6 +15,7 @@ package jsonschema.json4s
 
 // json4s
 import org.json4s._
+import org.json4s.jackson.JsonMethods.compact
 
 // This library
 import jsonschema.properties.StringProperty._
@@ -35,7 +36,7 @@ object StringSerializers {
   object MinLengthSerializer extends CustomSerializer[MinLength](_ => (
     {
       case JInt(value) if value >= 0 => MinLength(value)
-      case x => throw new MappingException(x + " isn't minLength")
+      case x => throw new MappingException(compact(x) + " isn't minLength")
     },
 
     {
@@ -47,7 +48,7 @@ object StringSerializers {
   object MaxLengthSerializer extends CustomSerializer[MaxLength](_ => (
     {
       case JInt(value) if value >= 0 => MaxLength(value)
-      case x => throw new MappingException(x + " isn't maxLength")
+      case x => throw new MappingException(compact(x) + " isn't maxLength")
     },
 
     {
@@ -58,7 +59,7 @@ object StringSerializers {
   object PatternSerializer extends CustomSerializer[Pattern](_ => (
     {
       case JString(value) => Pattern(value)
-      case x => throw new MappingException(x + " isn't valid regex")
+      case x => throw new MappingException(compact(x) + " isn't valid regex")
     },
 
     {

@@ -13,13 +13,16 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 package circe
 
-import cats.implicits._
+import cats.syntax.either._
 
 import io.circe._
 
 import properties.ArrayProperty._
 
 trait ArrayDecoders {
+
+  // Delete after 2.12 dropped
+  private[circe] val unusedImportHack1 = "".asRight
 
   implicit def schemaDecoder: Decoder[Schema]
 

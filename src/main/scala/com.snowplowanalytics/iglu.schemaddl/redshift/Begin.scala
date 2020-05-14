@@ -19,7 +19,7 @@ case class Begin(isolationLevel: Option[IsolationLevel.type], permission: Option
   }
 
   private def envelope(attrs: List[String]): String = attrs match {
-    case t :: _ => attrs.mkString(" ")
+    case _ :: _ => attrs.mkString(" ")
     case Nil    => ""
   }
 }
