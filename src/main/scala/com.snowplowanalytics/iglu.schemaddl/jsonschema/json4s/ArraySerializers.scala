@@ -15,6 +15,7 @@ package jsonschema.json4s
 
 // json4s
 import org.json4s._
+import org.json4s.jackson.compactJson
 
 // this library
 import jsonschema.Schema
@@ -30,13 +31,13 @@ object ArraySerializers {
       case schema: JObject =>
         Schema.parse(schema.asInstanceOf[JValue]) match {
           case Some(s) => Items.ListItems(s)
-          case None    => throw new MappingException(schema + " isn't Schema")
+          case None    => throw new MappingException(compactJson(schema) + " isn't Schema")
         }
       case tuple: JArray =>
         val schemas: List[Option[Schema]] = tuple.arr.map(Schema.parse(_))
         if (schemas.forall(_.isDefined)) Items.TupleItems(schemas.map(_.get))
-        else throw new MappingException(tuple + " need to be array of Schemas")
-      case x => throw new MappingException(x + " isn't valid items")
+        else throw new MappingException(compactJson(tuple) + " need to be array of Schemas")
+      case x => throw new MappingException(compactJson(x) + " isn't valid items")
     },
 
     {
@@ -50,9 +51,9 @@ object ArraySerializers {
       case JBool(bool) => AdditionalItems.AdditionalItemsAllowed(bool)
       case obj: JObject => Schema.parse(obj.asInstanceOf[JValue]) match {
         case Some(schema) => AdditionalItems.AdditionalItemsSchema(schema)
-        case _ => throw new MappingException(obj + " isn't Schema")
+        case _ => throw new MappingException(compactJson(obj) + " isn't Schema")
       }
-      case x => throw new MappingException(x + " isn't bool")
+      case x => throw new MappingException(compactJson(x) + " isn't bool")
     },
 
     {
@@ -64,7 +65,7 @@ object ArraySerializers {
   object MinItemsSerializer extends CustomSerializer[MinItems](_ => (
     {
       case JInt(value) => MinItems(value)
-      case x => throw new MappingException(x + " isn't minLength")
+      case x => throw new MappingException(compactJson(x) + " isn't minLength")
     },
 
     {
@@ -75,7 +76,7 @@ object ArraySerializers {
   object MaxItemsSerializer extends CustomSerializer[MaxItems](_ => (
     {
       case JInt(value) => MaxItems(value)
-      case x => throw new MappingException(x + " isn't maxItems")
+      case x => throw new MappingException(compactJson(x) + " isn't maxItems")
     },
 
     {

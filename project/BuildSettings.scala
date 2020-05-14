@@ -20,24 +20,7 @@ object BuildSettings {
 
   lazy val basicSettigns = Seq(
     shellPrompt := { _ => "schema-ddl> " },
-    addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.7")
-  )
-
-  lazy val compilerOptions = Seq(
-    "-deprecation",
-    "-encoding", "UTF-8",
-    "-feature",
-    "-language:existentials",
-    "-language:higherKinds",
-    "-language:implicitConversions",
-    "-unchecked",
-    "-Yno-adapted-args",
-    "-Ypartial-unification",
-    "-Ywarn-dead-code",
-    "-Ywarn-numeric-widen",
-    "-Ywarn-unused-import",
-    "-Xfuture",
-    "-Xlint"
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full)
   )
 
   lazy val javaCompilerOptions = Seq(

@@ -70,7 +70,7 @@ class BumpsSpec extends Specification {
 
       val diff = SchemaDiff.empty.copy(modified = Set(modified))
 
-      Bumps.getPointer(diff) must beSome(VersionKind.Revision)
+      Bumps.getPointer(diff) must beSome(VersionKind.Revision: VersionKind)
     }
 
     "identify constraint change as a revision" >> {
@@ -81,7 +81,7 @@ class BumpsSpec extends Specification {
 
       val diff = SchemaDiff.empty.copy(modified = Set(modified))
 
-      Bumps.getPointer(diff) must beSome(VersionKind.Revision)
+      Bumps.getPointer(diff) must beSome(VersionKind.Revision: VersionKind)
     }
 
     "identify added optional property AND constraint change as a revision" >> {
@@ -94,14 +94,14 @@ class BumpsSpec extends Specification {
 
       val diff = SchemaDiff.empty.copy(added = List(addedProps), modified = Set(modified))
 
-      Bumps.getPointer(diff) must beSome(VersionKind.Revision)
+      Bumps.getPointer(diff) must beSome(VersionKind.Revision: VersionKind)
     }
 
     "identify added optional property as an addition" >> {
       val addedProps = "/properties/bar".jsonPointer -> json"""{"type": ["string", "null"]}""".schema
       val diff = SchemaDiff.empty.copy(added = List(addedProps))
 
-      Bumps.getPointer(diff) must beSome(VersionKind.Addition)
+      Bumps.getPointer(diff) must beSome(VersionKind.Addition: VersionKind)
     }
   }
 }

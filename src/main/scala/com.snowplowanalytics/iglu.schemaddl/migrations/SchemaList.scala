@@ -33,7 +33,7 @@ import com.snowplowanalytics.iglu.schemaddl.experimental.VersionTree
   * Iglu Core's `SchemaList`
   */
 sealed trait SchemaList extends Product with Serializable {
-  /** Get the latest [[SchemaMap]] in a group */
+  /** Get the latest `SchemaMap` in a group */
   def latest: SchemaMap = this match {
     case SchemaList.Full(schemas) => schemas.last.self
     case SchemaList.Single(schema) => schema.self

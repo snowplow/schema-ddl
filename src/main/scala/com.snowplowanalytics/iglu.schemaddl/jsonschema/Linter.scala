@@ -317,7 +317,7 @@ object Linter {
     case class Details(keys: Set[String]) extends Issue {
       val linter = self
       def show: String =
-        s"""Use "type: null" to indicate a field as optional for properties ${keys.mkString(",")}"""
+        s"""Use "type: null" to indicate a field as optional for properties ${keys.toList.sorted.mkString(",")}"""
     }
 
     def apply(jsonPointer: Pointer.SchemaPointer, schema: Schema): Validated[Issue, Unit] =
@@ -364,7 +364,7 @@ object Linter {
       (jsonPointer, schema.`$schema`) match {
         case (Pointer.Root, Some(SchemaUri(value))) =>
           if (value == Schema.SelfDescribingUri) noIssues else Details(s"Given $$schema is not ${Schema.SelfDescribingUri}").invalid
-        case (Pointer.Root, None) => Details("No $schema field in top-level of schema").invalid
+        case (Pointer.Root, None) => Details(s"No $$schema field in top-level of schema").invalid
         case _ => noIssues
       }
   }

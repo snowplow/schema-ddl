@@ -87,7 +87,7 @@ object StringProperty {
   }
 
   /**
-    * Class representing `$schema` keyword
+    * Class representing `$$schema` keyword
     *
     * @see https://json-schema.org/understanding-json-schema/reference/schema.html
     */

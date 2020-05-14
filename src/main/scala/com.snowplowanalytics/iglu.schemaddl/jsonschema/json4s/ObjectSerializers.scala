@@ -18,6 +18,7 @@ import scala.annotation.tailrec
 
 // json4s
 import org.json4s._
+import org.json4s.jackson.JsonMethods.compact
 
 // This library
 import jsonschema.Schema
@@ -45,11 +46,11 @@ object ObjectSerializers {
           case Some(p) => Properties(p)
           case None => throw new MappingException("Isn't properties")
         }
-      case x => throw new MappingException(x + " isn't properties")
+      case x => throw new MappingException(compact(x) + " isn't properties")
     },
 
     {
-      case Properties(fields) => JObject(fields.mapValues(Schema.normalize(_)).toList)
+      case Properties(fields) => JObject(fields.toList.map { case (k, v) => k -> Schema.normalize(v) })
     }
     ))
 
@@ -58,9 +59,9 @@ object ObjectSerializers {
       case JBool(bool) => AdditionalProperties.AdditionalPropertiesAllowed(bool)
       case obj: JObject => Schema.parse(obj: JValue) match {
         case Some(schema) => AdditionalProperties.AdditionalPropertiesSchema(schema)
-        case None => throw new MappingException(obj + " isn't additionalProperties")
+        case None => throw new MappingException(compact(obj) + " isn't additionalProperties")
       }
-      case x => throw new MappingException(x + " isn't bool")
+      case x => throw new MappingException(compact(x) + " isn't bool")
     },
 
     {
@@ -75,7 +76,7 @@ object ObjectSerializers {
         case Some(k) => Required(k)
         case None => throw new MappingException("required array can contain only strings")
       }
-      case x => throw new MappingException(x + " isn't bool")
+      case x => throw new MappingException(compact(x) + " isn't bool")
     },
 
     {
@@ -92,11 +93,11 @@ object ObjectSerializers {
           case Some(p) => PatternProperties(p)
           case None => throw new MappingException("Isn't patternProperties")
         }
-      case x => throw new MappingException(x + " isn't patternProperties")
+      case x => throw new MappingException(compact(x) + " isn't patternProperties")
     },
 
     {
-      case PatternProperties(fields) => JObject(fields.mapValues(Schema.normalize(_)).toList)
+      case PatternProperties(fields) => JObject(fields.toList.map { case (k, v) => k -> Schema.normalize(v) } )
     }
     ))
 }

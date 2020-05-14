@@ -26,7 +26,7 @@ import com.github.fge.jsonschema.processors.syntax.SyntaxValidator
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import com.github.fge.msgsimple.bundle.MessageBundle
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import cats.data.{ NonEmptyList, ValidatedNel }
 import cats.syntax.validated._

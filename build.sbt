@@ -18,8 +18,7 @@ lazy val root = project.in(file("."))
     version            := "0.10.0",
     description        := "Set of Abstract Syntax Trees for various DDL and Schema formats",
     scalaVersion       := "2.12.8",
-    crossScalaVersions := Seq("2.12.8"),
-    scalacOptions      := BuildSettings.compilerOptions,
+    crossScalaVersions := Seq("2.12.8", "2.13.2"),
     javacOptions       := BuildSettings.javaCompilerOptions
   )
   .settings(BuildSettings.buildSettings)
@@ -31,6 +30,7 @@ lazy val root = project.in(file("."))
     Dependencies.Libraries.circeLiteral,
     Dependencies.Libraries.circeParser,
     Dependencies.Libraries.jsonValidator,
+    Dependencies.Libraries.libCompat,
     // Scala (test only)
     Dependencies.Libraries.specs2,
     Dependencies.Libraries.scalaCheck,

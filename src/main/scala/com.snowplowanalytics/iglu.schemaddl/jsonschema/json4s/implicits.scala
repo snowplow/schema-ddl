@@ -5,8 +5,6 @@ import org.json4s._
 
 object implicits {
 
-  import Formats._
-
   import com.snowplowanalytics.iglu.schemaddl.jsonschema.json4s.Formats.allFormats
 
   /**

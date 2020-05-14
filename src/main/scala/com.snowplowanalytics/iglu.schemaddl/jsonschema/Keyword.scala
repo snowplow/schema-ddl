@@ -17,87 +17,87 @@ object Keyword {
   // with prop: (was, became)
 
   case object MultipleOf extends Keyword {
-    val name = 'multipleOf
+    val name = Symbol("multipleOf")
     val recursive = false
   }
   case object Minimum extends Keyword {
-    val name = 'minimum
+    val name = Symbol("minimum")
     val recursive = false
   }
   case object Maximum extends Keyword {
-    val name = 'maximum
+    val name = Symbol("maximum")
     val recursive = false
   }
 
   case object MaxLength extends Keyword {
-    val name = 'maxLength
+    val name = Symbol("maxLength")
     val recursive = false
   }
   case object MinLength extends Keyword {
-    val name = 'minLength
+    val name = Symbol("minLength")
     val recursive = false
   }
   case object Pattern extends Keyword {
-    val name = 'pattern
+    val name = Symbol("pattern")
     val recursive = false
   }
   case object Format extends Keyword {
-    val name = 'format
+    val name = Symbol("format")
     val recursive = false
   }
   case object SchemaUri extends Keyword {
-    val name = '$schema
+    val name = Symbol("$schema")
     val recursive = false
   }
 
   case object Items extends Keyword {
-    val name = 'items
+    val name = Symbol("items")
     val recursive = true
   }
   case object AdditionalItems extends Keyword {
-    val name = 'additionalItems
+    val name = Symbol("additionalItems")
     val recursive = true
   }
   case object MinItems extends Keyword {
-    val name = 'minItems
+    val name = Symbol("minItems")
     val recursive = false
   }
   case object MaxItems extends Keyword {
-    val name = 'maxItems
+    val name = Symbol("maxItems")
     val recursive = false
   }
 
   case object Properties extends Keyword {
-    val name = 'properties
+    val name = Symbol("properties")
     val recursive = true
   }
   case object AdditionalProperties extends Keyword {
-    val name = 'additionalProperties
+    val name = Symbol("additionalProperties")
     val recursive = true
   }
   case object Required extends Keyword {
-    val name = 'required
+    val name = Symbol("required")
     val recursive = false
   }
   case object PatternProperties extends Keyword {
-    val name = 'patternProperties
+    val name = Symbol("patternProperties")
     val recursive = true
   }
 
   case object Type extends Keyword {
-    val name = 'type
+    val name = Symbol("type")
     val recursive = false
   }
   case object Enum extends Keyword {
-    val name = 'enum
+    val name = Symbol("enum")
     val recursive = false
   }
   case object OneOf extends Keyword {
-    val name = 'oneOf
+    val name = Symbol("oneOf")
     val recursive = true
   }
   case object Description extends Keyword {
-    val name = 'description
+    val name = Symbol("description")
     val recursive = false
   }
 }

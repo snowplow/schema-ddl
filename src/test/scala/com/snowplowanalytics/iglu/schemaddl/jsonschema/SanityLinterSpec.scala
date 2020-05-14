@@ -13,6 +13,8 @@
 package com.snowplowanalytics.iglu.schemaddl
 package jsonschema
 
+import cats.Order
+import cats.instances.string._
 import cats.data.NonEmptyList
 
 import io.circe.literal._
@@ -50,13 +52,14 @@ class SanityLinterSpec extends Specification { def is = s2"""
       "type": "object", "minLength": 3
     }""".schema
 
-    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must beEqualTo(
-      Map(
-        "/" -> NonEmptyList.of("The schema is missing the \"description\" property",
-          "String properties [minLength] require either string or absent values",
-          "At the root level, the schema should have a \"type\" property set to \"object\" and have a \"properties\" property")
-      )
-    )
+    lint(schema, Linter.allLintersMap.values.toList).map(showReport).toList must beLike {
+      case ("/", nel) :: Nil => nel.toList must containTheSameElementsAs(List(
+        "The schema is missing the \"description\" property",
+        "String properties [minLength] require either string or absent values",
+        "At the root level, the schema should have a \"type\" property set to \"object\" and have a \"properties\" property"
+      ))
+      case _ => ko("contains more than one pair")
+    }
   }
 
   def e2 = {
@@ -105,7 +108,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
           "The schema is missing the \"description\" property")
     )
 
-    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must beEqualTo(expected)
+    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must matchMap(expected)
   }
 
   def e3 = {
@@ -182,10 +185,10 @@ class SanityLinterSpec extends Specification { def is = s2"""
           "A string type in the schema doesn't contain \"maxLength\" or format which is required"),
       "/" ->
         NonEmptyList.of("The schema is missing the \"description\" property",
-          "Use \"type: null\" to indicate a field as optional for properties name,currency,category,unitPrice")
+          "Use \"type: null\" to indicate a field as optional for properties category,currency,name,unitPrice")
     )
 
-    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must beEqualTo(expected)
+    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must matchMap(expected)
   }
 
   def e5 = {
@@ -232,9 +235,9 @@ class SanityLinterSpec extends Specification { def is = s2"""
       "/properties/sku" ->
         NonEmptyList.of("The schema is missing the \"description\" property", "A string type in the schema doesn't contain \"maxLength\" or format which is required"),
       "/" ->
-        NonEmptyList.of("The schema is missing the \"description\" property", "Use \"type: null\" to indicate a field as optional for properties name,currency,category,unitPrice"))
+        NonEmptyList.of("The schema is missing the \"description\" property", "Use \"type: null\" to indicate a field as optional for properties category,currency,name,unitPrice"))
 
-    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must beEqualTo(expected)
+    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must matchMap(expected)
   }
 
   def e6 = {
@@ -265,7 +268,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
       "/" ->
         NonEmptyList.of("The schema is missing the \"description\" property", "At the root level, the schema should have a \"type\" property set to \"object\" and have a \"properties\" property"))
 
-    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must beEqualTo(expected)
+    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must matchMap(expected)
   }
 
   def e7 = {
@@ -292,7 +295,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
       "/" ->
         NonEmptyList.of("The schema is missing the \"description\" property", "Use \"type: null\" to indicate a field as optional for properties age"))
 
-    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must beEqualTo(expected)
+    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must matchMap(expected)
   }
 
   def e8 = {
@@ -341,7 +344,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
         "A string property has a \"maxLength\" [65536] greater than the Redshift VARCHAR maximum of 65535",
         "At the root level, the schema should have a \"type\" property set to \"object\" and have a \"properties\" property"))
 
-    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must beEqualTo(expected)
+    lint(schema, Linter.allLintersMap.values.toList).map(showReport) must matchMap(expected)
   }
 
   def e10 = {
@@ -388,7 +391,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
     val skippedLinters = List(Linter.description)
 
     val expected = Map("/" ->
-      NonEmptyList.of("Use \"type: null\" to indicate a field as optional for properties name,currency,category,unitPrice"))
+      NonEmptyList.of("Use \"type: null\" to indicate a field as optional for properties category,currency,name,unitPrice"))
 
     lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)).map { case (k, v) => (k.show, v.map(_.show)) } must beEqualTo(expected)
   }
@@ -470,7 +473,7 @@ class SanityLinterSpec extends Specification { def is = s2"""
     val skippedLinters = List(Linter.description)
 
     val expected = Map("/" ->
-      NonEmptyList.of("No $schema field in top-level of schema"))
+      NonEmptyList.of(s"No $$schema field in top-level of schema"))
 
     val res = lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)).map { case (k, v) => (k.show, v.map(_.show)) }
 
@@ -518,10 +521,18 @@ class SanityLinterSpec extends Specification { def is = s2"""
     val skippedLinters = List(Linter.description)
 
     val expected = Map("/" ->
-      NonEmptyList.of("Given $schema is not http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#"))
+      NonEmptyList.of(s"Given $$schema is not http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#"))
 
     val res = lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)).map { case (k, v) => (k.show, v.map(_.show)) }
 
     res must beEqualTo(expected)
   }
+
+  def matchMap[K, E: Order](exepcted: Map[K, NonEmptyList[E]]) =
+    beLike[Map[K, NonEmptyList[E]]] {
+      case m =>
+        val normalized = m.map { case (k, v) => (k, v.sorted)  }
+        val normalizedExpected = exepcted.map  { case (k, v) => (k, v.sorted)  }
+        normalized must beEqualTo(normalizedExpected)
+    }
 }

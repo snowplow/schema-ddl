@@ -101,12 +101,12 @@ object Pointer {
   }
 
   object SchemaProperty {
-    case object Items extends SchemaProperty { def key = 'items }
-    case object AdditionalItems extends SchemaProperty { def key = 'additionalItems }
-    case object Properties extends SchemaProperty { def key = 'properties }
-    case object AdditionalProperties extends SchemaProperty { def key = 'additionalProperties }
-    case object PatternProperties extends SchemaProperty { def key = 'patternProperties }
-    case object OneOf extends SchemaProperty { def key = 'oneOf }
+    case object Items extends SchemaProperty { def key = Symbol("items") }
+    case object AdditionalItems extends SchemaProperty { def key = Symbol("additionalItems") }
+    case object Properties extends SchemaProperty { def key = Symbol("properties") }
+    case object AdditionalProperties extends SchemaProperty { def key = Symbol("additionalProperties") }
+    case object PatternProperties extends SchemaProperty { def key = Symbol("patternProperties") }
+    case object OneOf extends SchemaProperty { def key = Symbol("oneOf") }
 
     val all = List(Items, AdditionalItems, Properties, AdditionalProperties, PatternProperties, OneOf)
 
@@ -127,7 +127,7 @@ object Pointer {
           def giveUp =
             SchemaPointer((current :: tail).reverse.map(Cursor.DownField.apply) ++ acc.value).asLeft
           acc match {
-            case Root => SchemaProperty.fromString(current) match {
+            case SchemaPointer(Nil) => SchemaProperty.fromString(current) match {
               case Right(property) => go(tail, Root.downProperty(property))
               case Left(_) => giveUp
             }
