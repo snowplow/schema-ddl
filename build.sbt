@@ -17,8 +17,8 @@ lazy val root = project.in(file("."))
     name               := "schema-ddl",
     version            := "0.11.0",
     description        := "Set of Abstract Syntax Trees for various DDL and Schema formats",
-    scalaVersion       := "2.12.8",
-    crossScalaVersions := Seq("2.12.8", "2.13.2"),
+    scalaVersion       := "2.12.12",
+    crossScalaVersions := Seq("2.12.12", "2.13.3"),
     javacOptions       := BuildSettings.javaCompilerOptions
   )
   .settings(BuildSettings.buildSettings)
