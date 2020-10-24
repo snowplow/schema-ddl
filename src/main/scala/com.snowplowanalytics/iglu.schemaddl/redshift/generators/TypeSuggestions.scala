@@ -10,8 +10,7 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-package com.snowplowanalytics.iglu.schemaddl.redshift
-package generators
+package com.snowplowanalytics.iglu.schemaddl.redshift.generators
 
 // cats
 import cats.instances.option._
@@ -25,11 +24,13 @@ import cats.syntax.foldable._
 import io.circe.Json
 
 // This project
-import com.snowplowanalytics.iglu.schemaddl.jsonschema._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.StringProperty.Format
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.NumberProperty.{ MultipleOf, Maximum }
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.StringProperty.{ MinLength, MaxLength }
+
+import com.snowplowanalytics.iglu.schemaddl.redshift._
 
 /**
  * Module containing functions for data type suggestions
@@ -97,15 +98,15 @@ object TypeSuggestions {
 
   val integerSuggestion: DataTypeSuggestion = (properties, _) => {
     (properties.`type`, properties.maximum, properties.enum, properties.multipleOf) match {
-      case (Some(types), Some(maximum), _, _) if types.possiblyWithNull(Type.Integer) =>
-        getIntSize(maximum.getAsDecimal.toLong)
+      case (Some(types), Some(max), _, _) if types.possiblyWithNull(Type.Integer) =>
+        getIntSize(max)
       // Contains only enum
       case (types, _, Some(enum), _) if types.isEmpty || types.get.possiblyWithNull(Type.Integer) =>
         enum.value.traverse(_.asNumber.flatMap(_.toBigInt)).flatMap(_.maximumOption).flatMap(getIntSize)
       case (Some(types), _, _, _) if types.possiblyWithNull(Type.Integer) =>
         Some(RedshiftBigInt)
       case (_, max, _, Some(MultipleOf.IntegerMultipleOf(_))) =>
-        max.flatMap(m => getIntSize(m)).orElse(Some(RedshiftInteger))
+        max.flatMap(getIntSize).orElse(Some(RedshiftInteger))
       case _ => None
     }
   }
@@ -174,16 +175,16 @@ object TypeSuggestions {
    * @param max upper bound
    * @return Long representing biggest possible value or None if it's not Int
    */
-  private def getIntSize(max: Maximum): Option[DataType] = max match {
-    case Maximum.IntegerMaximum(bigInt) => getIntSize(bigInt)
-    case Maximum.NumberMaximum(_) => Some(RedshiftDecimal(None, None))
-  }
+  private def getIntSize(max: Maximum): Option[DataType] =
+    max match {
+      case Maximum.IntegerMaximum(bigInt) => getIntSize(bigInt)
+      case Maximum.NumberMaximum(_) => Some(RedshiftDecimal(None, None))
+    }
 
   private def getIntSize(max: BigInt): Option[DataType] =
     if (max <= Short.MaxValue.toInt) Some(RedshiftSmallInt)
     else if (max <= Int.MaxValue) Some(RedshiftInteger)
-    else if (max <= Long.MaxValue) Some(RedshiftBigInt)
-    else None
+    else Some(RedshiftBigInt)
 
   /**
    * Check enum contains some different types
@@ -196,7 +197,7 @@ object TypeSuggestions {
     def isBoolean(s: Json) = s.isBoolean
 
     val nonNullEnum = excludeNull(enum)
-    somePredicates(nonNullEnum, List(isNumeric _, isNonNumeric _, isBoolean _), 2)
+    somePredicates(nonNullEnum, List(isNumeric, isNonNumeric, isBoolean), 2)
   }
 
   /**

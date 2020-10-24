@@ -10,18 +10,24 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-package com.snowplowanalytics.iglu.schemaddl
-package redshift
-package generators
+package com.snowplowanalytics.iglu.schemaddl.redshift.generators
 
 import scala.annotation.tailrec
+
 import cats.data.NonEmptyList
+
 import com.snowplowanalytics.iglu.core.SchemaMap
-import EncodeSuggestions._
-import TypeSuggestions._
+
+import com.snowplowanalytics.iglu.schemaddl.Properties
+
+import com.snowplowanalytics.iglu.schemaddl.redshift._
+import com.snowplowanalytics.iglu.schemaddl.redshift.generators.EncodeSuggestions._
+import com.snowplowanalytics.iglu.schemaddl.redshift.generators.TypeSuggestions._
+
 import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
-import jsonschema.Schema
-import jsonschema.Pointer
+
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer
 
 
 /** Generates a Redshift DDL File from a Flattened JsonSchema */

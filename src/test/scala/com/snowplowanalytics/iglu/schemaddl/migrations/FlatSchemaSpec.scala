@@ -984,7 +984,6 @@ class FlatSchemaSpec extends Specification {
       val initialSchema = SelfDescribingSchema(SchemaMap("com.acme", "example", "jsonschema", SchemaVer.Full(1,0,0)), initial)
       val schemaList = SchemaList.Full(NonEmptyList.of(initialSchema))
       val properties = FlatSchema.extractProperties(schemaList)
-      println(properties)
       val res = extractOrder(properties)
       res must beEmpty
     }
