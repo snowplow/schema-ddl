@@ -22,6 +22,14 @@ object EncodeSuggestions {
    */
   type EncodingSuggestion = (Schema, DataType, String) => Option[CompressionEncodingValue]
 
+  // Often repeated strings benefit from text255
+  val text255Suggestion: EncodingSuggestion =  (schema, dataType, _) =>
+    (schema.`enum`, dataType) match {
+      case (Some(_), RedshiftVarchar(_)) =>
+        Some(Text255Encoding)
+      case _ => None
+    }
+
   // Suggest LZO Encoding for boolean, double precision and real
   val lzoSuggestion: EncodingSuggestion = (_, dataType, _) =>
     dataType match {

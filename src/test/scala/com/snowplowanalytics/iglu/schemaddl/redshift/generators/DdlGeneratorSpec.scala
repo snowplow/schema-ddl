@@ -10,21 +10,24 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-package com.snowplowanalytics.iglu.schemaddl.redshift
-package generators
+package com.snowplowanalytics.iglu.schemaddl.redshift.generators
 
-// Specs2
-import org.specs2.Specification
 
 import cats.data.NonEmptyList
 
 import io.circe.literal._
 
+// Specs2
+import org.specs2.Specification
+
 // This library
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
+
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
+
+import com.snowplowanalytics.iglu.schemaddl.redshift._
 
 // TODO: union type specs (string, object)
 
@@ -48,7 +51,7 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       DdlGenerator.parentageColumns ++
       List(
         Column("foo",RedshiftVarchar(30),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set())
+        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set())
       ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
@@ -73,7 +76,7 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       List(
         Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
         Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
-        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull)))
+        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set(Nullability(NotNull)))
       ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
@@ -99,7 +102,7 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
         List(
           Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
           Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
-          Column("enum_field",RedshiftVarchar(5),Set(CompressionEncoding(ZstdEncoding)),Set())
+          Column("enum_field",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set())
         ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
@@ -127,5 +130,4 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
 
     ddl must beEqualTo(resultDdl)
   }
-
 }
