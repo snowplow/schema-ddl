@@ -28,7 +28,7 @@ class FlatDataSpec extends Specification {
       val path = "/properties/foo/properties/bar".jsonPointer.forData
       val data = json"""{"foo": {"bar": "success"}}"""
 
-      FlatData.getPath(path, data, None) must beEqualTo("success")
+      FlatData.getPath(path, data, FlatData.getString(None), "") must beEqualTo("success")
     }
   }
 
@@ -68,7 +68,7 @@ class FlatDataSpec extends Specification {
       val expected = List("one", "two", "three", "four")
 
       val data = json"""{"a": "one", "b": {"ba": "two", "bb": "four"}, "c": "three"}"""
-      val result = FlatData.flatten(data, schemaList, None)
+      val result = FlatData.flatten(data, schemaList, FlatData.getString(None), "")
 
       result must beEqualTo(expected)
     }
@@ -103,18 +103,18 @@ class FlatDataSpec extends Specification {
       val schemaList = SchemaList.buildSingleSchema(schema).get
 
       val data1 = json"""{"union": "union_value"}"""
-      val result1 = FlatData.flatten(data1, schemaList, None)
+      val result1 = FlatData.flatten(data1, schemaList, FlatData.getString(None), "")
       val expected1 = List("union_value")
       val comp1 = result1 must beEqualTo(expected1)
 
       val data2 = json"""{"union": {"foo": "foo_val", "bar": "bar_val"}}"""
-      val result2 = FlatData.flatten(data2, schemaList, None)
+      val result2 = FlatData.flatten(data2, schemaList, FlatData.getString(None), "")
       val expected2 = List("""{"foo":"foo_val","bar":"bar_val"}""")
       val comp2 = result2 must beEqualTo(expected2)
 
       val expected3 = List("""{"object_without_properties":"val"}""")
       val data3 = json"""{"union": {"object_without_properties": "val"}}"""
-      val result3 = FlatData.flatten(data3, schemaList, None)
+      val result3 = FlatData.flatten(data3, schemaList, FlatData.getString(None), "")
       val comp3 = result3 must beEqualTo(expected3)
 
       comp1 and comp2 and comp3
@@ -139,7 +139,7 @@ class FlatDataSpec extends Specification {
       val schemaList = SchemaList.buildMultiple(schemas).right.get.head
 
       val data = json"""{"someBool": true, "someArray": ["item1", "item2", "item3"]}"""
-      val result = FlatData.flatten(data, schemaList, None)
+      val result = FlatData.flatten(data, schemaList, FlatData.getString(None), "")
       val expected = List("""["item1","item2","item3"]""", "1")
 
       result must beEqualTo(expected)
@@ -164,7 +164,7 @@ class FlatDataSpec extends Specification {
       val schemaList = SchemaList.buildMultiple(schemas).right.get.head
 
       val data = json"""{"someBool": true, "someArray": ["item1","item2","item3"]}"""
-      val result = FlatData.flatten(data, schemaList, None)
+      val result = FlatData.flatten(data, schemaList, FlatData.getString(None), "")
       val expected = List("""["item1","item2","item3"]""", "1")
 
       result must beEqualTo(expected)
@@ -191,17 +191,17 @@ class FlatDataSpec extends Specification {
       val schemaList = SchemaList.buildMultiple(schemas).right.get.head
 
       val data1 = json"""{"a": 2}"""
-      val result1 = FlatData.flatten(data1, schemaList, None)
+      val result1 = FlatData.flatten(data1, schemaList, FlatData.getString(None), "")
       val expected1 = List("2")
       val comp1 = result1 must beEqualTo(expected1)
 
       val data2 = json"""{"a":{"b":1,"c":"val"}}"""
-      val result2 = FlatData.flatten(data2, schemaList, None)
+      val result2 = FlatData.flatten(data2, schemaList, FlatData.getString(None), "")
       val expected2 = List("""{"b":1,"c":"val"}""")
       val comp2 = result2 must beEqualTo(expected2)
 
       val data3 = json"""{"a":{"key1":"value1","key2":"value2"}}"""
-      val result3 = FlatData.flatten(data3, schemaList, None)
+      val result3 = FlatData.flatten(data3, schemaList, FlatData.getString(None), "")
       val expected3 = List("""{"key1":"value1","key2":"value2"}""")
       val comp3 = result3 must beEqualTo(expected3)
 

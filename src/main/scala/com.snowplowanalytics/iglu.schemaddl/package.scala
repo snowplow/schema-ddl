@@ -44,7 +44,6 @@ package object schemaddl {
    */
   type MigrationMap = Map[SchemaMap, NonEmptyList[Migration]]
 
-
   /**
    * Schema criterion restricted to revision: vendor/name/m-r-*
    * Tuple using as root key to bunch of Schemas differing only by addition

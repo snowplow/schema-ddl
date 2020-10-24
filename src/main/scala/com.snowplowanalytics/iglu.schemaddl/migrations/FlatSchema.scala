@@ -32,15 +32,24 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
 
 /**
+  * An object represents flattened JSON Schema, i.e. JSON Schema processed with an algorithm
+  * that unfolds nested JSON structure into sequence of typed pointers - JSON Pointers,
+  * pointing to leaf schemas - schemas that cannot be flattened further.
+  * Leaf schemas are mostly primitive values (strings, booleans etc), but also can be something
+  * that could not be flattened
   *
-  * @param subschemas (order should not matter at this point)
+  * This is mostly a transitive tool and should not be used by user-code and instead user
+  * should be creating *ordered* list of typed pointers from multiple schema via `FlatSchema.extractProperties`
+  *
+  * @param subschemas set of typed pointers (order should not matter at this point)
   * @param required keys listed in `required` property, whose parents also listed in `required`
   *                 some of parent properties still can be `null` and thus not required
   * @param parents keys that are not primitive, but can contain important information (e.g. nullability)
   */
 final case class FlatSchema(subschemas: SubSchemas, required: Set[SchemaPointer], parents: SubSchemas) {
-  // TODO: remove parents
+  // TODO: remove parents - we can preserve nullability without them
 
+  /** Add a JSON Pointer that can be converted into a separate column */
   def withLeaf(pointer: SchemaPointer, schema: Schema): FlatSchema = {
     val updatedSchema =
       if ((pointer.value.nonEmpty && !required.contains(pointer)) || schema.canBeNull)
@@ -91,12 +100,32 @@ final case class FlatSchema(subschemas: SubSchemas, required: Set[SchemaPointer]
     .mkString("\n")
 }
 
-
 object FlatSchema {
 
-  case class Changed(what: String, from: Schema.Primitive, to: Schema)
-  case class Diff(added: (String, Schema), removed: List[String], changed: Changed)
+  /**
+   * Main function for flattening multiple schemas, preserving their lineage
+   * in their properties. If user software (e.g. RDB Shredder) produces
+   * unexpected list of columns - this is the culprit
+   *
+   * Builds subschemas which are ordered according to nullness of field,
+   * name of field and which version field is added
+   * @param source List of ordered schemas to create ordered subschemas
+   * @return list of typed pointers which are ordered according to criterias specified
+   *         above
+   */
+  def extractProperties(source: SchemaList): Properties =
+    source match {
+      case s: SchemaList.Single =>
+        val origin = build(s.schema.schema)
+        postProcess(origin.subschemas)
+      case s: SchemaList.Full =>
+        val origin = build(s.schemas.head.schema)
+        val originColumns = postProcess(origin.subschemas)
+        val addedColumns = Migration.fromSegment(s.toSegment).diff.added
+        originColumns ++ addedColumns
+    }
 
+  /** Build [[FlatSchema]] from a single schema. Must be used only if there's only one schema */
   def build(schema: Schema): FlatSchema =
     Schema.traverse(schema, FlatSchema.save).runS(FlatSchema.empty).value
 
@@ -127,7 +156,7 @@ object FlatSchema {
       .getOrElse(Set.empty)
       .map(prop => cur.downProperty(Pointer.SchemaProperty.Properties).downField(prop))
 
-  val empty = FlatSchema(Set.empty, Set.empty, Set.empty)
+  val empty: FlatSchema = FlatSchema(Set.empty, Set.empty, Set.empty)
 
   def save(pointer: SchemaPointer, schema: Schema): State[FlatSchema, Unit] =
     State.modify[FlatSchema] { flatSchema =>
@@ -137,13 +166,13 @@ object FlatSchema {
         flatSchema
           .withRequired(pointer, schema)
           .withLeaf(pointer, schema)
-      else {
+      else
         flatSchema
           .withRequired(pointer, schema)
           .withParent(pointer, schema)
-      }
     }
 
+  /** Sort and clean-up */
   def postProcess(subschemas: SubSchemas): List[(Pointer.SchemaPointer, Schema)] =
     subschemas.toList.sortBy { case (pointer, schema) =>
       (schema.canBeNull, getName(pointer))
@@ -151,25 +180,6 @@ object FlatSchema {
       case List((SchemaPointer(Nil), s)) if s.properties.forall(_.value.isEmpty) =>
         List()
       case other => other
-    }
-
-  /**
-    * Build subschemas which are ordered according to nullness of field,
-    * name of field and which version field is added
-    * @param source List of ordered schemas to create ordered subschemas
-    * @return subschemas which are ordered according to criterias specified
-    *         above
-    */
-  def extractProperties(source: SchemaList): Properties =
-    source match {
-      case s: SchemaList.Single =>
-        val origin = build(s.schema.schema)
-        postProcess(origin.subschemas)
-      case s: SchemaList.Full =>
-        val origin = build(s.schemas.head.schema)
-        val originColumns = postProcess(origin.subschemas)
-        val addedColumns = Migration.fromSegment(s.toSegment).diff.added
-        originColumns ++ addedColumns
     }
 
   /** Get normalized name */

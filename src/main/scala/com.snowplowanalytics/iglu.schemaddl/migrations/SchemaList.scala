@@ -206,12 +206,11 @@ object SchemaList {
     * @param modelGroup ModelGroup to create SchemaList
     * @return created SchemaList from given model group
     */
-  private def buildWithoutReorder(modelGroup: ModelGroupSet): SchemaList = {
+  private def buildWithoutReorder(modelGroup: ModelGroupSet): SchemaList =
     modelGroup.schemas match {
       case NonEmptyList(h, Nil) => Single(h)
       case schemas => Full(schemas)
     }
-  }
 
   /** [[SchemaList]] construction errors */
   sealed trait BuildError extends Product with Serializable

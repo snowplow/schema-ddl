@@ -78,7 +78,7 @@ package object jsonschema {
         case None => false            // absent type is ok
       }
 
-    /** Check if Schema has no specific type *OR* has no type at all */
+    /** Check if Schema has a type (either specific or in union) */
     def withType(jsonType: Type): Boolean =
       value.`type` match {
         case Some(Type.Union(types)) => types.contains(jsonType)

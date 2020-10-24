@@ -25,17 +25,18 @@ object FlatData {
     * Transform JSON to TSV, where columns order match the table
     * @param data actual JSON data to transform
     * @param source state of schema, providing proper order
-    * @param escape function used to escape string values, e.g. to fix newlines
+    * @param getValue function used to extract a custom type from JSON
+    * @param default in case JsonPointer points to a missing key
     */
-  def flatten(data: Json, source: SchemaList, escape: Option[String => String]): List[String] =
-    FlatSchema.extractProperties(source).map { case (pointer, _) => getPath(pointer.forData, data, escape) }
+  def flatten[A](data: Json, source: SchemaList, getValue: Json => A, default: A): List[A] =
+    FlatSchema.extractProperties(source).map { case (pointer, _) => getPath(pointer.forData, data, getValue, default) }
 
   /** Extract data from JSON payload using JsonPointer */
-  def getPath(pointer: JsonPointer, json: Json, escape: Option[String => String]): String = {
-    def go(cursor: List[Pointer.Cursor], data: ACursor): String =
+  def getPath[A](pointer: JsonPointer, json: Json, getValue: Json => A, default: A): A = {
+    def go(cursor: List[Pointer.Cursor], data: ACursor): A =
       cursor match {
         case Nil =>
-          data.focus.map(getString(escape)).getOrElse("")
+          data.focus.map(getValue).getOrElse(default)
         case Pointer.Cursor.DownField(field) :: t =>
           go(t, data.downField(field))
         case Pointer.Cursor.At(i) :: t =>
@@ -47,7 +48,8 @@ object FlatData {
     go(pointer.get, json.hcursor)
   }
 
-  private def getString(escapeString: Option[String => String])(json: Json): String =
+  /** Example of `getValue` for `flatten`. Makes no difference between empty string and null */
+  def getString(escapeString: Option[String => String])(json: Json): String =
     escapeString match {
       case None => json.fold("", transformBool, _ => json.show, identity, _ => json.noSpaces, _ => json.noSpaces)
       case Some(f) =>
@@ -60,7 +62,7 @@ object FlatData {
     }
 
 
-  private def escapeJson(f: String => String)(json: Json): Json =
+  def escapeJson(f: String => String)(json: Json): Json =
     json.fold(
       Json.Null,
       Json.fromBoolean,
@@ -69,13 +71,11 @@ object FlatData {
       x => Json.fromValues(escapeArray(f)(x)),
       x => Json.fromJsonObject(escapeObject(f)(x)))
 
-  private def escapeArray(f: String => String)(array: Vector[Json]): Vector[Json] =
+  def escapeArray(f: String => String)(array: Vector[Json]): Vector[Json] =
     array.map(escapeJson(f))
 
-
-  private def escapeObject(f: String => String)(obj: JsonObject): JsonObject =
+  def escapeObject(f: String => String)(obj: JsonObject): JsonObject =
     obj.mapValues(escapeJson(f))
 
-
-  private def transformBool(b: Boolean): String = if (b) "1" else "0"
+  def transformBool(b: Boolean): String = if (b) "1" else "0"
 }
