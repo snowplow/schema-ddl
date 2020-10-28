@@ -1,18 +1,18 @@
 # Schema DDL
 
-[![Maven Central][maven-badge]][maven-link]
-[![Build Status][travis-image]][travis] 
+[![Maven Central][maven-image]][maven]
+[![Build Status][build-image]][build] 
 [![License][license-image]][license]
+[![Coverage Status][coveralls-image]][coveralls]
 
-Schema DDL is a set of Abstract Syntax Trees and generators for producing various DDL and Schema formats.
-It's tightly coupled with other tools from **[Snowplow Platform][snowplow]** like
-**[Iglu][iglu]** and **[Self-describing JSON][self-describing]**.
-
+Schema DDL is a set of Abstract Syntax Trees and generators for producing
+various DDL (such as Redshift, Postgres or BigQuery) from JSON Schema.
+The library is a core part of **[Iglu][iglu]** ecosystem and broadly used in **[Snowplow Platform][snowplow]**.
 Schema DDL itself does not provide any CLI and expose only Scala API.
 
 ## Quickstart
 
-Schema DDL is compiled against Scala 2.12 and availble on Maven Central. In order to use it with SBT, include following module:
+Schema DDL is compiled against Scala 2.12 and 2.13 and available on Maven Central. In order to use it with SBT, include following module:
 
 ```scala
 libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.11.0"
@@ -21,9 +21,9 @@ libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.11.0"
 
 ## Find out more
 
-| **[Technical Docs][techdocs]**     | **[Setup Guide][setup]**     | **[Roadmap][roadmap]**           | **[Contributing][contributing]**           |
-|-------------------------------------|-------------------------------|-----------------------------------|---------------------------------------------|
-| [![i1][techdocs-image]][techdocs] | [![i2][setup-image]][setup] | [![i3][roadmap-image]][roadmap] | [![i4][contributing-image]][contributing] |
+| **[Iglu][iglu]**          | **[API Reference][api-reference]**          | **[Developer Guide][developer-guide]**          | **[Contributing][contributing]**          |
+|---------------------------|---------------------------------------------|-------------------------------------------------|-------------------------------------------|
+| [![i1][iglu-image]][iglu] | [![i2][api-reference-image]][api-reference] | [![i3][developer-guide-image]][developer-guide] | [![i4][contributing-image]][contributing] |
 
 
 ## Copyright and License
@@ -40,25 +40,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
+[maven]: https://maven-badges.herokuapp.com/maven-central/com.snowplowanalytics/schema-ddl_2.12
+[maven-image]: https://maven-badges.herokuapp.com/maven-central/com.snowplowanalytics/schema-ddl_2.12/badge.svg
+
 [license-image]: http://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
 [license]: http://www.apache.org/licenses/LICENSE-2.0
 
-[maven-badge]: https://maven-badges.herokuapp.com/maven-central/com.snowplowanalytics/schema-ddl_2.12/badge.svg
-[maven-link]: https://maven-badges.herokuapp.com/maven-central/com.snowplowanalytics/schema-ddl_2.12
+[build]: https://github.com/snowplow-incubator/schema-ddl/actions?query=workflow%3A%22Test+and+deploy%22
+[build-image]: https://github.com/snowplow-incubator/schema-ddl/workflows/Test%20and%20deploy/badge.svg
 
-[travis]: https://travis-ci.org/snowplow-incubator/schema-ddl
-[travis-image]: https://travis-ci.org/snowplow-incubator/schema-ddl.png?branch=master
+[coveralls]: https://coveralls.io/github/snowplow-incubator/schema-ddl?branch=master
+[coveralls-image]: https://coveralls.io/repos/github/snowplow-incubator/schema-ddl/badge.svg?branch=master
 
 [snowplow]: https://github.com/snowplow/snowplow
-[iglu]: https://github.com/snowplow/iglu
 [self-describing]: http://snowplowanalytics.com/blog/2014/05/15/introducing-self-describing-jsons/
 
-[techdocs]: https://github.com/snowplow/iglu/wiki/
-[roadmap]: https://github.com/snowplow/iglu/wiki/Product-roadmap
-[setup]: https://github.com/snowplow/iglu/wiki/
-[contributing]: https://github.com/snowplow/iglu/wiki/Contributing
+[developer-guide]: https://github.com/snowplow-incubator/schema-ddl/wiki/
+[developer-guide-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/setup.png
 
-[techdocs-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/techdocs.png
-[setup-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/setup.png
-[roadmap-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/roadmap.png
+[iglu]: https://docs.snowplowanalytics.com/docs/iglu/
+[iglu-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/roadmap.png
+
+[contributing]: https://docs.snowplowanalytics.com/docs/contributing/
 [contributing-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/contributing.png
+
+[api-reference]: https://snowplow-incubator.github.io/schema-ddl/0.12.0/com/snowplowanalytics/iglu/schemaddl/index.html
+[api-reference-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/techdocs.png
