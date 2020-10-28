@@ -21,7 +21,10 @@ lazy val root = project.in(file("."))
     crossScalaVersions := Seq("2.12.12", "2.13.3"),
     javacOptions       := BuildSettings.javaCompilerOptions
   )
+  .enablePlugins(SiteScaladocPlugin)
+  .settings(BuildSettings.sbtSiteSettings)
   .settings(BuildSettings.buildSettings)
+  .settings(BuildSettings.scoverage)
   .settings(libraryDependencies ++= Seq(
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     Dependencies.Libraries.igluCoreJson4s,
