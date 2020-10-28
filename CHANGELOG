@@ -1,3 +1,13 @@
+Version 0.12.0 (2020-10-28)
+---------------------------
+Migrate from Travis to GH actions (#62)
+Redshift: switch to text255 encoding for enums (#36)
+Redshift: extend default VARCHAR length for arrays to 65535 (#54)
+Handle too big maximum for integer (#56)
+Make FlatData.getString function configurable (#57)
+Bump Scala to 2.12.12 (#59)
+Bump sbt to 1.4.1 (#58)
+
 Version 0.11.0 (2020-06-09)
 ---------------------------
 Add Scala 2.13 support (#52)
