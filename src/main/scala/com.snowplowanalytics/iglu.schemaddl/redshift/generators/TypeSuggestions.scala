@@ -36,6 +36,9 @@ import com.snowplowanalytics.iglu.schemaddl.redshift._
  * Module containing functions for data type suggestions
  */
 object TypeSuggestions {
+
+  val DefaultArraySize: Int = 65535
+
   /**
    * Type alias for function suggesting an encode type based on map of
    * JSON Schema properties
@@ -80,7 +83,7 @@ object TypeSuggestions {
   val arraySuggestion: DataTypeSuggestion = (properties, _) =>
     properties.`type` match {
       case Some(types) if types.possiblyWithNull(Type.Array) =>
-        Some(RedshiftVarchar(5000))
+        Some(RedshiftVarchar(DefaultArraySize))
       case _ => None
     }
 

@@ -59,5 +59,9 @@ class TypeSuggestionsSpec extends Specification {
       val props = json"""{"type": "integer", "maximum": 9223372036854775808}""".schema
       DdlGenerator.getDataType(props, 16, "somecolumn") must beEqualTo(RedshiftBigInt)
     }
+    "fallback to VARCHAR(65535) for arrays" in {
+      val props = json"""{"type": "array"}""".schema
+      DdlGenerator.getDataType(props, 16, "somecolumn") must beEqualTo(RedshiftVarchar(65535))
+    }
   }
 }
