@@ -37,11 +37,11 @@ object Dependencies {
     // Java
     val jsonValidator    = "com.github.java-json-tools" %  "json-schema-validator"  % V.jsonValidator
     // Scala (test only)
-    val specs2           = "org.specs2"                 %% "specs2-core"            % V.specs2     % "test"
-    val specs2Cats       = "org.specs2"                 %% "specs2-cats"            % V.specs2     % "test"
-    val specs2Scalacheck = "org.specs2"                 %% "specs2-scalacheck"      % V.specs2     % "test"
-    val scalaCheck       = "org.scalacheck"             %% "scalacheck"             % V.scalaCheck % "test"
-    val circeLiteral     = "io.circe"                   %% "circe-literal"          % V.circe      % "test"
-    val circeParser      = "io.circe"                   %% "circe-parser"           % V.circe      % "test"
+    val specs2           = "org.specs2"                 %% "specs2-core"            % V.specs2     % Test
+    val specs2Cats       = "org.specs2"                 %% "specs2-cats"            % V.specs2     % Test
+    val specs2Scalacheck = "org.specs2"                 %% "specs2-scalacheck"      % V.specs2     % Test
+    val scalaCheck       = "org.scalacheck"             %% "scalacheck"             % V.scalaCheck % Test
+    val circeLiteral     = "io.circe"                   %% "circe-literal"          % V.circe      % Test
+    val circeParser      = "io.circe"                   %% "circe-parser"           % V.circe      % Test
   }
 }

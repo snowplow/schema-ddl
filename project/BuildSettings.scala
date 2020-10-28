@@ -11,10 +11,17 @@
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
 
-import bintray.BintrayPlugin._
-import bintray.BintrayKeys._
 import sbt._
 import Keys._
+
+import bintray.BintrayPlugin._
+import bintray.BintrayKeys._
+
+import scoverage.ScoverageKeys._
+
+import com.typesafe.sbt.site.SitePlugin.autoImport._
+import com.typesafe.sbt.site.SiteScaladocPlugin.autoImport._
+import com.typesafe.sbt.site.preprocess.PreprocessPlugin.autoImport._
 
 object BuildSettings {
 
@@ -29,7 +36,7 @@ object BuildSettings {
   )
 
   // Publish settings
-  lazy val publishSettings = bintraySettings ++ Seq[Setting[_]](
+  lazy val bintrayPublish = bintraySettings ++ Seq[Setting[_]](
     licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html")),
     bintrayOrganization := Some("snowplow"),
     bintrayRepository := "snowplow-maven"
@@ -51,5 +58,18 @@ object BuildSettings {
       </developers>)
   )
 
-  lazy val buildSettings = basicSettigns ++ publishSettings ++ mavenCentralExtras
+  lazy val buildSettings = basicSettigns ++ bintrayPublish ++ mavenCentralExtras
+
+  val scoverage = Seq(
+    coverageMinimum := 50,
+    coverageFailOnMinimum := true,
+    coverageHighlighting := false,
+    (test in Test) := {
+      (coverageReport dependsOn (test in Test)).value
+    }
+  )
+
+  lazy val sbtSiteSettings = Seq(
+    siteSubdirName in SiteScaladoc := s"${version.value}"
+  )
 }
