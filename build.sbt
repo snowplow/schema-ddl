@@ -18,8 +18,7 @@ lazy val root = project.in(file("."))
     version            := "0.12.0",
     description        := "Set of Abstract Syntax Trees for various DDL and Schema formats",
     scalaVersion       := "2.12.12",
-    crossScalaVersions := Seq("2.12.12", "2.13.3"),
-    javacOptions       := BuildSettings.javaCompilerOptions
+    crossScalaVersions := Seq("2.12.12", "2.13.3")
   )
   .enablePlugins(SiteScaladocPlugin)
   .settings(BuildSettings.sbtSiteSettings)

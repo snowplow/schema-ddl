@@ -30,11 +30,6 @@ object BuildSettings {
     addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full)
   )
 
-  lazy val javaCompilerOptions = Seq(
-    "-source", "1.8",
-    "-target", "1.8"
-  )
-
   // Publish settings
   lazy val bintrayPublish = bintraySettings ++ Seq[Setting[_]](
     licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html")),
@@ -64,12 +59,12 @@ object BuildSettings {
     coverageMinimum := 50,
     coverageFailOnMinimum := true,
     coverageHighlighting := false,
-    (test in Test) := {
-      (coverageReport dependsOn (test in Test)).value
+    (Test / test) := {
+      (coverageReport dependsOn (Test / test)).value
     }
   )
 
   lazy val sbtSiteSettings = Seq(
-    siteSubdirName in SiteScaladoc := s"${version.value}"
+    (SiteScaladoc / siteSubdirName) := s"${version.value}"
   )
 }
