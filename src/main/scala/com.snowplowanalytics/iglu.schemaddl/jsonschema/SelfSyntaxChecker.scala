@@ -12,175 +12,156 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 
-import com.github.fge.jackson.NodeType
-import com.github.fge.jackson.jsonpointer.{ JsonPointer => FgeJsonPointer }
-import com.github.fge.jsonschema.cfg.ValidationConfiguration
-import com.github.fge.jsonschema.core.exceptions.ProcessingException
-import com.github.fge.jsonschema.core.keyword.syntax.checkers.AbstractSyntaxChecker
-import com.github.fge.jsonschema.core.load.configuration.LoadingConfiguration
-import com.github.fge.jsonschema.core.load.uri.URITranslatorConfiguration
-import com.github.fge.jsonschema.core.report.{ListProcessingReport, ProcessingMessage, ProcessingReport}
-import com.github.fge.jsonschema.core.tree.SchemaTree
-import com.github.fge.jsonschema.library.{DraftV4Library, Keyword => FgeKeyword}
-import com.github.fge.jsonschema.processors.syntax.SyntaxValidator
-import com.github.fge.jsonschema.main.JsonSchemaFactory
-import com.github.fge.msgsimple.bundle.MessageBundle
-
 import scala.jdk.CollectionConverters._
 
-import cats.data.{ NonEmptyList, ValidatedNel }
+import cats.data.{Validated, ValidatedNel, NonEmptyList}
+import cats.syntax.apply._
 import cats.syntax.validated._
 
-// json4s
-import org.json4s._
-import org.json4s.jackson.JsonMethods.{ fromJsonNode, asJsonNode }
-import org.json4s.jackson.compactJson
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.networknt.schema.{SpecVersion, JsonSchema, JsonSchemaFactory, SchemaValidatorsConfig}
 
-// Iglu Core
-import com.snowplowanalytics.iglu.core.SchemaKey
-import com.snowplowanalytics.iglu.core.json4s.Json4sIgluCodecs.SchemaVerSerializer
+import io.circe.jackson.circeToJackson
 
-import Linter.Message
+import com.snowplowanalytics.iglu.core.SelfDescribingSchema.SelfDescribingUri
 
-/** Specific to FGE Validator logic, responsible for linting schemas against meta-schema */
-object SelfSyntaxChecker extends AbstractSyntaxChecker("self", NodeType.OBJECT) {
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Level
 
-  private implicit val schemaFormats: Formats = DefaultFormats + SchemaVerSerializer
+// circe
+import io.circe.Json
 
-  private lazy val instance = SelfSyntaxChecker.getSyntaxValidator
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Message
 
-  /** Transform typical `ProcessingMessage` into a message accompanied with `JsonPointer` */
-  def extractCheckerMessage(json: JValue): Message =
-    json match {
-      case JObject(fields) =>
-        val jsonObject = fields.toMap
-        val pointer = for {
-          JObject(schemaFields) <- jsonObject.get("schema")
-          JString(pointer) <- schemaFields.toMap.get("pointer")
-        } yield Pointer.parseSchemaPointer(pointer).fold(identity, identity)
-        val keyword = jsonObject.get("keyword").flatMap {
-          case JString(kw) => Some(kw)
-          case _ => None
+/**
+ * Linting self-describing schemas gainst their meta-schemas
+ * Useful mostly for identifying user-defined properties at a wrong level
+ * and unexpected validation types, i.e. `maxLength: "foo"`
+ */
+object SelfSyntaxChecker {
+
+  private val MetaSchemaUri = SelfDescribingUri.toString
+
+  private val V4SchemaText =
+    """{
+      |"definitions":{
+      |  "schemaArray":{"type":"array","minItems":1,"items":{"$ref":"#"}},
+      |  "positiveInteger":{"type":"integer","minimum":0},
+      |  "positiveIntegerDefault0":{"allOf":[{"$ref":"#/definitions/positiveInteger"},{"default":0}]},
+      |  "simpleTypes":{"enum":["array","boolean","integer","null","number","object","string"]},
+      |  "stringArray":{"type":"array","items":{"type":"string"},"minItems":1,"uniqueItems":true}
+      |},
+      |"type":"object",
+      |"properties":{
+      |  "self":{
+      |    "required": ["vendor", "name", "format", "version"],
+      |    "properties":{
+      |      "vendor": {"type":"string"},
+      |      "name": {"type":"string"},
+      |      "format": {"type":"string"},
+      |      "version": {"type":"string"}
+      |    }
+      |  },
+      |  "id":{"type":"string"},
+      |  "$schema":{"type":"string"},
+      |  "title":{"type":"string"},
+      |  "description":{"type":"string"},
+      |  "default":{},
+      |  "multipleOf":{"type":"number","minimum":0},
+      |  "maximum":{"type":"number"},
+      |  "minimum":{"type":"number"},
+      |  "maxLength":{"$ref":"#/definitions/positiveInteger"},
+      |  "minLength":{"$ref":"#/definitions/positiveIntegerDefault0"},
+      |  "pattern":{"type":"string","format":"regex"},
+      |  "additionalItems":{"anyOf":[{"type":"boolean"},{"$ref":"#"}],"default":{}},
+      |  "items":{"anyOf":[{"$ref":"#"},{"$ref":"#/definitions/schemaArray"}],"default":{}},
+      |  "maxItems":{"$ref":"#/definitions/positiveInteger"},
+      |  "minItems":{"$ref":"#/definitions/positiveIntegerDefault0"},
+      |  "uniqueItems":{"type":"boolean","default":false},
+      |  "maxProperties":{"$ref":"#/definitions/positiveInteger"},
+      |  "minProperties":{"$ref":"#/definitions/positiveIntegerDefault0"},
+      |  "required":{"$ref":"#/definitions/stringArray"},
+      |  "additionalProperties":{"anyOf":[{"type":"boolean"},{"$ref":"#"}],"default":{}},
+      |  "definitions":{"type":"object","additionalProperties":{"$ref":"#"},"default":{}},
+      |  "properties":{"type":"object","additionalProperties":{"$ref":"#"},"default":{}},
+      |  "patternProperties":{"type":"object","additionalProperties":{"$ref":"#"},"default":{}},
+      |  "enum":{"type":"array","minItems":1,"uniqueItems":true},
+      |  "type":{"anyOf":[{"$ref":"#/definitions/simpleTypes"},{"type":"array","items":{"$ref":"#/definitions/simpleTypes"},"minItems":1,"uniqueItems":true}]},
+      |  "format":{"type":"string"},
+      |  "allOf":{"$ref":"#/definitions/schemaArray"},
+      |  "anyOf":{"$ref":"#/definitions/schemaArray"},
+      |  "oneOf":{"$ref":"#/definitions/schemaArray"},
+      |  "not":{"$ref":"#"}
+      |},
+      |"additionalProperties": false,
+      |"default":{}}""".stripMargin
+
+  private val V4SchemaInstance: JsonSchemaFactory =
+    JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4)
+
+  val SchemaValidatorsConfig: SchemaValidatorsConfig = {
+    val config = new SchemaValidatorsConfig()
+    // typeLoose is OpenAPI workaround to cast stringly typed properties
+    // e.g, with default true "5" string would validate against integer type
+    config.setTypeLoose(false)
+    config
+  }
+
+  private lazy val V4Schema: JsonSchema =
+    JsonSchemaFactory
+      .builder(V4SchemaInstance)
+      .build()
+      .getSchema(new ObjectMapper().readTree(V4SchemaText))
+
+  def validateSchema(schema: Json): ValidatedNel[Message, Unit] = {
+    val jacksonJson = circeToJackson(schema)
+    val validation = V4Schema
+      .validate(jacksonJson)
+      .asScala
+      .toList
+      .map { message =>
+        val pointer = JsonPath.parse(message.getPath).map(JsonPath.toPointer) match {
+          case Right(Right(value)) => value
+          case Right(Left(inComplete)) => inComplete
+          case Left(_) => Pointer.Root
         }
-        val message = jsonObject.getOrElse("message", JString("Unknown message from SelfSyntaxChecker")) match {
-          case JString(m) => m.capitalize + keyword.map(x => s", in [$x]").getOrElse("")
-          case unknown => s"Unrecognized message from SelfSyntaxChecker [${compactJson(unknown)}]"
+        Message(pointer, message.getMessage, Linter.Level.Warning)
+      }.valid.swap match {
+      case Validated.Invalid(Nil) =>
+        ().validNel
+      case Validated.Invalid(h :: t) =>
+        NonEmptyList(h, t).invalid
+      case Validated.Valid(_) =>
+        ().validNel
+    }
+
+    checkMetaSchema(schema) *> validation
+  }
+
+  /**
+   * Previous JSON Schema validator was able to recognize $$schema keyword,
+   * now we have to implement this check manually
+   *
+   * @param schema JSON node with a schema
+   * @return linting result
+   */
+  def checkMetaSchema(schema: Json): ValidatedNel[Message, Unit] =
+    schema.asObject.map(_.toMap) match {
+      case None =>
+        Message(Pointer.Root, "JSON Schema must be a JSON object", Level.Error).invalidNel
+      case Some(obj) =>
+        obj.get("self") match {
+          case None =>
+            ().validNel // Don't care if schema is not self-describing
+          case Some(_) =>
+            obj.get(s"$$schema") match {
+              case Some(schema) if schema.asString.contains(MetaSchemaUri) =>
+                ().validNel
+              case Some(schema) =>
+                Message(Pointer.Root, s"self is unknown keyword for a $$schema ${schema.noSpaces}, use $MetaSchemaUri", Level.Error).invalidNel
+              case None =>
+                Message(Pointer.Root, s"self is unknown keyword for vanilla $$schema, use $MetaSchemaUri", Level.Error).invalidNel
+            }
+
         }
-        val level = extractLevel(json)
-        Message(pointer.getOrElse(Pointer.Root), message, level)
-      case _ =>
-        Message(Pointer.Root, "Unknown message from SelfSyntaxChecker", Linter.Level.Info)
     }
-
-  def extractReport(processingMessage: ProcessingMessage) =
-    extractCheckerMessage(fromJsonNode(processingMessage.asJson))
-
-  /**
-    * Validate syntax of JSON Schema using FGE JSON Schema Validator
-    * Entry-point method
-    *
-    * @param json JSON supposed to be JSON Schema
-    * @param skipWarnings whether to count warning (such as unknown keywords) as
-    *                    errors or silently ignore them
-    * @return non-empty list of error messages in case of invalid Schema
-    *         or unit if case of successful
-    */
-  def validateSchema(json: JValue, skipWarnings: Boolean): ValidatedNel[Message, Unit] = {
-    val jsonNode = asJsonNode(json)
-    val report = instance.validateSchema(jsonNode)
-      .asInstanceOf[ListProcessingReport]
-
-      report.iterator.asScala.map(extractReport).filter(filterMessages(skipWarnings)).toList match {
-      case Nil => ().valid
-      case h :: t => NonEmptyList.of(h, t: _*).invalid
-    }
-  }
-
-  private def extractLevel(message: JValue): Linter.Level =
-    message \ "level" match {
-      case JString(l) if l.toLowerCase == "error" => Linter.Level.Error
-      case JString(l) if l.toLowerCase == "warning" => Linter.Level.Warning
-      case JString(l) if l.toLowerCase == "info" => Linter.Level.Info
-      case _ => Linter.Level.Info
-    }
-
-  /**
-    * Build predicate to filter messages with log level less than WARNING
-    *
-    * @param skipWarning curried arg to produce predicate
-    * @param message validation message produced by FGE validator
-    * @return always true if `skipWarnings` is false, otherwise depends on loglevel
-    */
-  private def filterMessages(skipWarning: Boolean)(message: Message): Boolean =
-    if (skipWarning) message.level match {
-      case Linter.Level.Warning => false
-      case Linter.Level.Info => false
-      case _ => true
-    }
-    else true
-
-  /**
-    * Default `SyntaxChecker` method to process key
-    * The only required method for `SyntaxChecker`, others are factory methods
-    *
-    * @param pointers list of JSON Pointers to fill
-    * @param bundle message bundle to use
-    * @param report processing report to use
-    * @param tree currently processing part of Schema
-    */
-  @throws[ProcessingException]("If key is invalid")
-  def checkValue(pointers: java.util.Collection[FgeJsonPointer],
-                 bundle: MessageBundle,
-                 report: ProcessingReport,
-                 tree: SchemaTree): Unit = {
-
-    val value = fromJsonNode(getNode(tree))
-    value.extractOpt[SchemaKey] match {
-      case Some(_) => ()
-      case None => report.error(newMsg(tree, bundle, "iglu.invalidSchemaMap").putArgument("value", value))
-    }
-  }
-
-  // Factory methods
-
-  /**
-    * Get `ValidationConfiguration` object with validator defined for `self`
-    * keyword, ready to be used for `Validator` construction
-    */
-  def getValidationConfiguration: ValidationConfiguration = {
-    val selfKeyword = FgeKeyword.newBuilder("self")
-      .withSimpleDigester(NodeType.OBJECT)
-      .withSyntaxChecker(SelfSyntaxChecker)
-      .freeze()
-
-    val library = DraftV4Library.get()
-      .thaw()
-      .addKeyword(selfKeyword)
-      .freeze()
-
-    val validationConfiguration = ValidationConfiguration
-      .newBuilder()
-      .addLibrary("http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0", library)
-      .freeze()
-
-    validationConfiguration
-  }
-
-  /**
-    * Build `SyntaxValidator` object with `SelfSyntaxChecker`.
-    * This is a main object used to validate Schemas
-    */
-  def getSyntaxValidator: SyntaxValidator = {
-    val builder = URITranslatorConfiguration.newBuilder()
-
-    val cfg = LoadingConfiguration.newBuilder()
-      .setURITranslatorConfiguration(builder.freeze())
-      .freeze()
-
-    JsonSchemaFactory.newBuilder()
-      .setLoadingConfiguration(cfg)
-      .setValidationConfiguration(getValidationConfiguration)
-      .freeze()
-      .getSyntaxValidator
-  }
 }

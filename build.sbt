@@ -30,8 +30,10 @@ lazy val root = project.in(file("."))
     Dependencies.Libraries.igluCoreJson4s,
     Dependencies.Libraries.igluCoreCirce,
     Dependencies.Libraries.circeGeneric,
+    Dependencies.Libraries.circeJackson,
     Dependencies.Libraries.circeLiteral,
     Dependencies.Libraries.circeParser,
+    Dependencies.Libraries.catsParse,
     Dependencies.Libraries.jsonValidator,
     Dependencies.Libraries.libCompat,
     // Scala (test only)

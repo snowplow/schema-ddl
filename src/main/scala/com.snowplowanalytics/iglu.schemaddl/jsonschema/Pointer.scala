@@ -19,6 +19,7 @@ import scala.annotation.tailrec
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer._
 
 sealed trait Pointer extends Product with Serializable {
+  /** A REVERSE order cursors */
   def value: List[Cursor]
 
   def get: List[Cursor] = value.reverse

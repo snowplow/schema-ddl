@@ -13,72 +13,120 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 
 import cats.data.NonEmptyList
-import org.json4s.jackson.JsonMethods.parse
 
-import org.specs2.Specification
+import io.circe.literal._
 
+import org.specs2.mutable.Specification
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.Cursor.{DownField, DownProperty}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.SchemaProperty.Properties
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Level.Warning
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Level.{ Warning, Error }
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Message
 
-class SelfSyntaxCheckerSpec extends Specification { def is = s2"""
-  Recognize invalid property $e1
-  """
+class SelfSyntaxCheckerSpec extends Specification {
+  "validateSchema" should {
+    "recognize invalid schema property" in {
+      val jsonSchema =
+        json"""{
+        "$$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+        "description": "Schema for an example event",
+        "self": {
+            "vendor": "com.snowplowanalytics",
+            "name": "example_event",
+            "format": "jsonschema",
+            "version": "1-0-0"
+        },
+        "type": "object",
+        "properties": {
+            "example_field_1": {
+                "type": "string",
+                "description": "the example_field_1 means x",
+                "maxLength": 128
+            },
+            "example_field_2": {
+                "type": ["string", "null"],
+                "description": "the example_field_2 means y",
+                "maxLength": 128
+            },
+            "example_field_3": {
+                "type": "array",
+                "description": "the example_field_3 is a collection of user names",
+                "users": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "maxLength": 128
+                        }
+                    },
+                    "required": [
+                        "id"
+                    ],
+                    "additionalProperties": false
+                }
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "example_field_1",
+            "example_field_3"
+        ]
+    }"""
 
-  def e1 = {
-    val jsonSchema = parse(
-      """{
-        |    "$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
-        |    "description": "Schema for an example event",
-        |    "self": {
-        |        "vendor": "com.snowplowanalytics",
-        |        "name": "example_event",
-        |        "format": "jsonschema",
-        |        "version": "1-0-0"
-        |    },
-        |    "type": "object",
-        |    "properties": {
-        |        "example_field_1": {
-        |            "type": "string",
-        |            "description": "the example_field_1 means x",
-        |            "maxLength": 128
-        |        },
-        |        "example_field_2": {
-        |            "type": ["string", "null"],
-        |            "description": "the example_field_2 means y",
-        |            "maxLength": 128
-        |        },
-        |        "example_field_3": {
-        |            "type": "array",
-        |            "description": "the example_field_3 is a collection of user names",
-        |            "users": {
-        |                "type": "object",
-        |                "properties": {
-        |                    "name": {
-        |                        "type": "string",
-        |                        "maxLength": 128
-        |                    }
-        |                },
-        |                "required": [
-        |                    "id"
-        |                ],
-        |                "additionalProperties": false
-        |            }
-        |        }
-        |    },
-        |    "additionalProperties": false,
-        |    "required": [
-        |        "example_field_1",
-        |        "example_field_3"
-        |    ]
-        |}""".stripMargin)
+      val expected = NonEmptyList.of(Message(
+        Pointer.SchemaPointer(List(DownProperty(Properties), DownField("example_field_3"))),
+        "$.properties.example_field_3.users: is not defined in the schema and the schema does not allow additional properties",
+        Warning))
 
-    val expected = NonEmptyList.of(Message(
-      Pointer.SchemaPointer(List(DownField("example_field_3"), DownProperty(Properties))),
-      "The following keywords are unknown and will be ignored: [users]",
-      Warning))
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft(expected)
+    }
 
-    SelfSyntaxChecker.validateSchema(jsonSchema, false).toEither must beLeft(expected)
+    "recognize invalid maxLength type" in {
+      val jsonSchema =
+        json"""{
+        "$$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+        "description": "Schema for an example event",
+        "self": {
+            "vendor": "com.snowplowanalytics",
+            "name": "example_event",
+            "format": "jsonschema",
+            "version": "1-0-0"
+        },
+        "type": "object",
+        "properties": {
+          "invalidMaxLength": {
+            "maxLength": "string"
+          }
+        }
+    }"""
+
+      val expected = NonEmptyList.of(Message(
+        Pointer.SchemaPointer(List(DownProperty(Properties), DownField("invalidMaxLength"), DownField("maxLength"))),
+        "$.properties.invalidMaxLength.maxLength: string found, integer expected",
+        Warning))
+
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft(expected)
+    }
+
+    "complain about unknown self if valid meta-schema is not specified" in {
+      val jsonSchema =
+        json"""{
+          "$$schema" : "http://something.com/unexpected#",
+          "self": {
+              "vendor": "com.snowplowanalytics",
+              "name": "example_event",
+              "format": "jsonschema",
+              "version": "1-0-0"
+          },
+          "type": "object",
+          "properties": { }
+        }"""
+
+      val expected = NonEmptyList.of(Message(
+        Pointer.SchemaPointer(List()),
+        "self is unknown keyword for a $schema \"http://something.com/unexpected#\", use http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+        Error))
+
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft(expected)
+    }
   }
 }

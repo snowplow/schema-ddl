@@ -428,6 +428,58 @@ class FlatSchemaSpec extends Specification {
 
       required and subschemas
     }
+
+    "recognize an oneOf as sum type" >> {
+      val json = json"""
+      {
+        "type": "object",
+        "properties": {
+          "union": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "one": { "type": "integer" }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "two": { "type": "string" }
+                }
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    """.schema
+
+      val subSchemas = Set(
+        "/properties/union".jsonPointer ->
+          json"""{
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "one": { "type": "integer" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "two": { "type": "string" }
+              }
+            }
+          ]
+        }""".schema.copy(`type` = Some(Type.Null))
+      )
+
+      val result = FlatSchema.build(json)
+
+      (result.subschemas must beEqualTo(subSchemas)) and (result.required must beEmpty)
+
+    }
   }
 
   "nestedRequired" should {
