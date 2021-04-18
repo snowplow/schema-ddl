@@ -25,6 +25,13 @@ import com.typesafe.sbt.site.preprocess.PreprocessPlugin.autoImport._
 
 object BuildSettings {
 
+  lazy val commonSettings = Seq(
+    organization       := "com.snowplowanalytics",
+    version            := "0.12.0",
+    scalaVersion       := "2.12.12",
+    crossScalaVersions := Seq("2.12.12", "2.13.3")
+  )
+
   lazy val basicSettigns = Seq(
     shellPrompt := { _ => "schema-ddl> " },
     addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full)

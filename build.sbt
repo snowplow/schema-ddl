@@ -11,22 +11,18 @@
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
 
-lazy val root = project.in(file("."))
+lazy val core = project.in(file("modules/core"))
   .settings(
-    organization       := "com.snowplowanalytics",
     name               := "schema-ddl",
-    version            := "0.12.0",
     description        := "Set of Abstract Syntax Trees for various DDL and Schema formats",
-    scalaVersion       := "2.12.12",
-    crossScalaVersions := Seq("2.12.12", "2.13.3")
   )
   .enablePlugins(SiteScaladocPlugin)
+  .settings(BuildSettings.commonSettings)
   .settings(BuildSettings.sbtSiteSettings)
   .settings(BuildSettings.buildSettings)
   .settings(BuildSettings.scoverage)
   .settings(libraryDependencies ++= Seq(
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-    Dependencies.Libraries.igluCoreJson4s,
     Dependencies.Libraries.igluCoreCirce,
     Dependencies.Libraries.circeGeneric,
     Dependencies.Libraries.circeJackson,
@@ -41,3 +37,18 @@ lazy val root = project.in(file("."))
     Dependencies.Libraries.specs2Scalacheck,
     Dependencies.Libraries.specs2Cats
   ))
+
+lazy val json4s = project.in(file("modules/json4s"))
+  .settings(
+    name               := "schema-ddl-json4s",
+    description        := "Json4s-compatible entities for Schema DDL",
+  )
+  .settings(BuildSettings.commonSettings)
+  .settings(libraryDependencies ++= Seq(
+    Dependencies.Libraries.igluCoreJson4s,
+    Dependencies.Libraries.specs2,
+    Dependencies.Libraries.scalaCheck,
+    Dependencies.Libraries.specs2Scalacheck,
+    Dependencies.Libraries.specs2Cats
+  ))
+  .dependsOn(core)
