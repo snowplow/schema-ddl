@@ -37,6 +37,7 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
     Generate correct DDL for with runlength encoding for booleans $e2
     Generate correct DDL when enum schema is nullable $e3
     Generate correct DDL when only pointer is root pointer $e4
+    Generate correct DDL with sum type $e5
   """
 
   def e1 = {
@@ -127,6 +128,44 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
     )
+
+    ddl must beEqualTo(resultDdl)
+  }
+
+  def e5 = {
+
+    val subSchemas = List(
+      "/properties/union".jsonPointer ->
+        json"""{
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "one": { "type": "integer" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "two": { "type": "string" }
+              }
+            }
+          ]
+        }""".schema.copy(`type` = Some(Type.Null))
+    )
+
+    val ddl = DdlGenerator
+      .generateTableDdl(subSchemas, "launch_missles", None, 4096, false)
+      .columns
+
+    val resultDdl = CreateTable(
+      "atomic.launch_missles",
+      DdlGenerator.selfDescSchemaColumns ++
+        DdlGenerator.parentageColumns :+
+        Column("union",RedshiftVarchar(4096),Set(CompressionEncoding(ZstdEncoding)),Set()),
+      Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
+      Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
+    ).columns
 
     ddl must beEqualTo(resultDdl)
   }
