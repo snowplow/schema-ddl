@@ -13,8 +13,6 @@
 package com.snowplowanalytics.iglu.schemaddl
 package bigquery
 
-import cats.data.NonEmptyList
-
 import io.circe._
 import io.circe.literal._
 
@@ -157,9 +155,8 @@ class RowSpec extends org.specs2.Specification { def is = s2"""
       json"""null"""
 
     val inputField = Type.String
-    val expected = NonEmptyList.of(CastError.NotAnArray(Json.Null,Type.String))
+    val expected = Row.Repeated(Nil)
 
-    // This can be an invalid behavior depending on what BigQuery does in this case
-    castRepeated(inputField, inputJson) must beInvalid(expected)
+    castRepeated(inputField, inputJson) must beValid(expected)
   }
 }

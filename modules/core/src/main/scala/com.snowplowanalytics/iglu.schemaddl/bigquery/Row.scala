@@ -113,13 +113,16 @@ object Row {
 
   /** Try to cast JSON into a list of `fieldType`, fail if JSON is not an array */
   def castRepeated(fieldType: Type, json: Json): CastResult =
-    json.asArray match {  // TODO: should we case null into empty array?
+    json.asArray match {
       case Some(values) => values
         .toList
         .flatMap(castValue(fieldType)(_).eraseNull)
         .sequence[ValidatedNel[CastError, ?], Row]
         .map(Repeated.apply)
       case None =>
-        NotAnArray(json, fieldType).invalidNel
+        json.asNull match {
+          case Some(_) => Repeated(List.empty).validNel
+          case None => NotAnArray(json, fieldType).invalidNel
+        }
     }
 }
