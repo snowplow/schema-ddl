@@ -50,14 +50,14 @@ object SanityLinter {
   def getLinters(names: List[String]): Either[NonEmptyList[String], List[Linter]] =
     names
       .map(name => (name, Linter.allLintersMap.get(name)))
-      .traverse[ValidatedNel[String, ?], Linter] {
+      .traverse[ValidatedNel[String, *], Linter] {
       case (_, Some(linter)) => linter.validNel
       case (name, None) => name.invalidNel
     }.toEither
 
   private def validate(linters: List[Linter])(jsonPointer: Pointer.SchemaPointer, schema: Schema): State[ValidationState, Unit] = {
     val results = linters
-      .traverse[ValidatedNel[Linter.Issue, ?], Unit](linter => linter(jsonPointer, schema).toValidatedNel)
+      .traverse[ValidatedNel[Linter.Issue, *], Unit](linter => linter(jsonPointer, schema).toValidatedNel)
     results match {
       case Validated.Invalid(errors) =>
         State.modify[ValidationState] { state =>
