@@ -23,6 +23,7 @@ object Dependencies {
     val jsonValidator    = "1.0.39"
     val libCompat        = "2.1.6"
     val catsParse        = "0.3.2"
+    val jacksonDatabind  = "2.10.5.1"
 
     // Scala (test only)
     val specs2           = "4.8.0"
@@ -38,6 +39,7 @@ object Dependencies {
     val libCompat        = "org.scala-lang.modules"     %% "scala-collection-compat" % V.libCompat
     val catsParse        = "org.typelevel"              %% "cats-parse"             % V.catsParse
     // Java
+    val jacksonDatabind  = "com.fasterxml.jackson.core" % "jackson-databind"        % V.jacksonDatabind
     val jsonValidator    = "com.networknt"              %  "json-schema-validator"  % V.jsonValidator
     // Scala (test only)
     val specs2           = "org.specs2"                 %% "specs2-core"            % V.specs2     % Test

@@ -30,6 +30,7 @@ lazy val core = project.in(file("modules/core"))
     Dependencies.Libraries.circeLiteral,
     Dependencies.Libraries.circeParser,
     Dependencies.Libraries.catsParse,
+    Dependencies.Libraries.jacksonDatabind,
     Dependencies.Libraries.jsonValidator,
     Dependencies.Libraries.libCompat,
     // Scala (test only)
