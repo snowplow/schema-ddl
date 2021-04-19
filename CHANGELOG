@@ -1,3 +1,16 @@
+Version 0.13.0 (2021-04-21)
+---------------------------
+Extend copyright to 2021 (#73)
+Bump jackson-databind to 2.10.5.1 (#71)
+BigQuery: cast a null of nullable array type into an empty array (#70)
+Redshift: fix PrimaryKeyTable being rendered as list of characters (#64)
+Migrate to Sonatype (#69)
+Extract json4s into a separate module (#67)
+Bump sbt to 1.5.0 (#66)
+Bump kind-project to 0.11.3 (#74)
+Redshift: add a test spec for handling sum types (#68)
+Get rid of FGE JSON Schema validator (#65)
+
 Version 0.12.0 (2020-11-03)
 ---------------------------
 Migrate from Travis to GH actions (#62)
