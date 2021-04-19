@@ -28,7 +28,7 @@ libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.12.0"
 
 ## Copyright and License
 
-Schema DDL is copyright 2014-2020 Snowplow Analytics Ltd.
+Schema DDL is copyright 2014-2021 Snowplow Analytics Ltd.
 
 Licensed under the **[Apache License, Version 2.0][license]** (the "License");
 you may not use this software except in compliance with the License.
