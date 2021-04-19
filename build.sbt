@@ -19,7 +19,8 @@ lazy val core = project.in(file("modules/core"))
   .enablePlugins(SiteScaladocPlugin)
   .settings(BuildSettings.commonSettings)
   .settings(BuildSettings.sbtSiteSettings)
-  .settings(BuildSettings.buildSettings)
+  .settings(BuildSettings.basicSettigns)
+  .settings(BuildSettings.publishSettings)
   .settings(BuildSettings.scoverage)
   .settings(libraryDependencies ++= Seq(
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
@@ -43,7 +44,9 @@ lazy val json4s = project.in(file("modules/json4s"))
     name               := "schema-ddl-json4s",
     description        := "Json4s-compatible entities for Schema DDL",
   )
+  .settings(BuildSettings.basicSettigns)
   .settings(BuildSettings.commonSettings)
+  .settings(BuildSettings.publishSettings)
   .settings(libraryDependencies ++= Seq(
     Dependencies.Libraries.igluCoreJson4s,
     Dependencies.Libraries.specs2,
