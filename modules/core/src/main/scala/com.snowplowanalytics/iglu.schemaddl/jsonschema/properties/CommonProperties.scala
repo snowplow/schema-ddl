@@ -92,7 +92,7 @@ object CommonProperties {
     }
 
     private[jsonschema] def fromProduct(arr: List[String]): Either[String, Type] =
-      arr.map(fromString).map(_.toValidatedNel).sequence[ValidatedNel[String, ?], Type] match {
+      arr.map(fromString).map(_.toValidatedNel).sequence[ValidatedNel[String, *], Type] match {
         case Validated.Valid(List(single)) => single.asRight
         case Validated.Valid(product) => Union(product.toSet).asRight
         case Validated.Invalid(invalid) if invalid.size == 1 => s"${invalid.head} is invalid type".asLeft

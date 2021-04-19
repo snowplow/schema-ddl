@@ -33,7 +33,7 @@ object BuildSettings {
 
   lazy val basicSettigns = Seq(
     shellPrompt := { _ => "schema-ddl> " },
-    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full)
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.3" cross CrossVersion.full)
   )
 
   // Maven Central publishing settings

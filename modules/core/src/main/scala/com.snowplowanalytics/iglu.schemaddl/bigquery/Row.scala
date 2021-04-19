@@ -107,7 +107,7 @@ object Row {
     }
 
     results
-      .sequence[ValidatedNel[CastError, ?], (String, Row)]
+      .sequence[ValidatedNel[CastError, *], (String, Row)]
       .map(Record.apply)
   }
 
@@ -117,7 +117,7 @@ object Row {
       case Some(values) => values
         .toList
         .flatMap(castValue(fieldType)(_).eraseNull)
-        .sequence[ValidatedNel[CastError, ?], Row]
+        .sequence[ValidatedNel[CastError, *], Row]
         .map(Repeated.apply)
       case None =>
         json.asNull match {
