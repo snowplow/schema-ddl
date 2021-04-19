@@ -13,6 +13,8 @@
 package com.snowplowanalytics.iglu.schemaddl.redshift
 package generators
 
+import cats.data.NonEmptyList
+
 import io.circe.literal._
 
 // specs2
@@ -28,6 +30,7 @@ class DdlFileSpec extends Specification { def is = s2"""
     render correct table definition when given schema contains oneOf $e2
     render correct table definition when given schema contains oneOf $e3
     render correct table definition when given schema contains union type $e4
+    render correct table definition with table constraints $e5
   """
 
   def e1 = {
@@ -211,6 +214,56 @@ class DdlFileSpec extends Specification { def is = s2"""
     val flatSchema = FlatSchema.build(json)
     val orderedSubSchemas = FlatSchema.postProcess(flatSchema.subschemas)
     val schemaCreate = DdlGenerator.generateTableDdl(orderedSubSchemas, "table_name", None, 1024, false)
+    val ddl = DdlFile(List(schemaCreate)).render(Nil)
+    ddl must beEqualTo(expected)
+  }
+
+  def e5 = {
+    val schemaCreate = CreateTable(
+      "atomic.table_name",
+      List(
+        Column("schema_vendor",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("schema_name",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("schema_format",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("schema_version",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("root_id",RedshiftChar(36),Set(CompressionEncoding(RawEncoding)),Set(Nullability(NotNull))),
+        Column("root_tstamp",RedshiftTimestamp,Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("ref_root",RedshiftVarchar(255),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("ref_tree",RedshiftVarchar(1500),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("ref_parent",RedshiftVarchar(255),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        Column("union",ProductType(List("Product type [\"string\",\"object\",\"null\"] encountered in union"),None),Set(CompressionEncoding(ZstdEncoding)),Set()),
+        Column("union2",ProductType(List("Product type [\"string\",\"object\",\"null\"] encountered in union2"),None),Set(CompressionEncoding(ZstdEncoding)),Set())
+      ),
+      Set(
+        ForeignKeyTable(NonEmptyList.of("root_id", "root_tstamp"),RefTable("atomic.events",Some("event_id"))),
+        PrimaryKeyTable(NonEmptyList.of("root_id", "root_tstamp")),
+        UniqueKeyTable(NonEmptyList.of("root_id", "root_tstamp")),
+      ),
+      Set(Diststyle(Key), DistKeyTable("root_id"), SortKeyTable(None,NonEmptyList.one("root_tstamp")))
+    )
+
+    val expected =
+      """CREATE TABLE IF NOT EXISTS atomic.table_name (
+        |    "schema_vendor"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_name"    VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_format"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "schema_version" VARCHAR(128)  ENCODE ZSTD NOT NULL,
+        |    "root_id"        CHAR(36)      ENCODE RAW  NOT NULL,
+        |    "root_tstamp"    TIMESTAMP     ENCODE ZSTD NOT NULL,
+        |    "ref_root"       VARCHAR(255)  ENCODE ZSTD NOT NULL,
+        |    "ref_tree"       VARCHAR(1500) ENCODE ZSTD NOT NULL,
+        |    "ref_parent"     VARCHAR(255)  ENCODE ZSTD NOT NULL,
+        |    "union"          VARCHAR(4096) ENCODE ZSTD,
+        |    "union2"         VARCHAR(4096) ENCODE ZSTD,
+        |    FOREIGN KEY (root_id, root_tstamp) REFERENCES atomic.events(event_id)
+        |    PRIMARY KEY (root_id, root_tstamp)
+        |    UNIQUE (root_id, root_tstamp)
+        |)
+        |DISTSTYLE KEY
+        |DISTKEY (root_id)
+        |SORTKEY (root_tstamp);""".stripMargin
+
+
     val ddl = DdlFile(List(schemaCreate)).render(Nil)
     ddl must beEqualTo(expected)
   }

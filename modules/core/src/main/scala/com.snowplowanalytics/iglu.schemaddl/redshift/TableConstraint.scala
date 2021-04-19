@@ -24,14 +24,14 @@ import cats.data.NonEmptyList
 sealed trait TableConstraint extends Ddl
 
 case class UniqueKeyTable(columns: NonEmptyList[String]) extends TableConstraint {
-  def toDdl = s"UNIQUE (${columns.toList.map(_.mkString(", "))})"
+  def toDdl = s"UNIQUE (${columns.toList.mkString(", ")})"
 }
 
 case class PrimaryKeyTable(columns: NonEmptyList[String]) extends TableConstraint {
-  def toDdl = s"PRIMARY KEY (${columns.toList.map(_.mkString(", "))})"
+  def toDdl = s"PRIMARY KEY (${columns.toList.mkString(", ")})"
 }
 
 case class ForeignKeyTable(columns: NonEmptyList[String], reftable: RefTable) extends TableConstraint {
-  def toDdl = s"FOREIGN KEY (${columns.toList.mkString(",")}) ${reftable.toDdl}"
+  def toDdl = s"FOREIGN KEY (${columns.toList.mkString(", ")}) ${reftable.toDdl}"
 }
 
