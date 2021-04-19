@@ -14,8 +14,7 @@
 import sbt._
 import Keys._
 
-import bintray.BintrayPlugin._
-import bintray.BintrayKeys._
+import sbtdynver.DynVerPlugin.autoImport._
 
 import scoverage.ScoverageKeys._
 
@@ -27,9 +26,9 @@ object BuildSettings {
 
   lazy val commonSettings = Seq(
     organization       := "com.snowplowanalytics",
-    version            := "0.12.0",
     scalaVersion       := "2.12.12",
-    crossScalaVersions := Seq("2.12.12", "2.13.3")
+    crossScalaVersions := Seq("2.12.12", "2.13.3"),
+    licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0"))
   )
 
   lazy val basicSettigns = Seq(
@@ -37,30 +36,23 @@ object BuildSettings {
     addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full)
   )
 
-  // Publish settings
-  lazy val bintrayPublish = bintraySettings ++ Seq[Setting[_]](
-    licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0.html")),
-    bintrayOrganization := Some("snowplow"),
-    bintrayRepository := "snowplow-maven"
-  )
-
   // Maven Central publishing settings
-  lazy val mavenCentralExtras = Seq[Setting[_]](
+  lazy val publishSettings = Seq[Setting[_]](
     pomIncludeRepository := { _ => false },
+    ThisBuild / dynverVTagPrefix := false,      // Otherwise git tags required to have v-prefix
     homepage := Some(url("http://snowplowanalytics.com")),
     scmInfo := Some(ScmInfo(url("https://github.com/snowplow-incubator/schema-ddl"), "scm:git@github.com:snowplow-incubator/schema-ddl.git")),
-    pomExtra := (
-      <developers>
-        <developer>
-          <name>Snowplow Analytics Ltd</name>
-          <email>support@snowplowanalytics.com</email>
-          <organization>Snowplow Analytics Ltd</organization>
-          <organizationUrl>http://snowplowanalytics.com</organizationUrl>
-        </developer>
-      </developers>)
+    publishArtifact := true,
+    Test / publishArtifact := false,
+    developers := List(
+      Developer(
+        "Snowplow Analytics Ltd",
+        "Snowplow Analytics Ltd",
+        "support@snowplowanalytics.com",
+        url("https://snowplowanalytics.com")
+      )
+    )
   )
-
-  lazy val buildSettings = basicSettigns ++ bintrayPublish ++ mavenCentralExtras
 
   val scoverage = Seq(
     coverageMinimum := 50,
