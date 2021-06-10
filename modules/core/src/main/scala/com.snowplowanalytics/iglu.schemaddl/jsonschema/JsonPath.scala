@@ -87,7 +87,7 @@ object JsonPath {
     }
 
     // If at some point it had unexpected non-schema field - turn downstream into data-pointers
-    val output = Pointer.SchemaPointer(result.reverse)
+    val output = Pointer.SchemaPointer(result)
     Either.cond(isFull, output, output)
   }
 

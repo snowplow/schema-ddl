@@ -70,14 +70,18 @@ class SelfSyntaxCheckerSpec extends Specification {
             "example_field_1",
             "example_field_3"
         ]
-    }"""
+      }"""
 
-      val expected = NonEmptyList.of(Message(
-        Pointer.SchemaPointer(List(DownProperty(Properties), DownField("example_field_3"))),
-        "$.properties.example_field_3.users: is not defined in the schema and the schema does not allow additional properties",
-        Warning))
-
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft(expected)
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+        case NonEmptyList
+          (Message(
+            pointer,
+            "$.properties.example_field_3.users: is not defined in the schema and the schema does not allow additional properties",
+            Warning
+          ),
+          Nil
+        ) if pointer.value === List(DownField("example_field_3"), DownProperty(Properties)) => ok
+      }
     }
 
     "recognize invalid maxLength type" in {
@@ -97,14 +101,18 @@ class SelfSyntaxCheckerSpec extends Specification {
             "maxLength": "string"
           }
         }
-    }"""
+      }"""
 
-      val expected = NonEmptyList.of(Message(
-        Pointer.SchemaPointer(List(DownProperty(Properties), DownField("invalidMaxLength"), DownField("maxLength"))),
-        "$.properties.invalidMaxLength.maxLength: string found, integer expected",
-        Warning))
-
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft(expected)
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+        case NonEmptyList(
+          Message(
+            pointer,
+            "$.properties.invalidMaxLength.maxLength: string found, integer expected",
+            Warning
+          ),
+          Nil
+        ) if pointer.value === List(DownField("maxLength"), DownField("invalidMaxLength"), DownProperty(Properties)) => ok
+      }
     }
 
     "complain about unknown self if valid meta-schema is not specified" in {
@@ -121,12 +129,16 @@ class SelfSyntaxCheckerSpec extends Specification {
           "properties": { }
         }"""
 
-      val expected = NonEmptyList.of(Message(
-        Pointer.SchemaPointer(List()),
-        "self is unknown keyword for a $schema \"http://something.com/unexpected#\", use http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
-        Error))
-
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft(expected)
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+        case NonEmptyList
+          (Message(
+            pointer,
+            "self is unknown keyword for a $schema \"http://something.com/unexpected#\", use http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+            Error
+          ),
+          Nil
+        ) if pointer.value === List() => ok
+      }
     }
   }
 }
