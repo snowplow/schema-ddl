@@ -33,7 +33,7 @@ import io.circe.Json
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Message
 
 /**
- * Linting self-describing schemas gainst their meta-schemas
+ * Linting self-describing schemas against their meta-schemas
  * Useful mostly for identifying user-defined properties at a wrong level
  * and unexpected validation types, i.e. `maxLength: "foo"`
  */
