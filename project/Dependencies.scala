@@ -22,8 +22,8 @@ object Dependencies {
     val circe            = "0.14.1"
     val circeJackson     = "0.14.0"
     val jsonValidator    = "1.0.39"
-    val libCompat        = "2.1.6"
     val catsParse        = "0.3.4"
+    val libCompat        = "2.5.0"
     val jacksonDatabind  = "2.10.5.1"
 
     // Scala (test only)
