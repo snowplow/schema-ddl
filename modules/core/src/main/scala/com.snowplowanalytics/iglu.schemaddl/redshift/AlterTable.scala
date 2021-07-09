@@ -90,3 +90,11 @@ case class AddColumn(
 case class DropColumn(columnName: String, mode: Option[DropMode]) extends Ddl {
   def toDdl = s"DROP COLUMN $columnName${mode.map(" " + _.toDdl).getOrElse("")}"
 }
+
+case class IncreaseMaxLength(
+  columnName: String,
+  dataType: DataType
+) extends AlterTableStatement {
+  def toDdl =
+    s"""ALTER "$columnName" TYPE ${dataType.toDdl}"""
+}
