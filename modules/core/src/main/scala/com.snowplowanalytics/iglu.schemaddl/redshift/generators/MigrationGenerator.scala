@@ -19,7 +19,9 @@ import com.snowplowanalytics.iglu.schemaddl.migrations.{ Migration, FlatSchema }
 
 // This library
 import com.snowplowanalytics.iglu.schemaddl.StringUtils._
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.{ Schema, Pointer }
+import com.snowplowanalytics.iglu.schemaddl.jsonschema._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties
+import com.snowplowanalytics.iglu.schemaddl.migrations.SchemaDiff
 
 // This library
 import DdlGenerator._
@@ -46,17 +48,23 @@ object MigrationGenerator {
     val tableName     = getTableName(schemaMap)                            // e.g. com_acme_event_1
     val tableNameFull = tableSchema.map(_ + ".").getOrElse("") + tableName   // e.g. atomic.com_acme_event_1
 
-    val transaction =
+    val added =
       if (migration.diff.added.nonEmpty)
         migration.diff.added.map {
           case (pointer, schema) =>
-            buildAlterTable(tableNameFull, varcharSize, (pointer, schema))
+            buildAlterTableAdd(tableNameFull, varcharSize, (pointer, schema))
         }
       else List(CommentBlock("NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION", 3))
 
+    val modified =
+      migration.diff.modified.toList.collect {
+        case modified if maxLengthIncreased(modified) || enumLonger(modified) =>
+          buildAlterTableMaxLength(tableName, varcharSize, modified)
+      }
+
     val header = getHeader(tableName, oldSchemaUri)
     val comment = CommentOn(tableNameFull, schemaMap.schemaKey.toSchemaUri)
-    DdlFile(List(header, Empty, Begin(None, None), Empty) ++ transaction :+ Empty :+ comment :+ Empty :+ End)
+    DdlFile(List(header, Empty, Begin(None, None), Empty) ++ added ++ modified :+ Empty :+ comment :+ Empty :+ End)
   }
 
   /**
@@ -78,15 +86,15 @@ object MigrationGenerator {
       " (1 row)"))
 
   /**
-   * Generate single ALTER TABLE statement for some new property
+   * Generate single ALTER TABLE statement to add a new property
    *
    * @param tableName name of migrating table
    * @param varcharSize default size for VARCHAR
    * @param pair pair of property name and its Schema properties like
    *             length, maximum, etc
-   * @return DDL statement altering single column in table
+   * @return DDL statement altering single column in table by adding new property
    */
-  def buildAlterTable(tableName: String, varcharSize: Int, pair: (Pointer.SchemaPointer, Schema)): AlterTable =
+  def buildAlterTableAdd(tableName: String, varcharSize: Int, pair: (Pointer.SchemaPointer, Schema)): AlterTable =
     pair match {
       case (pointer, properties) =>
         val columnName = FlatSchema.getName(pointer)
@@ -94,5 +102,37 @@ object MigrationGenerator {
         val encoding = getEncoding(properties, dataType, columnName)
         val nullable = if (properties.canBeNull) None else Some(Nullability(NotNull))
         AlterTable(tableName, AddColumn(snakeCase(columnName), dataType, None, Some(encoding), nullable))
+    }
+
+  /**
+   * Generate single ALTER TABLE statement that increases the length of a varchar in-place
+   *
+   * @param tableName name of migrating table
+   * @param varcharSize default size for VARCHAR
+   * @param modified field whose length gets increased
+   * @return DDL statement altering single column in table by increasing the sieadding new property
+   */
+  def buildAlterTableMaxLength(tableName: String, varcharSize: Int, modified: SchemaDiff.Modified): AlterTable = {
+    val columnName = FlatSchema.getName(modified.pointer)
+    val dataType = getDataType(modified.to, varcharSize, columnName)
+    AlterTable(tableName, AlterType(columnName, dataType))
+  }
+
+  /** @return true if the field is string and its maxLength got increased */
+  private[generators] def maxLengthIncreased(modified: SchemaDiff.Modified): Boolean =
+    modified.from.`type`.exists(_.possiblyWithNull(CommonProperties.Type.String)) &&
+      modified.to.`type`.exists(_.possiblyWithNull(CommonProperties.Type.String)) &&
+      modified.getDelta.maxLength.was.exists { was =>
+        modified.getDelta.maxLength.became.exists { became =>
+          became.value > was.value
+        }
+      }
+
+  /** @return true if the field is enum with new value longer than the existing ones */
+  private[generators] def enumLonger(modified: SchemaDiff.Modified): Boolean =
+    modified.getDelta.enum.was.exists { was =>
+      modified.getDelta.enum.became.exists { became =>
+        became.value.map(_.asString).collect { case Some(s) => s.length }.max > was.value.map(_.asString).collect { case Some(s) => s.length }.max
+      }
     }
 }
