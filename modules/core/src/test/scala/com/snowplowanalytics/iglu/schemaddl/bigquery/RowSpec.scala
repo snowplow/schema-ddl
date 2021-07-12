@@ -36,8 +36,9 @@ class RowSpec extends org.specs2.Specification { def is = s2"""
   def e1 = {
     val string = castValue(Type.String)(json""""foo"""") must beValid(Primitive("foo"))
     val int = castValue(Type.Integer)(json"-43") must beValid(Primitive(-43))
+    val num = castValue(Type.Numeric)(json"-87.98") must beValid(Primitive(new java.math.BigDecimal("-87.98")))
     val bool = castValue(Type.Boolean)(Json.fromBoolean(false)) must beValid(Primitive(false))
-    string and int and bool
+    string and int and num and bool
   }
 
   def e2 = {
