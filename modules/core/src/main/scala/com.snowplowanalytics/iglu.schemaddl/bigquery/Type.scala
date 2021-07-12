@@ -18,7 +18,6 @@ sealed trait Type extends Product with Serializable
 object Type {
   case object String extends Type
   case object Boolean extends Type
-  case object Bytes extends Type
   case object Integer extends Type
   case object Float extends Type
   case object Numeric extends Type
