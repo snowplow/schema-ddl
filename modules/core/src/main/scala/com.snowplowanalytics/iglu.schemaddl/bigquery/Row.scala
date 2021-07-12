@@ -59,6 +59,8 @@ object Row {
         value.asNumber.flatMap(_.toLong).fold(WrongType(value, fieldType).invalidNel[Row])(Primitive(_).validNel)
       case Type.Float =>
         value.asNumber.flatMap(_.toBigDecimal.map(_.bigDecimal)).fold(WrongType(value, fieldType).invalidNel[Row])(Primitive(_).validNel)
+      case Type.Numeric =>
+        value.asNumber.flatMap(_.toBigDecimal.map(_.bigDecimal)).fold(WrongType(value, fieldType).invalidNel[Row])(Primitive(_).validNel)
       case Type.Timestamp =>
         value.asString.fold(WrongType(value, fieldType).invalidNel[Row])(Primitive(_).validNel)
       case Type.Date =>
