@@ -1,3 +1,17 @@
+Version 0.14.0 (2021-07-14)
+---------------------------
+Automate the creation of release PR (#93)
+Bump specs2 to 4.12.3 (#91)
+Bump cats-parse to 0.3.4 (#90)
+Bump scala-collection-compat to 2.5.0 (#89)
+Redshift: update table in-place when increasing maxLength of a field or adding new longer enum value (#83)
+Fix non-exhaustive match when casting value (#85)
+Remove Type.Bytes for BigQuery (#86)
+Bump kind-projector to 0.13.0 (#79)
+Bump scala versions to 2.12.14 and 2.13.6 (#78)
+Bump circe to 0.14.1 (#77)
+SelfSyntaxChecker returns SchemaPointer in the wrong order (#75)
+
 Version 0.13.0 (2021-04-21)
 ---------------------------
 Extend copyright to 2021 (#73)
