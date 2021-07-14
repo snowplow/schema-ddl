@@ -22,7 +22,7 @@ object Dependencies {
     val circe            = "0.14.1"
     val circeJackson     = "0.14.0"
     val jsonValidator    = "1.0.39"
-    val libCompat        = "2.4.4"
+    val libCompat        = "2.5.0"
     val catsParse        = "0.3.3"
     val jacksonDatabind  = "2.10.5.1"
 
