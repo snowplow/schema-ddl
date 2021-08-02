@@ -33,11 +33,12 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
     generates addition migration with three new columns              $e3
     generates migration when increasing maxLength                    $e4
     generates migration when increasing maxLength and adding a field $e5
-    generates migration when adding new longer enum value            $e6
+    generates migration when increasing maxLength of nullable field  $e6
+    generates migration when adding new longer enum value            $e7
   maxLengthIncreased
-    correctly detects when maxLength has been increased              $e7
+    correctly detects when maxLength has been increased              $e8
   enumLonger
-    correctly detects when enum gets new longer value                $e8
+    correctly detects when enum gets new longer value                $e9
   """
 
   val emptyModified = Set.empty[SchemaDiff.Modified]
@@ -211,6 +212,46 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
   }
 
   def e6 = {
+    val added = List(
+      "/foo2".jsonPointer -> json"""{"type": ["string", "null"], "maxLength": "1024"}""".schema
+    )
+    val modified = Set(
+      SchemaDiff.Modified(
+        "/foo".jsonPointer,
+        json"""{"type": ["string","null"], "maxLength": "1024"}""".schema,
+        json"""{"type": ["string","null"], "maxLength": "2048"}""".schema
+      )
+    )
+    val removed = List.empty[(Pointer.SchemaPointer, Schema)]
+
+    val diff = SchemaDiff(added, modified, removed)
+    val schemaMigration = Migration("com.acme", "example", SchemaVer.Full(1,0,0), SchemaVer.Full(1,0,1), diff)
+    val ddlMigration = MigrationGenerator.generateMigration(schemaMigration, 4096, Some("atomic")).render
+
+    val result =
+      """|-- WARNING: only apply this file to your database if the following SQL returns the expected:
+         |--
+         |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1';
+         |--  obj_description
+         |-- -----------------
+         |--  iglu:com.acme/example/jsonschema/1-0-0
+         |--  (1 row)
+         |
+         |BEGIN TRANSACTION;
+         |
+         |  ALTER TABLE atomic.com_acme_example_1
+         |    ADD COLUMN "foo2" VARCHAR(1024) ENCODE ZSTD;
+         |  ALTER TABLE com_acme_example_1
+         |    ALTER "foo" TYPE VARCHAR(2048);
+         |
+         |  COMMENT ON TABLE atomic.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+         |
+         |END TRANSACTION;""".stripMargin
+
+    ddlMigration must beEqualTo(result)
+  }
+
+  def e7 = {
     val added = List.empty[(Pointer.SchemaPointer, Schema)]
     val modified = Set(
       SchemaDiff.Modified(
@@ -247,7 +288,7 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
     ddlMigration must beEqualTo(result)
   }
 
-  def e7 = {
+  def e8 = {
     val modifiedY = SchemaDiff.Modified(
       "/foo".jsonPointer,
       json"""{"type": "string", "maxLength": "1024"}""".schema,
@@ -265,7 +306,7 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
     yes and no
   }
 
-  def e8 = {
+  def e9 = {
     val modifiedY1 = SchemaDiff.Modified(
       "/foo".jsonPointer,
       json"""{"type": "string", "enum": ["FOO", "BAR"]}""".schema,

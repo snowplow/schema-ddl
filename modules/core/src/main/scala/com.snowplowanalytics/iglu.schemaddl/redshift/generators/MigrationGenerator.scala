@@ -19,7 +19,7 @@ import com.snowplowanalytics.iglu.schemaddl.migrations.{ Migration, FlatSchema }
 
 // This library
 import com.snowplowanalytics.iglu.schemaddl.StringUtils._
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.{ Schema, Pointer }
+import com.snowplowanalytics.iglu.schemaddl.jsonschema._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties
 import com.snowplowanalytics.iglu.schemaddl.migrations.SchemaDiff
 
@@ -120,8 +120,8 @@ object MigrationGenerator {
 
   /** @return true if the field is string and its maxLength got increased */
   private[generators] def maxLengthIncreased(modified: SchemaDiff.Modified): Boolean =
-    modified.from.`type` == Some(CommonProperties.Type.String) &&
-      modified.to.`type` == Some(CommonProperties.Type.String) &&
+    modified.from.`type`.exists(_.possiblyWithNull(CommonProperties.Type.String)) &&
+      modified.to.`type`.exists(_.possiblyWithNull(CommonProperties.Type.String)) &&
       modified.getDelta.maxLength.was.exists { was =>
         modified.getDelta.maxLength.became.exists { became =>
           became.value > was.value
