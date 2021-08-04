@@ -22,6 +22,8 @@ import com.typesafe.sbt.site.SitePlugin.autoImport._
 import com.typesafe.sbt.site.SiteScaladocPlugin.autoImport._
 import com.typesafe.sbt.site.preprocess.PreprocessPlugin.autoImport._
 
+import com.typesafe.sbt.SbtGit.git
+
 object BuildSettings {
 
   lazy val commonSettings = Seq(
@@ -51,7 +53,8 @@ object BuildSettings {
         "support@snowplowanalytics.com",
         url("https://snowplowanalytics.com")
       )
-    )
+    ),
+    git.remoteRepo := "git@github.com:snowplow/schema-ddl.git"
   )
 
   val scoverage = Seq(

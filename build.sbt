@@ -17,6 +17,7 @@ lazy val core = project.in(file("modules/core"))
     description        := "Set of Abstract Syntax Trees for various DDL and Schema formats",
   )
   .enablePlugins(SiteScaladocPlugin)
+  .enablePlugins(GhpagesPlugin)
   .settings(BuildSettings.commonSettings)
   .settings(BuildSettings.sbtSiteSettings)
   .settings(BuildSettings.basicSettigns)

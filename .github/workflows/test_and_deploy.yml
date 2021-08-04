@@ -34,6 +34,26 @@ jobs:
       - name: Run tests
         run: sbt coverage +test
 
+      - name: Publish ScalaDoc
+        run: |
+          project_version=$(sbt version -Dsbt.log.noformat=true | perl -ne 'print "$1\n" if /info.*(\d+\.\d+\.\d+[^\r\n]*)/' | tail -n 1 | tr -d '\n')
+          if [[ "${{ github.ref }}" = "refs/tags/${project_version}" ]]
+          then
+            sbt "project core" makeSite
+            echo Publishing Scaladoc
+            git fetch
+            git checkout gh-pages
+            cp -r modules/core/target/site/* .
+            git config user.name "GitHub Actions"
+            git config user.email "<>"
+            git add $project_version
+            git commit -m "Added Scaladoc for $project_version"
+            git push origin gh-pages
+          else
+            echo "${{ github.ref }} does not match project version $project_version => not publishing"
+            exit 1
+          fi
+
       - name: Aggregate coverage data and submit
         run: sbt coverageReport coveralls
         env:
