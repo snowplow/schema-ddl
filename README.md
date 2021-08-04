@@ -15,7 +15,7 @@ Schema DDL itself does not provide any CLI and expose only Scala API.
 Schema DDL is compiled against Scala 2.12 and 2.13 and available on Maven Central. In order to use it with SBT, include following module:
 
 ```scala
-libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.12.0"
+libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.14.0"
 ```
 
 
@@ -46,16 +46,16 @@ limitations under the License.
 [license-image]: http://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
 [license]: http://www.apache.org/licenses/LICENSE-2.0
 
-[build]: https://github.com/snowplow-incubator/schema-ddl/actions?query=workflow%3A%22Test+and+deploy%22
-[build-image]: https://github.com/snowplow-incubator/schema-ddl/workflows/Test%20and%20deploy/badge.svg
+[build]: https://github.com/snowplow/schema-ddl/actions?query=workflow%3A%22Test+and+deploy%22
+[build-image]: https://github.com/snowplow/schema-ddl/workflows/Test%20and%20deploy/badge.svg
 
-[coveralls]: https://coveralls.io/github/snowplow-incubator/schema-ddl?branch=master
-[coveralls-image]: https://coveralls.io/repos/github/snowplow-incubator/schema-ddl/badge.svg?branch=master
+[coveralls]: https://coveralls.io/github/snowplow/schema-ddl?branch=master
+[coveralls-image]: https://coveralls.io/repos/github/snowplow/schema-ddl/badge.svg?branch=master
 
 [snowplow]: https://github.com/snowplow/snowplow
 [self-describing]: http://snowplowanalytics.com/blog/2014/05/15/introducing-self-describing-jsons/
 
-[developer-guide]: https://github.com/snowplow-incubator/schema-ddl/wiki/
+[developer-guide]: https://github.com/snowplow/schema-ddl/wiki/
 [developer-guide-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/setup.png
 
 [iglu]: https://docs.snowplowanalytics.com/docs/iglu/
@@ -64,5 +64,5 @@ limitations under the License.
 [contributing]: https://docs.snowplowanalytics.com/docs/contributing/
 [contributing-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/contributing.png
 
-[api-reference]: https://snowplow-incubator.github.io/schema-ddl/0.12.0/com/snowplowanalytics/iglu/schemaddl/index.html
+[api-reference]: https://snowplow.github.io/schema-ddl/0.14.0/com/snowplowanalytics/iglu/schemaddl/index.html
 [api-reference-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/techdocs.png
