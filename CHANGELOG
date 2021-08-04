@@ -1,3 +1,8 @@
+Version 0.14.1 (2021-08-04)
+---------------------------
+Fix ScalaDoc publishing (#100)
+Move ALTER TYPE statements out of transaction block (#101)
+
 Version 0.14.0 (2021-08-02)
 ---------------------------
 Automate the creation of release PR (#93)
