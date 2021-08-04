@@ -41,7 +41,7 @@ object BuildSettings {
     pomIncludeRepository := { _ => false },
     ThisBuild / dynverVTagPrefix := false,      // Otherwise git tags required to have v-prefix
     homepage := Some(url("http://snowplowanalytics.com")),
-    scmInfo := Some(ScmInfo(url("https://github.com/snowplow-incubator/schema-ddl"), "scm:git@github.com:snowplow-incubator/schema-ddl.git")),
+    scmInfo := Some(ScmInfo(url("https://github.com/snowplow/schema-ddl"), "scm:git@github.com:snowplow/schema-ddl.git")),
     publishArtifact := true,
     Test / publishArtifact := false,
     developers := List(
