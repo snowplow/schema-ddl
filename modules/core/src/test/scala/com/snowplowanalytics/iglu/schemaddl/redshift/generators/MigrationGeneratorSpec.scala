@@ -84,13 +84,10 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
          |--  iglu:com.acme/launch_missles/jsonschema/2-0-0
          |--  (1 row)
          |
-         |BEGIN TRANSACTION;
-         |
          |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
          |
          |  COMMENT ON TABLE atomic.com_acme_launch_missles_2 IS 'iglu:com.acme/launch_missles/jsonschema/2-0-1';
-         |
-         |END TRANSACTION;""".stripMargin
+         |""".stripMargin
 
     ddlMigration must beEqualTo(result)
   }
@@ -158,15 +155,11 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
          |--  iglu:com.acme/example/jsonschema/1-0-0
          |--  (1 row)
          |
-         |BEGIN TRANSACTION;
-         |
-         |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
-         |  ALTER TABLE com_acme_example_1
+         |  ALTER TABLE atomic.com_acme_example_1
          |    ALTER "foo" TYPE VARCHAR(2048);
          |
          |  COMMENT ON TABLE atomic.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
-         |
-         |END TRANSACTION;""".stripMargin
+         |""".stripMargin
 
     ddlMigration must beEqualTo(result)
   }
@@ -197,12 +190,13 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
          |--  iglu:com.acme/example/jsonschema/1-0-0
          |--  (1 row)
          |
+         |  ALTER TABLE atomic.com_acme_example_1
+         |    ALTER "foo" TYPE VARCHAR(2048);
+         |
          |BEGIN TRANSACTION;
          |
          |  ALTER TABLE atomic.com_acme_example_1
          |    ADD COLUMN "foo2" VARCHAR(1024) ENCODE ZSTD;
-         |  ALTER TABLE com_acme_example_1
-         |    ALTER "foo" TYPE VARCHAR(2048);
          |
          |  COMMENT ON TABLE atomic.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
          |
@@ -237,12 +231,13 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
          |--  iglu:com.acme/example/jsonschema/1-0-0
          |--  (1 row)
          |
+         |  ALTER TABLE atomic.com_acme_example_1
+         |    ALTER "foo" TYPE VARCHAR(2048);
+         |
          |BEGIN TRANSACTION;
          |
          |  ALTER TABLE atomic.com_acme_example_1
          |    ADD COLUMN "foo2" VARCHAR(1024) ENCODE ZSTD;
-         |  ALTER TABLE com_acme_example_1
-         |    ALTER "foo" TYPE VARCHAR(2048);
          |
          |  COMMENT ON TABLE atomic.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
          |
@@ -275,15 +270,11 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
          |--  iglu:com.acme/example/jsonschema/1-0-0
          |--  (1 row)
          |
-         |BEGIN TRANSACTION;
-         |
-         |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
-         |  ALTER TABLE com_acme_example_1
+         |  ALTER TABLE atomic.com_acme_example_1
          |    ALTER "foo" TYPE VARCHAR(6);
          |
          |  COMMENT ON TABLE atomic.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
-         |
-         |END TRANSACTION;""".stripMargin
+         |""".stripMargin
 
     ddlMigration must beEqualTo(result)
   }

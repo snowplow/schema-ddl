@@ -37,7 +37,7 @@ trait Ddl {
    * @return string with spaces
    */
   def withTabs(spaces: Int, str: String): String =
-    if (str.length == 0) " " * spaces
+    if (str.isEmpty) " " * spaces
     else if (spaces <= str.length) str
     else str + (" " * (spaces - str.length))
 }

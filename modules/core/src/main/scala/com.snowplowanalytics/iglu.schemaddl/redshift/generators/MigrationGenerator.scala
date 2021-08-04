@@ -54,18 +54,28 @@ object MigrationGenerator {
           case (pointer, schema) =>
             buildAlterTableAdd(tableNameFull, varcharSize, (pointer, schema))
         }
-      else List(CommentBlock("NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION", 3))
+      else Nil
 
     val modified =
       migration.diff.modified.toList.collect {
         case modified if maxLengthIncreased(modified) || enumLonger(modified) =>
-          buildAlterTableMaxLength(tableName, varcharSize, modified)
+          buildAlterTableMaxLength(tableNameFull, varcharSize, modified)
       }
 
     val header = getHeader(tableName, oldSchemaUri)
     val comment = CommentOn(tableNameFull, schemaMap.schemaKey.toSchemaUri)
-    DdlFile(List(header, Empty, Begin(None, None), Empty) ++ added ++ modified :+ Empty :+ comment :+ Empty :+ End)
+
+    val statements =
+      if (modified.isEmpty && added.isEmpty) List(EmptyAdded, Empty, comment, Empty)
+      else if (modified.isEmpty) List(Begin(None, None), Empty) ++ added :+ Empty :+ comment :+ Empty :+ End
+      else if (added.isEmpty) modified ++ List(Empty, comment, Empty)
+      else (modified :+ Empty) ++ List(Begin(None, None), Empty) ++ added :+ Empty :+ comment :+ Empty :+ End
+
+
+    DdlFile(List(header, Empty) ++ statements)
   }
+
+  val EmptyAdded = CommentBlock("NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION", 3)
 
   /**
    * Generate comment block for for migration file with information about
