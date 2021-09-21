@@ -22,6 +22,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   build recognized nullable union type $e6
   build generates repeated string for empty schema in items $e7
   build generates repeated record for nullable array $e8
+  normalName handles camel case and disallowed characters $e9
   """
 
   def e1 = {
@@ -216,4 +217,19 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
     val expected = Field("arrayTest",Type.Record(List(Field("imp",Type.String,Mode.Repeated))),Mode.Required)
     Field.build("arrayTest", input, true) must beEqualTo(expected)
   }
+
+  def e9 = {
+    (fieldNormalName("") must beEqualTo("")) and
+      (fieldNormalName("test1") must beEqualTo("test1")) and
+      (fieldNormalName("test1Test2Test3") must beEqualTo("test1_test2_test3")) and
+      (fieldNormalName("Test1Test2TEST3") must beEqualTo("test1_test2_test3")) and
+      (fieldNormalName("test1,test2.test3;test4") must beEqualTo("test1_test2_test3_test4")) and
+      (fieldNormalName("1test1,test2.test3;test4") must beEqualTo("_1test1_test2_test3_test4")) and
+      (fieldNormalName("_50test1,test2.test3;test4") must beEqualTo("_50test1_test2_test3_test4")) and
+      (fieldNormalName("_.test1,test2.test3;test4") must beEqualTo("__test1_test2_test3_test4")) and
+      (fieldNormalName(",.;:") must beEqualTo("____")) and
+      (fieldNormalName("1test1,Test2Test3Test4.test5;test6") must beEqualTo("_1test1_test2_test3_test4_test5_test6"))
+  }
+
+  private def fieldNormalName(name: String) = Field(name, Type.String, Mode.Nullable).normalName
 }

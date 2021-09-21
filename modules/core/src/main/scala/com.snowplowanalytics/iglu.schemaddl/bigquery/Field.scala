@@ -26,7 +26,9 @@ case class Field(name: String, fieldType: Type, mode: Mode) {
   }
 
   def normalName: String =
-    StringUtils.snakeCase(name)
+    StringUtils.snakeCase
+      .andThen(Field.replaceDisallowedCharacters)
+      .andThen(Field.prependIllegalStart)(name)
 
   def normalized: Field = fieldType match {
     case Type.Record(fields) => Field(normalName, Type.Record(fields.map(_.normalized)), mode)
@@ -64,4 +66,17 @@ object Field {
           .apply(name)
     }
   }
+
+  /**
+   * Replaces disallowed BQ column characters with underscore
+   */
+  val replaceDisallowedCharacters: String => String = str =>
+    str.replaceAll("[^A-Za-z0-9_]", "_")
+
+  /**
+   * Prepends underscore if string is starting with
+   * disallowed character
+   */
+  val prependIllegalStart: String => String = str =>
+    if (str.take(1).matches("[^A-Za-z_]")) s"_$str" else str
 }

@@ -45,11 +45,8 @@ object StringUtils {
   /**
    * Transforms CamelCase string into snake_case
    * Also replaces all hyphens with underscores
-   *
-   * @param str string to transform
-   * @return the underscored string
    */
-  def snakeCase(str: String): String =
+  val snakeCase: String => String = str =>
     str.replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2")
        .replaceAll("([a-z\\d])([A-Z])", "$1_$2")
        .replaceAll("-", "_")
