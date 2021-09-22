@@ -41,6 +41,8 @@ class SanityLinterSpec extends Specification { def is = s2"""
     selected formats will not fail with warning for 'no maxLength' $e11
     recognize missing $$schema field $e12
     recognize incorrect $$schema field $e13
+    recognize disallowed characters for BQ column name $e14
+    recognize illegal start for BQ column name $e15
   """
 
   def showReport(kv: (Pointer.SchemaPointer, NonEmptyList[Linter.Issue])): (String, NonEmptyList[String]) =
@@ -522,6 +524,148 @@ class SanityLinterSpec extends Specification { def is = s2"""
 
     val expected = Map("/" ->
       NonEmptyList.of(s"Given $$schema is not http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#"))
+
+    val res = lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)).map { case (k, v) => (k.show, v.map(_.show)) }
+
+    res must beEqualTo(expected)
+  }
+
+  def e14 = {
+    val schema = json"""
+        {
+           "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+           "self": {
+             "vendor": "com.test.valid",
+             "name": "test_schema",
+             "format": "jsonschema",
+             "version": "1-0-0"
+           },
+           "type": "object",
+           "description": "desc text",
+           "properties": {
+               "emailField": {
+                   "type": "string",
+                   "format": "email"
+               },
+               "dateField": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "nestedField": {
+                   "type": "object",
+                   "properties": {
+                       "nestedField1": {
+                           "type": "string",
+                           "format": "date"
+                       },
+                       "nested;Field2": {
+                           "type": "string",
+                           "format": "date"
+                       }
+                   }
+               },
+               "test1,test2.test3;test4": {
+                   "type": "string",
+                   "format": "hostname"
+               },
+               "correctField1": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "_50test1,test2.test3;test4": {
+                   "type": "string",
+                   "format": "uuid"
+               },
+               "correctField2": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "_50test1_test2_TEST3_test4": {
+                   "type": "string",
+                   "format": "uuid"
+               }
+           },
+           "additionalProperties": false
+        }
+      """.schema
+
+    val skippedLinters = List(Linter.description)
+
+    val expected = Map(
+      "/" -> NonEmptyList.of(s"Following properties contain disallowed characters for BigQuery column name: [_50test1,test2.test3;test4, test1,test2.test3;test4]"),
+      "/properties/nestedField" -> NonEmptyList.of("Following properties contain disallowed characters for BigQuery column name: [nested;Field2]")
+    )
+
+    val res = lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)).map { case (k, v) => (k.show, v.map(_.show)) }
+
+    res must beEqualTo(expected)
+  }
+
+  def e15 = {
+    val schema = json"""
+        {
+           "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+           "self": {
+             "vendor": "com.test.valid",
+             "name": "test_schema",
+             "format": "jsonschema",
+             "version": "1-0-0"
+           },
+           "type": "object",
+           "description": "desc text",
+           "properties": {
+               "emailField": {
+                   "type": "string",
+                   "format": "email"
+               },
+               "dateField": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "nestedField": {
+                   "type": "object",
+                   "properties": {
+                       "nestedField1": {
+                           "type": "string",
+                           "format": "date"
+                       },
+                       "1nestedField2": {
+                           "type": "string",
+                           "format": "date"
+                       }
+                   }
+               },
+               "1test1": {
+                   "type": "string",
+                   "format": "uuid"
+               },
+               "correctField1": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "correctField2": {
+                   "type": "string",
+                   "format": "date"
+               },
+               "_50test1_test2_TEST3_test4": {
+                   "type": "string",
+                   "format": "uuid"
+               },
+               "20test2": {
+                   "type": "string",
+                   "format": "uuid"
+               }
+           },
+           "additionalProperties": false
+        }
+      """.schema
+
+    val skippedLinters = List(Linter.description)
+
+    val expected = Map(
+      "/" -> NonEmptyList.of(s"Following properties start with illegal character for BigQuery column name: [20test2, 1test1]"),
+      "/properties/nestedField" -> NonEmptyList.of("Following properties start with illegal character for BigQuery column name: [1nestedField2]")
+    )
 
     val res = lint(schema, Linter.allLintersMap.values.toList.diff(skippedLinters)).map { case (k, v) => (k.show, v.map(_.show)) }
 

@@ -24,6 +24,7 @@ import properties.{ArrayProperty, NumberProperty, ObjectProperty, StringProperty
 import properties.CommonProperties._
 import properties.ObjectProperty._
 import properties.StringProperty._
+import com.snowplowanalytics.iglu.schemaddl.bigquery.Field
 
 /** Schema validation logic */
 sealed trait Linter extends Product with Serializable {
@@ -367,6 +368,46 @@ object Linter {
         case (Pointer.Root, None) => Details(s"No $$schema field in top-level of schema").invalid
         case _ => noIssues
       }
+  }
+
+  final case object bqDisallowedCharacters extends Linter { self =>
+
+    val level: Level = Level.Warning
+
+    case class Details(keys: Set[String]) extends Issue {
+      val linter = self
+      def show: String =
+        s"Following properties contain disallowed characters for BigQuery column name: [${keys.mkString(", ")}]"
+    }
+
+    def apply(jsonPointer: Pointer.SchemaPointer, schema: Schema): Validated[Issue, Unit] = {
+      schema.properties match {
+        case Some(Properties(value)) =>
+          val problematicKeys = value.keySet.filter(k => Field.replaceDisallowedCharacters(k) != k)
+          if (problematicKeys.isEmpty) noIssues else Details(problematicKeys).invalid
+        case _ => noIssues
+      }
+    }
+  }
+
+  final case object bqIllegalStart extends Linter { self =>
+
+    val level: Level = Level.Warning
+
+    case class Details(keys: Set[String]) extends Issue {
+      val linter = self
+      def show: String =
+        s"Following properties start with illegal character for BigQuery column name: [${keys.mkString(", ")}]"
+    }
+
+    def apply(jsonPointer: Pointer.SchemaPointer, schema: Schema): Validated[Issue, Unit] = {
+      schema.properties match {
+        case Some(Properties(value)) =>
+          val problematicKeys = value.keySet.filter(k => Field.prependIllegalStart(k) != k)
+          if (problematicKeys.isEmpty) noIssues else Details(problematicKeys).invalid
+        case _ => noIssues
+      }
+    }
   }
 
   private val m = ru.runtimeMirror(getClass.getClassLoader)
