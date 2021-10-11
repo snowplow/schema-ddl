@@ -108,6 +108,10 @@ object Keyword {
     val name = Symbol("oneOf")
     val recursive = true
   }
+  case object AnyOf extends Keyword {
+    val name = Symbol("anyOf")
+    val recursive = true
+  }
   case object Description extends Keyword {
     val name = Symbol("description")
     val recursive = false

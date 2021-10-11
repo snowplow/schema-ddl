@@ -36,12 +36,13 @@ object CommonProperties {
       case other => Type.Union(Set(Type.Null, other))
     }
 
-    def isSubsetOf(other: Type): Boolean = (this, other) match {
-      case (Type.Union(thisTypes), Type.Union(otherTypes)) => thisTypes.subsetOf(otherTypes)
-      case (Type.Union(thisTypes), otherType) => thisTypes == Set(otherType)
-      case (thisType, Type.Union(otherTypes)) => otherTypes.contains(thisType)
-      case (thisType, otherType) => thisType == otherType
+    def asUnion: Type.Union = this match {
+      case u: Type.Union => u
+      case other => Type.Union(Set(other))
     }
+
+    def isSubsetOf(other: Type): Boolean =
+      this.asUnion.value.subsetOf(other.asUnion.value)
   }
 
   object Type {
@@ -117,6 +118,13 @@ object CommonProperties {
    */
   case class OneOf(value: List[Schema]) extends JsonSchemaProperty {
     val keyword: Keyword = Keyword.OneOf
+  }
+
+  /**
+   * Type representing value for `anyOf` key
+   */
+  case class AnyOf(value: List[Schema]) extends JsonSchemaProperty {
+    val keyword: Keyword = Keyword.AnyOf
   }
 
 
