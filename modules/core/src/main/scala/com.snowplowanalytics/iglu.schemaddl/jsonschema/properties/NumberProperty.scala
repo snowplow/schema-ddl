@@ -27,10 +27,21 @@ object NumberProperty {
    */
   sealed trait MultipleOf extends JsonSchemaProperty with NumberProperty {
     val keyword: Keyword = Keyword.MultipleOf
+
+    /**
+     * Get value of `multipleOf` property as `BigDecimal` preserving point for
+     * `NumberMultipleOf` and adding it for `IntegerMultipleOf`
+     */
+    def getAsDecimal: BigDecimal
   }
   object MultipleOf {
-    case class NumberMultipleOf(value: BigDecimal) extends MultipleOf
-    case class IntegerMultipleOf(value: BigInt) extends MultipleOf
+    case class NumberMultipleOf(value: BigDecimal) extends MultipleOf {
+      def getAsDecimal: BigDecimal = value
+    }
+
+    case class IntegerMultipleOf(value: BigInt) extends MultipleOf {
+      def getAsDecimal: BigDecimal = BigDecimal(value)
+    }
   }
 
   /**

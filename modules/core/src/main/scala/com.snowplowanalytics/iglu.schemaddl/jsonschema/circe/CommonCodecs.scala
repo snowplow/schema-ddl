@@ -36,6 +36,9 @@ trait CommonCodecs {
   implicit def oneOfDecoder: Decoder[OneOf] =
     Decoder[List[Schema]].map(OneOf.apply)
 
+  implicit def anyOfDecoder: Decoder[AnyOf] =
+    Decoder[List[Schema]].map(AnyOf.apply)
+
 
   implicit def schemaEncoder: Encoder[Schema]
 
@@ -49,6 +52,9 @@ trait CommonCodecs {
     Encoder.instance(_.value.asJson)
 
   implicit def oneOfEncoder: Encoder[OneOf] =
+    Encoder.instance(_.value.asJson)
+
+  implicit def anyOfEncoder: Encoder[AnyOf] =
     Encoder.instance(_.value.asJson)
 
 }
