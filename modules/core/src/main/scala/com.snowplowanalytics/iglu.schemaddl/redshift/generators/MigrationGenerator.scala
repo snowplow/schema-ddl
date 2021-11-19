@@ -57,9 +57,11 @@ object MigrationGenerator {
       else Nil
 
     val modified =
-      migration.diff.modified.toList.collect {
+      migration.diff.modified.toList.flatMap {
         case modified if maxLengthIncreased(modified) || enumLonger(modified) =>
           buildAlterTableMaxLength(tableNameFull, varcharSize, modified)
+        case _ =>
+          None
       }
 
     val header = getHeader(tableName, oldSchemaUri)
@@ -122,11 +124,21 @@ object MigrationGenerator {
    * @param modified field whose length gets increased
    * @return DDL statement altering single column in table by increasing the sieadding new property
    */
-  def buildAlterTableMaxLength(tableName: String, varcharSize: Int, modified: SchemaDiff.Modified): AlterTable = {
+  def buildAlterTableMaxLength(tableName: String, varcharSize: Int, modified: SchemaDiff.Modified): Option[AlterTable] = {
     val columnName = FlatSchema.getName(modified.pointer)
     val dataType = getDataType(modified.to, varcharSize, columnName)
-    AlterTable(tableName, AlterType(columnName, dataType))
+    val encodingFrom = getEncoding(modified.to, dataType, columnName)
+    val encodingTo = getEncoding(modified.to, dataType, columnName)
+    if (EncodingsForbiddingAlter.contains(encodingFrom.value) || EncodingsForbiddingAlter.contains(encodingTo.value)) None
+    else Some(AlterTable(tableName, AlterType(columnName, dataType)))
   }
+
+  /**
+   * List of column encodings that don't support length extension
+   * @see https://docs.aws.amazon.com/redshift/latest/dg/r_ALTER_TABLE.html
+   */
+  val EncodingsForbiddingAlter: List[CompressionEncodingValue] =
+    List(ByteDictEncoding, RunLengthEncoding, Text255Encoding, Text32KEncoding)
 
   /** @return true if the field is string and its maxLength got increased */
   private[generators] def maxLengthIncreased(modified: SchemaDiff.Modified): Boolean =

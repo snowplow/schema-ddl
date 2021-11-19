@@ -28,17 +28,17 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.{ Pointer, Schema }
 
 class MigrationGeneratorSpec extends Specification { def is = s2"""
   Redshift migration
-    generates addition migration with one new column                 $e1
-    generates addition migration without visible changes             $e2
-    generates addition migration with three new columns              $e3
-    generates migration when increasing maxLength                    $e4
-    generates migration when increasing maxLength and adding a field $e5
-    generates migration when increasing maxLength of nullable field  $e6
-    generates migration when adding new longer enum value            $e7
+    generates addition migration with one new column                          $e1
+    generates addition migration without visible changes                      $e2
+    generates addition migration with three new columns                       $e3
+    generates migration when increasing maxLength                             $e4
+    generates migration when increasing maxLength and adding a field          $e5
+    generates migration when increasing maxLength of nullable field           $e6
+    doesn't generate migration when altering column with unsupported encoding $e7
   maxLengthIncreased
-    correctly detects when maxLength has been increased              $e8
+    correctly detects when maxLength has been increased                       $e8
   enumLonger
-    correctly detects when enum gets new longer value                $e9
+    correctly detects when enum gets new longer value                         $e9
   """
 
   val emptyModified = Set.empty[SchemaDiff.Modified]
@@ -270,8 +270,7 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
          |--  iglu:com.acme/example/jsonschema/1-0-0
          |--  (1 row)
          |
-         |  ALTER TABLE atomic.com_acme_example_1
-         |    ALTER "foo" TYPE VARCHAR(6);
+         |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
          |
          |  COMMENT ON TABLE atomic.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
          |""".stripMargin
