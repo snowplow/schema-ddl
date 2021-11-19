@@ -1,3 +1,7 @@
+Version 0.14.3 (2021-11-19)
+---------------------------
+Redshift: don't attempt to alter columns with unsupported encoding (#110)
+
 Version 0.14.2 (2021-09-22)
 ---------------------------
 BigQuery: handle disallowed characters in properties (#45)
