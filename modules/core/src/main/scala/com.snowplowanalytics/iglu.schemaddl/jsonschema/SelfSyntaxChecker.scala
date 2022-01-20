@@ -124,7 +124,7 @@ object SelfSyntaxChecker {
           case Right(Left(inComplete)) => inComplete
           case Left(_) => Pointer.Root
         }
-        Message(pointer, message.getMessage, Linter.Level.Warning)
+        Message(pointer, message.getMessage, Linter.Level.Error)
       }.valid.swap match {
       case Validated.Invalid(Nil) =>
         ().validNel
