@@ -1,3 +1,8 @@
+Version 0.14.4 (2022-01-21)
+---------------------------
+Update copyright notices to 2022 (#113)
+Raise SelfSyntaxChecker lint level to Error (#109)
+
 Version 0.14.3 (2021-11-19)
 ---------------------------
 Redshift: don't attempt to alter columns with unsupported encoding (#110)
