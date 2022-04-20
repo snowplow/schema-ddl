@@ -13,12 +13,10 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import io.circe._
-
 import cats.implicits._
 import cats.data.ValidatedNel
 
 import java.time.Instant
-
 import CastError._
 
 /** Run-time value, conforming `Field` (type) */
@@ -55,7 +53,7 @@ object FieldValue {
   /**
     * Turn primitive JSON or JSON object into Parquet row
     */
-  private def castNonNull(fieldType: Type, value: Json): CastResult = {
+  private [parquet] def castNonNull(fieldType: Type, value: Json): CastResult = {
     fieldType match {
       case Type.String =>   // Fallback strategy for union types
         value.asString.fold(StringValue(value.noSpaces))(StringValue(_)).validNel
