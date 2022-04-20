@@ -198,7 +198,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
           Field(
             name = "union",
             fieldType = Type.String,
-            nullable = false //TODO is false correct? 
+            nullable = true 
           )
         )
       ),

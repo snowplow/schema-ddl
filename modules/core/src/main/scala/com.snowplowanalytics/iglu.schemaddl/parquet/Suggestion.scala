@@ -96,7 +96,7 @@ object Suggestion {
   def finalSuggestion(schema: Schema, required: Boolean): String => Field =
     schema.`type` match {
       case Some(jsonType) if jsonType.nullable =>
-        name => Field(name, Type.String, false)
+        name => Field(name, Type.String, nullable = true)
       case _ =>
         name => Field(name, Type.String, !required)
     }
