@@ -19,7 +19,7 @@ import io.circe.literal._
 import org.specs2.mutable.Specification
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.Cursor.{DownField, DownProperty}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.SchemaProperty.Properties
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Level.Error
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Level.{Error, Warning}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Message
 
 class SelfSyntaxCheckerSpec extends Specification {
@@ -77,7 +77,7 @@ class SelfSyntaxCheckerSpec extends Specification {
           (Message(
             pointer,
             "$.properties.example_field_3.users: is not defined in the schema and the schema does not allow additional properties",
-            Error
+            Warning
           ),
           Nil
         ) if pointer.value === List(DownField("example_field_3"), DownProperty(Properties)) => ok

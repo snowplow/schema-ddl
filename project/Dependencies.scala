@@ -17,7 +17,7 @@ import Keys._
 object Dependencies {
   object V {
     // Scala
-    val igluCore         = "1.0.0"
+    val igluCore         = "1.1.0-M1" // TODO: Remove -M1
     val igluCoreJson4s   = "1.0.0"
     val circe            = "0.14.1"
     val circeJackson     = "0.14.0"
