@@ -24,6 +24,7 @@ import com.networknt.schema.{SpecVersion, JsonSchema, JsonSchemaFactory, SchemaV
 import io.circe.jackson.circeToJackson
 
 import com.snowplowanalytics.iglu.core.SelfDescribingSchema.SelfDescribingUri
+import com.snowplowanalytics.iglu.core.circe.MetaSchemas
 
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Level
 
@@ -106,25 +107,48 @@ object SelfSyntaxChecker {
     config
   }
 
-  private lazy val V4Schema: JsonSchema =
+  /** An excessively strict Json Schema
+   *
+   *  In particular, this version disallows additionalProperties. It is helpful for raising warnings when a schema contains typos.
+   */
+  private lazy val V4SchemaStrict: JsonSchema =
     JsonSchemaFactory
       .builder(V4SchemaInstance)
       .build()
       .getSchema(new ObjectMapper().readTree(V4SchemaText))
 
+  /** The more permissive JsonSchema allowed by Iglu Core
+   *
+   *  Schemas valid against this definition are generally considered valid throughout the Iglu System.
+   */
+  private lazy val V4SchemaIgluCore: JsonSchema =
+    JsonSchemaFactory
+      .builder(V4SchemaInstance)
+      .build()
+      .getSchema(new ObjectMapper().readTree(MetaSchemas.JsonSchemaV4Text))
+
   def validateSchema(schema: Json): ValidatedNel[Message, Unit] = {
     val jacksonJson = circeToJackson(schema)
-    val validation = V4Schema
+    val laxValidation = V4SchemaIgluCore
       .validate(jacksonJson)
       .asScala
+      .map(_ -> Linter.Level.Error) // It is an error to fail the lax validation
+      .toMap
+    val strictValidation = V4SchemaStrict
+      .validate(jacksonJson)
+      .asScala
+      .map(_ -> Linter.Level.Warning) // It is a warning to fail the strict validation
+      .toMap
+
+    val validation = (strictValidation ++ laxValidation) // Order is important: Errors override Warnings for identical messages
       .toList
-      .map { message =>
+      .map { case (message, level) =>
         val pointer = JsonPath.parse(message.getPath).map(JsonPath.toPointer) match {
           case Right(Right(value)) => value
           case Right(Left(inComplete)) => inComplete
           case Left(_) => Pointer.Root
         }
-        Message(pointer, message.getMessage, Linter.Level.Error)
+        Message(pointer, message.getMessage, level)
       }.valid.swap match {
       case Validated.Invalid(Nil) =>
         ().validNel
