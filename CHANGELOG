@@ -1,3 +1,7 @@
+Version 0.14.5 (2022-04-27)
+---------------------------
+SelfSyntaxChecker should validate against a more permissive version of jsonschema v4 (#117)
+
 Version 0.14.4 (2022-01-21)
 ---------------------------
 Update copyright notices to 2022 (#113)
