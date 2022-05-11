@@ -396,7 +396,7 @@ class SuggestionSpec extends Specification {
       assert(
         suggestion = enumSuggestion,
         schema = """{"enum": [1, 2, 3]}""",
-        expectedType = Type.Decimal(Type.DecimalPrecision.Digits9, 0),
+        expectedType = Type.Integer,
         expectedNullability = JsonNullability.NoExplicitNull
       )
     }
@@ -404,7 +404,7 @@ class SuggestionSpec extends Specification {
       assert(
         suggestion = enumSuggestion,
         schema = """{"enum": [1, 2, null, 3]}""",
-        expectedType = Type.Decimal(Type.DecimalPrecision.Digits9, 0),
+        expectedType = Type.Integer,
         expectedNullability = JsonNullability.ExplicitlyNullable
       )
     }

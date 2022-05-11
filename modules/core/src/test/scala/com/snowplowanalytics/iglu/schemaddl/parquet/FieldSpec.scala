@@ -13,9 +13,10 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.Nullability.{Nullable, Required}
-import com.snowplowanalytics.iglu.schemaddl.parquet.Field.NullableType
-import com.snowplowanalytics.iglu.schemaddl.parquet.Field.JsonNullability.NoExplicitNull
+
+import org.specs2.matcher.MatchResult
 
 class FieldSpec extends org.specs2.Specification { def is = s2"""
   build generates field for object with string and object $e1
@@ -29,6 +30,17 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   build generates repeated record for nullable array $e9
   normalName handles camel case and disallowed characters $e10
   """
+
+  // a helper
+  def testBuild(input: Schema, expected: Type): MatchResult[Field] =
+    List(
+      Field.build("top", input, false) must beEqualTo(Field("top", expected, Nullable)),
+      Field.build("top", input, true) must beEqualTo(Field("top", expected, Required)),
+      Field.buildRepeated("top", input, true, Nullable) must beEqualTo(Field("top", Type.Array(expected, Required), Nullable)),
+      Field.buildRepeated("top", input, true, Required) must beEqualTo(Field("top", Type.Array(expected, Required), Required)),
+      Field.buildRepeated("top", input, false, Nullable) must beEqualTo(Field("top", Type.Array(expected, Nullable), Nullable)),
+      Field.buildRepeated("top", input, false, Required) must beEqualTo(Field("top", Type.Array(expected, Nullable), Required)),
+    ).reduce(_ and _)
 
   def e1 = {
     val input = SpecHelpers.parseSchema(
@@ -68,8 +80,9 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         Field("stringKey", Type.String, nullability = Nullable))
       )
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
+
 
   def e2 = {
     val input = SpecHelpers.parseSchema(
@@ -95,7 +108,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         )
       )
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
 
   def e3 = {
@@ -121,7 +134,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         nullability = Required
       )
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
 
   def e4 = {
@@ -147,7 +160,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         nullability = Nullable
       )
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
 
   def e5 = {
@@ -172,7 +185,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         )
       )
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
 
   def e6 = {
@@ -186,7 +199,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
 
     val expected = Type.Json
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
 
   def e7 = {
@@ -212,7 +225,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         )
       )
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
 
   def e8 = {
@@ -240,7 +253,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         )
       )
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
 
   def e9 = {
@@ -268,7 +281,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         )
       )
 
-    Field.buildType(input) must beEqualTo(NullableType(expected, NoExplicitNull))
+    testBuild(input, expected)
   }
 
   def e10 = {

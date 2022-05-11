@@ -34,8 +34,11 @@ object FieldValue {
   case class DecimalValue(value: BigDecimal) extends FieldValue
   case class TimestampValue(value: java.sql.Timestamp) extends FieldValue
   case class DateValue(value: java.sql.Date) extends FieldValue
-  case class StructValue(values: List[(String, FieldValue)]) extends FieldValue
+  case class StructValue(values: List[NamedValue]) extends FieldValue
   case class ArrayValue(values: List[FieldValue]) extends FieldValue
+
+  /* Part of [[StructValue]] */
+  case class NamedValue(name: String, value: FieldValue)
 
   /**
     * Turn JSON  value into Parquet-compatible row, matching schema defined in `field`
@@ -51,78 +54,101 @@ object FieldValue {
         else if (field.fieldType === Type.Json) JsonValue(value).validNel
         else WrongType(value, field.fieldType).invalidNel
       case nonNull =>
-        castNonNull(field.fieldType, nonNull)
+        castNonNull(field.fieldType)(nonNull)
     }
 
   /**
     * Turn primitive JSON or JSON object into Parquet row
     */
-  private [parquet] def castNonNull(fieldType: Type, value: Json): CastResult = {
+  private def castNonNull(fieldType: Type): Json => CastResult =
     fieldType match {
-      case Type.Json =>
-        JsonValue(value).validNel
-      case Type.String =>
-        value.asString.fold(WrongType(value, fieldType).invalidNel[FieldValue])(StringValue(_).validNel)
-      case Type.Boolean =>
-        value.asBoolean.fold(WrongType(value, fieldType).invalidNel[FieldValue])(BooleanValue(_).validNel)
-      case Type.Integer =>
-        value.asNumber.flatMap(_.toInt).fold(WrongType(value, fieldType).invalidNel[FieldValue])(IntValue(_).validNel)
-      case Type.Long =>
-        value.asNumber.flatMap(_.toLong).fold(WrongType(value, fieldType).invalidNel[FieldValue])(LongValue(_).validNel)
-      case Type.Double =>
-        value.asNumber.fold(WrongType(value, fieldType).invalidNel[FieldValue])(num => DoubleValue(num.toDouble).validNel)
-      case Type.Decimal(precision, scale) =>
-        value.asNumber.flatMap(_.toBigDecimal).fold(WrongType(value, fieldType).invalidNel[FieldValue]) {
-          bigDec =>
-            if (bigDec.precision <= Type.DecimalPrecision.toInt(precision) && bigDec.scale <= scale)
-              DecimalValue(bigDec).validNel
-            else
-              WrongType(value, fieldType).invalidNel
-        }
-      case Type.Timestamp =>
-        value.asString
-          .flatMap(s => Either.catchNonFatal(DateTimeFormatter.ISO_DATE_TIME.parse(s)).toOption)
-          .flatMap(a => Either.catchNonFatal(java.sql.Timestamp.from(Instant.from(a))).toOption)
-          .fold(WrongType(value, fieldType).invalidNel[FieldValue])(TimestampValue(_).validNel)
-      case Type.Date =>
-        value.asString
-          .flatMap(s => Either.catchNonFatal(java.sql.Date.valueOf(s)).toOption)
-          .fold(WrongType(value, fieldType).invalidNel[FieldValue])(DateValue(_).validNel)
-      case Type.Struct(subfields) =>
-        value
-          .asObject
-          .fold(WrongType(value, fieldType).invalidNel[Map[String, Json]])(_.toMap.validNel)
-          .andThen(castObject(subfields))
-      case Type.Array(element, nullability) =>
-        value.asArray match {
-          case Some(values) => values
-            .toList
-            .map {
-              case Json.Null =>
-                if (nullability.nullable) NullValue.validNel
-                else if (element === Type.Json) JsonValue(Json.Null).validNel
-                else WrongType(Json.Null, element).invalidNel
-              case nonNull => castNonNull(element, nonNull)
-            }
-            .sequence[ValidatedNel[CastError, *], FieldValue]
-            .map(ArrayValue.apply)
-          case None => WrongType(value, fieldType).invalidNel
-        }
+      case Type.Json => castJson
+      case Type.String => castString
+      case Type.Boolean => castBoolean
+      case Type.Integer => castInteger
+      case Type.Long => castLong
+      case Type.Double => castDouble
+      case d: Type.Decimal => castDecimal(d)
+      case Type.Timestamp => castTimestamp
+      case Type.Date => castDate
+      case s: Type.Struct => castStruct(s)
+      case a: Type.Array => castArray(a)
     }
-  }
 
-  /** Part of `castValue`, mapping JSON object into *ordered* list of `TableRow`s */
-  private def castObject(subfields: List[Field])(jsonObject: Map[String, Json]): CastResult =
-    subfields.map { f =>
-        jsonObject.get(f.name) match {
-          case Some(json) => cast(f)(json).map { (Field.normalizeName(f) -> _) }
-          case None =>
-            f.nullability match {
-              case Type.Nullability.Nullable => (Field.normalizeName(f) -> NullValue).validNel
-              case Type.Nullability.Required => MissingInValue(f.name, Json.fromFields(jsonObject)).invalidNel
-            }
+  private def castString(value: Json): CastResult =
+    value.asString.fold(WrongType(value, Type.String).invalidNel[FieldValue])(StringValue(_).validNel)
+
+  private def castBoolean(value: Json): CastResult =
+    value.asBoolean.fold(WrongType(value, Type.Boolean).invalidNel[FieldValue])(BooleanValue(_).validNel)
+
+  private def castInteger(value: Json): CastResult =
+    value.asNumber.flatMap(_.toInt).fold(WrongType(value, Type.Integer).invalidNel[FieldValue])(IntValue(_).validNel)
+
+  private def castLong(value: Json): CastResult =
+    value.asNumber.flatMap(_.toLong).fold(WrongType(value, Type.Long).invalidNel[FieldValue])(LongValue(_).validNel)
+
+  private def castDouble(value: Json): CastResult =
+    value.asNumber.fold(WrongType(value, Type.Double).invalidNel[FieldValue])(num => DoubleValue(num.toDouble).validNel)
+
+  private def castDecimal(decimal: Type.Decimal)(value: Json): CastResult =
+    value.asNumber.flatMap(_.toBigDecimal).fold(WrongType(value, decimal).invalidNel[FieldValue]) {
+      bigDec =>
+        if (bigDec.precision <= Type.DecimalPrecision.toInt(decimal.precision) && bigDec.scale <= decimal.scale)
+          DecimalValue(bigDec).validNel
+        else
+          WrongType(value, decimal).invalidNel
+    }
+
+  private def castTimestamp(value: Json): CastResult =
+    value.asString
+      .flatMap(s => Either.catchNonFatal(DateTimeFormatter.ISO_DATE_TIME.parse(s)).toOption)
+      .flatMap(a => Either.catchNonFatal(java.sql.Timestamp.from(Instant.from(a))).toOption)
+      .fold(WrongType(value, Type.Timestamp).invalidNel[FieldValue])(TimestampValue(_).validNel)
+
+  private def castDate(value: Json): CastResult =
+    value.asString
+      .flatMap(s => Either.catchNonFatal(java.sql.Date.valueOf(s)).toOption)
+      .fold(WrongType(value, Type.Date).invalidNel[FieldValue])(DateValue(_).validNel)
+
+  private def castJson(value: Json): CastResult =
+    JsonValue(value).validNel
+
+  private def castArray(array: Type.Array)(value: Json): CastResult =
+    value.asArray match {
+      case Some(values) => values
+        .toList
+        .map {
+          case Json.Null =>
+            if (array.nullability.nullable) NullValue.validNel
+            else if (array.element === Type.Json) JsonValue(Json.Null).validNel
+            else WrongType(Json.Null, array.element).invalidNel
+          case nonNull => castNonNull(array.element)(nonNull)
+        }
+        .sequence[ValidatedNel[CastError, *], FieldValue]
+        .map(ArrayValue.apply)
+      case None => WrongType(value, array).invalidNel
+    }
+
+  private def castStruct(struct: Type.Struct)(value: Json): CastResult =
+    value.asObject match {
+      case None =>
+        WrongType(value, struct).invalidNel[FieldValue]
+      case Some(obj) =>
+        val map = obj.toMap
+        struct.fields
+          .map(castStructField(_, map))
+          .sequence[ValidatedNel[CastError, *], NamedValue]
+          .map(StructValue.apply)
+    }
+
+  /** Part of `castStruct`, mapping sub-fields of a JSON object into `FieldValue`s */
+  private def castStructField(field: Field, jsonObject: Map[String, Json]): ValidatedNel[CastError, NamedValue] =
+    jsonObject.get(field.name) match {
+      case Some(json) => cast(field)(json).map(NamedValue(Field.normalizeName(field), _))
+      case None =>
+        field.nullability match {
+          case Type.Nullability.Nullable => NamedValue(Field.normalizeName(field), NullValue).validNel
+          case Type.Nullability.Required => MissingInValue(field.name, Json.fromFields(jsonObject)).invalidNel
         }
     }
-    .sequence[ValidatedNel[CastError, *], (String, FieldValue)]
-    .map(StructValue.apply)
 }

@@ -77,7 +77,7 @@ object Field {
     }
   }
 
-  private[parquet] def buildType(topSchema: Schema): NullableType = {
+  private def buildType(topSchema: Schema): NullableType = {
     topSchema.`type` match {
       case Some(types) if types.possiblyWithNull(CommonProperties.Type.Object) =>
         NullableType(
@@ -122,12 +122,7 @@ object Field {
     topSchema.items match {
       case Some(ArrayProperty.Items.ListItems(schema)) =>
         val typeOfArrayItem = buildType(schema)
-        val nullability = typeOfArrayItem.nullability match {
-          case JsonNullability.ExplicitlyNullable =>
-            Type.Nullability.Nullable
-          case JsonNullability.NoExplicitNull =>
-            Type.Nullability.Required
-        }
+        val nullability = isFieldNullable(typeOfArrayItem.nullability, true)
         Type.Array(typeOfArrayItem.value, nullability)
       case _ =>
         Type.Array(Type.Json, Type.Nullability.Nullable)
