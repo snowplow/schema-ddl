@@ -15,7 +15,7 @@ package com.snowplowanalytics.iglu.schemaddl.jsonschema.mutate
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties._
 
-object Mutate {
+private[schemaddl] object Mutate {
 
   /**
   * Mutates a schema to be more amenable for converting into a storage AST.
@@ -110,7 +110,7 @@ object Mutate {
    * }
    * ```
    */
-  def noAlternatives(schema: Schema): Schema = {
+  private def noAlternatives(schema: Schema): Schema = {
     val items = schema.items.map {
         case ArrayProperty.Items.ListItems(li) => ArrayProperty.Items.ListItems(noAlternatives(li))
         case ArrayProperty.Items.TupleItems(ti) => ArrayProperty.Items.TupleItems(ti.map(noAlternatives))
@@ -176,7 +176,7 @@ object Mutate {
    * output schema. For example, using the example schemas above, the data `["hello", 42, true]`
    * is technically valid against `inputSchema` but invalid against `outputSchema`.
    */
-  def noTupleItems(schema: Schema): Schema = {
+  private def noTupleItems(schema: Schema): Schema = {
     val items = schema.items.flatMap {
       case ArrayProperty.Items.ListItems(li) =>
         Some(ArrayProperty.Items.ListItems(noTupleItems(li)))
@@ -247,7 +247,7 @@ object Mutate {
    * technically valid against `inputSchema` but invalid against `outputSchema`.
    *
    */
-  def noAdditionalProperties(schema: Schema): Schema = {
+  private def noAdditionalProperties(schema: Schema): Schema = {
     val items = schema.items.map {
       case ArrayProperty.Items.ListItems(li) =>
         ArrayProperty.Items.ListItems(noAdditionalProperties(li))
