@@ -25,7 +25,7 @@ object EncodeSuggestions {
   // Often repeated strings benefit from text255
   val text255Suggestion: EncodingSuggestion =  (schema, dataType, _) =>
     (schema.`enum`, dataType) match {
-      case (Some(_), RedshiftVarchar(_)) =>
+      case (Some(_), RedshiftVarchar(size)) if size <= 255 =>
         Some(Text255Encoding)
       case _ => None
     }
