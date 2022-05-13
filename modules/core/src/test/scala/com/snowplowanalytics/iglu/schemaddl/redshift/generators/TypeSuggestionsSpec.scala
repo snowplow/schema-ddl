@@ -31,6 +31,22 @@ class TypeSuggestionsSpec extends Specification {
       val props = json"""{"type": "number", "multipleOf": 1}""".schema
       DdlGenerator.getDataType(props, 16, "somecolumn") must beEqualTo(RedshiftInteger)
     }
+    "handle string" in {
+      val props = json"""{"type": "string"}""".schema
+      DdlGenerator.getDataType(props, 16, "somecolumn") must beEqualTo(RedshiftVarchar(16))
+    }
+    "handle string with maxLength" in {
+      val props = json"""{"type": "string", "maxLength": 42}""".schema
+      DdlGenerator.getDataType(props, 16, "somecolumn") must beEqualTo(RedshiftVarchar(42))
+    }
+    "handle string with enum" in {
+      val props = json"""{"type": "string", "enum": ["one", "two"]}""".schema
+      DdlGenerator.getDataType(props, 16, "somecolumn") must beEqualTo(RedshiftVarchar(3))
+    }
+    "handle string with enum and maxLength" in {
+      val props = json"""{"type": "string", "enum": ["one", "two"], "maxLength": 42}""".schema
+      DdlGenerator.getDataType(props, 16, "somecolumn") must beEqualTo(RedshiftVarchar(3))
+    }
     "handle invalid enum" in {
       val props = json"""{"type": "integer", "multipleOf": 1, "enum": [2,3,5,"hello",32]}""".schema
       DdlGenerator.getDataType(props, 16, "somecolumn") must beEqualTo(RedshiftVarchar(7))

@@ -146,7 +146,7 @@ object TypeSuggestions {
         Some(RedshiftVarchar(15))
       case (Some(types), _,                    _,               Some(Format.EmailFormat)) if types.possiblyWithNull(Type.String) =>
         Some(RedshiftVarchar(255))
-      case (Some(types), Some(maxLength),      _,               _) if types.possiblyWithNull(Type.String) =>
+      case (Some(types), Some(maxLength),      None,            _) if types.possiblyWithNull(Type.String) =>
         Some(RedshiftVarchar(maxLength.value.toInt))
       case (_,           _,                    Some(enum),      _) =>
         enum.value.map(jsonLength).maximumOption match {
