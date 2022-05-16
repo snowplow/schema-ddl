@@ -120,9 +120,9 @@ class MigrationGeneratorSpec extends Specification { def is = s2"""
          |  ALTER TABLE atomic.com_acme_launch_missles_1
          |    ADD COLUMN "launch_time" TIMESTAMP ENCODE ZSTD;
          |  ALTER TABLE atomic.com_acme_launch_missles_1
-         |    ADD COLUMN "latitude" DOUBLE PRECISION NOT NULL ENCODE RAW;
+         |    ADD COLUMN "latitude" DOUBLE PRECISION ENCODE RAW;
          |  ALTER TABLE atomic.com_acme_launch_missles_1
-         |    ADD COLUMN "longitude" DOUBLE PRECISION NOT NULL ENCODE RAW;
+         |    ADD COLUMN "longitude" DOUBLE PRECISION ENCODE RAW;
          |
          |  COMMENT ON TABLE atomic.com_acme_launch_missles_1 IS 'iglu:com.acme/launch_missles/jsonschema/1-0-3';
          |
