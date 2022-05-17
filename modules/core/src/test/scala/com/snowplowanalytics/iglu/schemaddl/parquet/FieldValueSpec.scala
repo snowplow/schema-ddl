@@ -18,7 +18,7 @@ import org.specs2.matcher.ValidatedMatchers._
 import org.specs2.matcher.MatchResult
 
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.Nullability.{Nullable, Required}
-import com.snowplowanalytics.iglu.schemaddl.parquet.Type.DecimalPrecision.Digits9
+import com.snowplowanalytics.iglu.schemaddl.parquet.Type.DecimalPrecision.{Digits9, Digits18, Digits38}
 import com.snowplowanalytics.iglu.schemaddl.parquet.FieldValue.NamedValue
 
 class FieldValueSpec extends org.specs2.Specification { def is = s2"""
@@ -35,6 +35,8 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
   cast does not stringify null when mode is Nullable $e11
   cast turns any unexpected type into json, when schema type is json $e12
   cast does not transform unexpected JSON $e13
+  cast transforms decimal values with correct scale and precision $e14
+  cast does not transform decimal values with invalid scale or precision $e15
   """
 
   import FieldValue._
@@ -56,7 +58,7 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
       testCast(Type.Long, json"2147483648", LongValue(2147483648l)),
       testCast(Type.Double, json"-43", DoubleValue(-43d)),
       testCast(Type.Double, json"-43.3", DoubleValue(-43.3d)),
-      testCast(Type.Decimal(Digits9, 2), json"-87.98", DecimalValue(new java.math.BigDecimal("-87.98"))),
+      testCast(Type.Decimal(Digits9, 2), json"-87.98", DecimalValue(new java.math.BigDecimal("-87.98"), Digits9)),
       testCast(Type.Boolean, Json.fromBoolean(false), BooleanValue(false))
     ).reduce(_ and _)
   }
@@ -222,4 +224,44 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
       testInvalidCast(Type.Timestamp, json""""not a timestamp"""")
     ).reduce(_ and _)
   }
+
+  def e14 = {
+    def testDecimal(decimal: Type.Decimal, value: Json, expectedLong: Long, expectedScale: Int) =
+      cast(Field("top", decimal, Required))(value) must beValid.like {
+        case DecimalValue(bd, digits) =>
+          (digits must_== decimal.precision) and
+          (bd.underlying.unscaledValue.longValue must_== expectedLong) and
+          (bd.scale must_== expectedScale)
+      }
+    List(
+      testDecimal(Type.Decimal(Digits9, 2), json"87.98", 8798, 2),
+      testDecimal(Type.Decimal(Digits9, 2), json"-87.98", -8798, 2),
+      testDecimal(Type.Decimal(Digits9, 2), json"87.98000", 8798, 2),
+      testDecimal(Type.Decimal(Digits9, 2), json"87.90000", 8790, 2),
+      testDecimal(Type.Decimal(Digits9, 2), json"879", 87900, 2),
+      testDecimal(Type.Decimal(Digits9, 10), json"0.00000001", 100, 10),
+
+      testDecimal(Type.Decimal(Digits18, 2), json"879", 87900, 2),
+      testDecimal(Type.Decimal(Digits18, 2), json"-879", -87900, 2),
+      testDecimal(Type.Decimal(Digits18, 18), json"0.123456789123456789", 123456789123456789L, 18),
+
+      testDecimal(Type.Decimal(Digits38, 2), json"879", 87900, 2),
+      testDecimal(Type.Decimal(Digits38, 2), json"-879", -87900, 2),
+    ).reduce(_ and _)
+  }
+
+  def e15 = {
+    def testInvalidCast(decimal: Type.Decimal, value: Json) =
+      cast(Field("top", decimal, Required))(value) must beInvalid
+    List(
+      testInvalidCast(Type.Decimal(Digits9, 2), json"""12.1234"""),
+      testInvalidCast(Type.Decimal(Digits9, 2), json"""-12.1234"""),
+      testInvalidCast(Type.Decimal(Digits9, 2), json"""123456789.12"""),
+      testInvalidCast(Type.Decimal(Digits9, 2), json"""1000000000"""),
+      testInvalidCast(Type.Decimal(Digits9, 2), json"""0.00001"""),
+      testInvalidCast(Type.Decimal(Digits18, 2), json"""0.00001"""),
+      testInvalidCast(Type.Decimal(Digits38, 2), json"""0.00001"""),
+    ).reduce(_ and _)
+  }
+
 }

@@ -31,7 +31,7 @@ object FieldValue {
   case class IntValue(value: Int) extends FieldValue
   case class LongValue(value: Long) extends FieldValue
   case class DoubleValue(value: Double) extends FieldValue
-  case class DecimalValue(value: BigDecimal) extends FieldValue
+  case class DecimalValue(value: BigDecimal, precision: Type.DecimalPrecision) extends FieldValue
   case class TimestampValue(value: java.sql.Timestamp) extends FieldValue
   case class DateValue(value: java.sql.Date) extends FieldValue
   case class StructValue(values: List[NamedValue]) extends FieldValue
@@ -90,13 +90,15 @@ object FieldValue {
   private def castDouble(value: Json): CastResult =
     value.asNumber.fold(WrongType(value, Type.Double).invalidNel[FieldValue])(num => DoubleValue(num.toDouble).validNel)
 
-  private def castDecimal(decimal: Type.Decimal)(value: Json): CastResult =
-    value.asNumber.flatMap(_.toBigDecimal).fold(WrongType(value, decimal).invalidNel[FieldValue]) {
+  private def castDecimal(decimalType: Type.Decimal)(value: Json): CastResult =
+    value.asNumber.flatMap(_.toBigDecimal).fold(WrongType(value, decimalType).invalidNel[FieldValue]) {
       bigDec =>
-        if (bigDec.precision <= Type.DecimalPrecision.toInt(decimal.precision) && bigDec.scale <= decimal.scale)
-          DecimalValue(bigDec).validNel
-        else
-          WrongType(value, decimal).invalidNel
+        Either.catchOnly[java.lang.ArithmeticException](bigDec.setScale(decimalType.scale, BigDecimal.RoundingMode.UNNECESSARY)) match {
+          case Right(scaled) if bigDec.precision <= Type.DecimalPrecision.toInt(decimalType.precision) =>
+            DecimalValue(scaled, decimalType.precision).validNel
+          case _ =>
+            WrongType(value, decimalType).invalidNel
+        }
     }
 
   private def castTimestamp(value: Json): CastResult =
