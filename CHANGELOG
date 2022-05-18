@@ -1,3 +1,10 @@
+Version 0.15.0 (2022-05-18)
+---------------------------
+Redshift AddColumn migration should never be NOT NULL (#123)
+Fix Redshift column type for enum with a max length (#121)
+Add Parquet schema AST (#119)
+Utils for oneOf/anyOf properties to become fields of storage ASTs (#120)
+
 Version 0.14.5 (2022-04-27)
 ---------------------------
 SelfSyntaxChecker should validate against a more permissive version of jsonschema v4 (#117)
