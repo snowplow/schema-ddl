@@ -1,5 +1,9 @@
 Version 0.15.0 (2022-05-18)
 ---------------------------
+
+
+Version 0.15.0 (2022-05-18)
+---------------------------
 Redshift AddColumn migration should never be NOT NULL (#123)
 Fix Redshift column type for enum with a max length (#121)
 Add Parquet schema AST (#119)
