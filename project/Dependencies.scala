@@ -18,7 +18,6 @@ object Dependencies {
   object V {
     // Scala
     val igluCore         = "1.1.0"
-    val igluCoreJson4s   = "1.0.0"
     val circe            = "0.14.1"
     val circeJackson     = "0.14.0"
     val jsonValidator    = "1.0.39"
@@ -33,7 +32,7 @@ object Dependencies {
 
   object Libraries {
     // Scala
-    val igluCoreJson4s   = "com.snowplowanalytics"      %% "iglu-core-json4s"       % V.igluCoreJson4s
+    val igluCoreJson4s   = "com.snowplowanalytics"      %% "iglu-core-json4s"       % V.igluCore
     val igluCoreCirce    = "com.snowplowanalytics"      %% "iglu-core-circe"        % V.igluCore
     val circeGeneric     = "io.circe"                   %% "circe-generic"          % V.circe
     val circeJackson     = "io.circe"                   %% "circe-jackson210"       % V.circeJackson
