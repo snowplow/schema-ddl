@@ -26,7 +26,7 @@ object Dependencies {
     val jacksonDatabind  = "2.13.2.1"
 
     // Scala (test only)
-    val specs2           = "4.12.3"
+    val specs2           = "4.15.0"
     val scalaCheck       = "1.14.0"
   }
 
