@@ -1,3 +1,16 @@
+Version 0.15.1 (2022-08-12)
+---------------------------
+Fix flaky FieldValueSpec test (#129)
+Bump sbt-tpolecat to 0.4.1 (#129)
+Bump scalacheck to 1.16.0 (#127)
+Bump specs2 to 4.15.0 (#127)
+Bump scala-collection-compat to 2.8.1 (#127)
+Bump cats-parse to 0.3.8 (#127)
+Bump json-schema-validator to 1.0.72 (#127)
+Bump circe-generic to 0.14.2 (#127)
+Bump iglu-core-json4s to 1.1.0 (#127)
+Bump jackson-databind to 2.13.2.1 (#127)
+
 Version 0.15.0 (2022-05-18)
 ---------------------------
 Redshift AddColumn migration should never be NOT NULL (#123)
