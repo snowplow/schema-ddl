@@ -18,7 +18,7 @@ object Dependencies {
   object V {
     // Scala
     val igluCore         = "1.1.0"
-    val circe            = "0.14.1"
+    val circe            = "0.14.2"
     val circeJackson     = "0.14.0"
     val jsonValidator    = "1.0.39"
     val catsParse        = "0.3.4"
