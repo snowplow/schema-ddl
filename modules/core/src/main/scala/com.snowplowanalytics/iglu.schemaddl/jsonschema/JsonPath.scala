@@ -57,6 +57,7 @@ object JsonPath {
     op <- operator
   } yield r :: op
 
+  @scala.annotation.nowarn
   def parse(str: String): Either[String, NonEmptyList[Cursor]] =
     jsonPath.parseAll(str).leftMap {
       case Parser.Error(failedAtOffset, expected) =>
