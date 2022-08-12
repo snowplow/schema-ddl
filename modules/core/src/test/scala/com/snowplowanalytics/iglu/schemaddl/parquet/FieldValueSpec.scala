@@ -19,7 +19,6 @@ import org.specs2.matcher.MatchResult
 
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.Nullability.{Nullable, Required}
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.DecimalPrecision.{Digits9, Digits18, Digits38}
-import com.snowplowanalytics.iglu.schemaddl.parquet.FieldValue.NamedValue
 
 class FieldValueSpec extends org.specs2.Specification { def is = s2"""
   cast transforms any primitive value $e1
@@ -46,7 +45,7 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
     List(
       cast(Field("top", fieldType, Required))(value) must beValid(expected),
       cast(Field("top", fieldType, Nullable))(value) must beValid(expected),
-      cast(Field("top", fieldType, Nullable))(Json.Null) must beValid(NullValue),
+      cast(Field("top", fieldType, Nullable))(Json.Null) must beValid[FieldValue](NullValue),
       cast(Field("top", fieldType, Required))(Json.Null) must beInvalid
     ).reduce(_ and _)
 
@@ -54,8 +53,8 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
     List(
       testCast(Type.String, json""""foo"""", StringValue("foo")),
       testCast(Type.Integer, json"-43", IntValue(-43)),
-      testCast(Type.Long, json"-43", LongValue(-43l)),
-      testCast(Type.Long, json"2147483648", LongValue(2147483648l)),
+      testCast(Type.Long, json"-43", LongValue(-43L)),
+      testCast(Type.Long, json"2147483648", LongValue(2147483648L)),
       testCast(Type.Double, json"-43", DoubleValue(-43d)),
       testCast(Type.Double, json"-43.3", DoubleValue(-43.3d)),
       testCast(Type.Decimal(Digits9, 2), json"-87.98", DecimalValue(new java.math.BigDecimal("-87.98"), Digits9)),
