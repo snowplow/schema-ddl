@@ -1,7 +1,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers
-import com.snowplowanalytics.iglu.schemaddl.parquet.Migrations.{NullableRequired, ParquetMigration, ParquetSchemaMigrations, RequiredNullable, TopLevelKeyAddition, suggestSchemaVersionMaskFromMigrations}
+import com.snowplowanalytics.iglu.schemaddl.parquet.Migrations.{NullableRequired, ParquetMigration, ParquetSchemaMigrations, TopLevelKeyAddition, suggestSchemaVersionMaskFromMigrations}
 
 class MigrationSpec extends org.specs2.Specification {
 
@@ -454,16 +454,6 @@ class MigrationSpec extends org.specs2.Specification {
         |  "longKey": {
         |    "type": "integer",
         |    "maximum": 9223372036854775808
-        |  },
-        |  "decimalKey": {
-        |    "enum": [0.1, 222, 3.3]
-        |  },
-        |  "doubleKey": {
-        |    "type": "number"
-        |  },
-        |  "dateKey": {
-        |    "type": "string",
-        |    "format": "date"
         |  }
         |}
         |}
@@ -479,17 +469,7 @@ class MigrationSpec extends org.specs2.Specification {
         |    "maximum": 9223372036854775808
         |  },
         |  "longKey": {
-        |     "enum": [0.1, 222, 3.3]
-        |  },
-        |  "decimalKey": {
-        |    "type": "number"
-        |  },
-        |  "doubleKey": {
-        |    "type": "number"
-        |  },
-        |  "dateKey": {
-        |    "type": "string",
-        |    "format": "date-time"
+        |      "type": "number"
         |  }
         |}
         |}
@@ -497,21 +477,16 @@ class MigrationSpec extends org.specs2.Specification {
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
 
     Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set(
-      "Type widening from Date to Timestamp at /dateKey",
-      "Type widening from Decimal(Digits9,1) to Double at /decimalKey",
-      "Type widening from Integer to Long at /intKey",
-      "Type widening from Long to Decimal(Digits9,1) at /longKey")
+      "Type widening from Integer to Long at /intKey", "Type widening from Long to Double at /longKey")
   }
 
   //Suggest version change correctly $e15
   def e15 = {
     val patch: ParquetSchemaMigrations = Set(NullableRequired(Nil))
-    val minor: ParquetSchemaMigrations = Set(RequiredNullable(Nil)) ++ patch
-    val major: ParquetSchemaMigrations = Set(TopLevelKeyAddition(Nil, Type.Boolean)) ++ minor
+    val major: ParquetSchemaMigrations = Set(TopLevelKeyAddition(Nil, Type.Boolean))
 
-    suggestSchemaVersionMaskFromMigrations(major) shouldEqual ((true, false, false))
-    suggestSchemaVersionMaskFromMigrations(minor) shouldEqual ((false, true, false))
-    suggestSchemaVersionMaskFromMigrations(patch) shouldEqual ((false, false, true))
+    suggestSchemaVersionMaskFromMigrations(major) shouldEqual ((true, false))
+    suggestSchemaVersionMaskFromMigrations(patch) shouldEqual ((false, true))
   }
 }
 

@@ -1,23 +1,20 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
-import com.snowplowanalytics.iglu.schemaddl.parquet.Type.{Array, Struct, DecimalPrecision}
+import com.snowplowanalytics.iglu.schemaddl.parquet.Type.{Array, Struct}
 
 /*
   Parquet schemas are migrated though the `merge.schema = true` loading option in Spark/Databricks.
   Migrations in this package do not define spark 3.0 style `ATLER TABLE` transformations, similar to Redshift. Instead
-  they are used to categorize schema changes into 3 categories:
-   - Patch - Miscellaneous changes that would be handled by the `merge.schema`:
+  they are used to categorize schema changes into 2 categories:
+   - Non breaking - Miscellaneous changes that would be handled by the `merge.schema`:
       * `NullableRequired` - nullable to required change
       * `NestedKeyAddition` - addition of the new Struct key anywhere except for top level Schema.
-      * `TypeWidening` - Compatible type casting. Such as Int -> Long (cast as BitInt) -> Decimal -> Double.
-   - Minor - Reserved for key addition in top level schema `TopLevelKeyAddition`.
-   - Major - Breaking change that would either lead to oen of these outcomes:
+      * `TypeWidening` - Compatible type casting. Such as Int -> Long (cast as BitInt) -> Double.
+      * `TopLevelKeyAddition` - key addition in top level schema
+   - Breaking - Breaking change that would either lead to oen of these outcomes:
       * `KeyRemoval` historical data loss, such as removing field in Struct. Loading will succeed with data loss.
       * `IncompatibleType` Incompatible type casting, such as String -> Int, etc. Loading will fail.
       * `RequiredNullable` Nullable to required field or array migration. Loading will fail.
-
-   Note that JSON type and String are interchangeable, in the context of this library because Spark does not support
-   Parquet with JSON type, so they are stringified.
  */
 object Migrations {
 
@@ -36,37 +33,35 @@ object Migrations {
 
   type ParquetSchemaMigrations = Set[ParquetMigration]
 
-  sealed trait Patch extends ParquetMigration
+  sealed trait NonBreaking extends ParquetMigration
 
-  sealed trait Minor extends ParquetMigration
+  sealed trait Breaking extends ParquetMigration
 
-  sealed trait Major extends ParquetMigration
-
-  case class KeyRemoval(override val path: ParquetSchemaPath, removedKey: Type) extends Major {
+  case class KeyRemoval(override val path: ParquetSchemaPath, removedKey: Type) extends Breaking {
     override def toString: String = s"Key removal at /${reversedPath.mkString("/")}"
   }
 
-  case class RequiredNullable(override val path: ParquetSchemaPath) extends Major {
+  case class RequiredNullable(override val path: ParquetSchemaPath) extends Breaking {
     override def toString: String = s"Changing nullable property to required at /${reversedPath.mkString("/")}"
   }
 
-  case class NullableRequired(override val path: ParquetSchemaPath) extends Patch {
+  case class NullableRequired(override val path: ParquetSchemaPath) extends NonBreaking {
     override def toString: String = s"Changing required property to nullable at /${reversedPath.mkString("/")}"
   }
 
-  case class TopLevelKeyAddition(override val path: ParquetSchemaPath, key: Type) extends Minor {
+  case class TopLevelKeyAddition(override val path: ParquetSchemaPath, key: Type) extends NonBreaking {
     override def toString: String = s"Top-level schema key addition at /${reversedPath.mkString("/")}"
   }
 
-  case class NestedKeyAddition(override val path: ParquetSchemaPath, key: Type) extends Patch {
+  case class NestedKeyAddition(override val path: ParquetSchemaPath, key: Type) extends NonBreaking {
     override def toString: String = s"Nested object key addition at /${reversedPath.mkString("/")}"
   }
 
-  case class TypeWidening(override val path: ParquetSchemaPath, oldType: Type, newType: Type) extends Patch {
+  case class TypeWidening(override val path: ParquetSchemaPath, oldType: Type, newType: Type) extends NonBreaking {
     override def toString: String = s"Type widening from $oldType to $newType at /${reversedPath.mkString("/")}"
   }
 
-  case class IncompatibleType(override val path: ParquetSchemaPath, oldType: Type, newType: Type) extends Major {
+  case class IncompatibleType(override val path: ParquetSchemaPath, oldType: Type, newType: Type) extends Breaking {
     override def toString: String = s"Incompatible type change $oldType to $newType at /${reversedPath.mkString("/")}"
   }
 
@@ -86,8 +81,6 @@ object Migrations {
 
       sourceType match {
         case Type.String => targetType match {
-          // Json is cast down to string by the transformer
-          case Type.Json => addTypeWidening()
           case Type.String => ()
           case _ => addIncompatibleType()
         }
@@ -99,13 +92,11 @@ object Migrations {
           case Type.Integer => ()
           case Type.Long => addTypeWidening()
           case Type.Double => addTypeWidening()
-          case _: Type.Decimal => addTypeWidening()
           case _ => addIncompatibleType()
         }
         case Type.Long => targetType match {
           case Type.Long => ()
           case Type.Double => addTypeWidening()
-          case _: Type.Decimal => addTypeWidening()
           case _ => addIncompatibleType()
         }
         case Type.Double => targetType match {
@@ -117,10 +108,6 @@ object Migrations {
           case Type.Decimal(targetPrecision, targetScale) =>
             if (targetPrecision == precision & targetScale == scale)
               ()
-            else if (targetScale != scale)
-              addIncompatibleType()
-            else if (DecimalPrecision.toInt(precision) <= DecimalPrecision.toInt(targetPrecision))
-              addTypeWidening()
             else
               addIncompatibleType()
           case _ => addIncompatibleType()
@@ -204,20 +191,18 @@ object Migrations {
    */
 
   // [parquet] to access this in tests
-  private[parquet] def suggestSchemaVersionMaskFromMigrations(migrations: ParquetSchemaMigrations): (Boolean, Boolean, Boolean) = {
-    val finalFlags = migrations.foldLeft((false, false, false))((flags, migration) =>
+  private[parquet] def suggestSchemaVersionMaskFromMigrations(migrations: ParquetSchemaMigrations): (Boolean, Boolean) = {
+    val finalFlags = migrations.foldLeft((false, false))((flags, migration) =>
       migration match {
-        case _: Patch => (flags._1, flags._2, true)
-        case _: Minor => (flags._1, true, flags._3)
-        case _: Major => (true, flags._2, flags._3)
+        case _: NonBreaking => (flags._1, true)
+        case _: Breaking => (true, flags._2)
       })
     (
       finalFlags._1,
-      finalFlags._2 & !finalFlags._1,
-      finalFlags._3 & !finalFlags._2 & !finalFlags._1,
+      finalFlags._2 & !finalFlags._1
     )
   }
 
-  def suggestSchemaVersionMask(source: Field, target: Field): (Boolean, Boolean, Boolean) =
+  def getSchemaMigrationFlags(source: Field, target: Field): (Boolean, Boolean) =
     suggestSchemaVersionMaskFromMigrations(MigrationFieldPair(Nil, source, Some(target)).migrations)
 }
