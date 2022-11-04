@@ -1,7 +1,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers
-import com.snowplowanalytics.iglu.schemaddl.parquet.Migrations.{NullableRequired, ParquetMigration, ParquetSchemaMigrations, TopLevelKeyAddition, suggestSchemaVersionMaskFromMigrations}
+import com.snowplowanalytics.iglu.schemaddl.parquet.Migrations.{NullableRequired, ParquetMigration, ParquetSchemaMigrations, TopLevelKeyAddition, isSchemaMigrationBreakingFromMigrations}
 
 class MigrationSpec extends org.specs2.Specification {
 
@@ -485,8 +485,8 @@ class MigrationSpec extends org.specs2.Specification {
     val patch: ParquetSchemaMigrations = Set(NullableRequired(Nil))
     val major: ParquetSchemaMigrations = Set(TopLevelKeyAddition(Nil, Type.Boolean))
 
-    suggestSchemaVersionMaskFromMigrations(major) shouldEqual ((true, false))
-    suggestSchemaVersionMaskFromMigrations(patch) shouldEqual ((false, true))
+    isSchemaMigrationBreakingFromMigrations(major) shouldEqual true
+    isSchemaMigrationBreakingFromMigrations(patch) shouldEqual false
   }
 }
 
