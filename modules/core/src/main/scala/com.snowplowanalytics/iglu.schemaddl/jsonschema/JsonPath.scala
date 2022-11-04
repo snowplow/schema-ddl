@@ -61,6 +61,8 @@ object JsonPath {
     jsonPath.parseAll(str).leftMap {
       case Parser.Error(failedAtOffset, expected) =>
         s"Failed to parse $str as JSONPath at $failedAtOffset. Expected: ${expected.toList.mkString(", ")}"
+      case _ =>
+        s"Failed to parse $str as JSONPath. Unhandled exception."
     }
 
   /**

@@ -1,5 +1,6 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
+import cats.Show
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.{Array, Struct}
 
 /*
@@ -26,9 +27,9 @@ object Migrations {
   sealed trait ParquetMigration {
     // As Migration logic traverses deeper into the structure keys appended to the head of list.
     // So path stored is reverse.
-    def path: ParquetSchemaPath
+    def reversedPath: ParquetSchemaPath
 
-    def reversedPath: ParquetSchemaPath = path.reverse
+    def path: ParquetSchemaPath = reversedPath.reverse
   }
 
   type ParquetSchemaMigrations = Set[ParquetMigration]
@@ -37,32 +38,34 @@ object Migrations {
 
   sealed trait Breaking extends ParquetMigration
 
-  case class KeyRemoval(override val path: ParquetSchemaPath, removedKey: Type) extends Breaking {
-    override def toString: String = s"Key removal at /${reversedPath.mkString("/")}"
+  implicit val showPerson: Show[ParquetMigration] = Show.show(_.toString)
+
+  case class KeyRemoval(override val reversedPath: ParquetSchemaPath, removedKey: Type) extends Breaking {
+    override def toString: String = s"Key removal at /${path.mkString("/")}"
   }
 
-  case class RequiredNullable(override val path: ParquetSchemaPath) extends Breaking {
-    override def toString: String = s"Changing nullable property to required at /${reversedPath.mkString("/")}"
+  case class RequiredNullable(override val reversedPath: ParquetSchemaPath) extends Breaking {
+    override def toString: String = s"Changing nullable property to required at /${path.mkString("/")}"
   }
 
-  case class NullableRequired(override val path: ParquetSchemaPath) extends NonBreaking {
-    override def toString: String = s"Changing required property to nullable at /${reversedPath.mkString("/")}"
+  case class NullableRequired(override val reversedPath: ParquetSchemaPath) extends NonBreaking {
+    override def toString: String = s"Changing required property to nullable at /${path.mkString("/")}"
   }
 
-  case class TopLevelKeyAddition(override val path: ParquetSchemaPath, key: Type) extends NonBreaking {
-    override def toString: String = s"Top-level schema key addition at /${reversedPath.mkString("/")}"
+  case class TopLevelKeyAddition(override val reversedPath: ParquetSchemaPath, key: Type) extends NonBreaking {
+    override def toString: String = s"Top-level schema key addition at /${path.mkString("/")}"
   }
 
-  case class NestedKeyAddition(override val path: ParquetSchemaPath, key: Type) extends NonBreaking {
-    override def toString: String = s"Nested object key addition at /${reversedPath.mkString("/")}"
+  case class NestedKeyAddition(override val reversedPath: ParquetSchemaPath, key: Type) extends NonBreaking {
+    override def toString: String = s"Nested object key addition at /${path.mkString("/")}"
   }
 
-  case class TypeWidening(override val path: ParquetSchemaPath, oldType: Type, newType: Type) extends NonBreaking {
-    override def toString: String = s"Type widening from $oldType to $newType at /${reversedPath.mkString("/")}"
+  case class TypeWidening(override val reversedPath: ParquetSchemaPath, oldType: Type, newType: Type) extends NonBreaking {
+    override def toString: String = s"Type widening from $oldType to $newType at /${path.mkString("/")}"
   }
 
-  case class IncompatibleType(override val path: ParquetSchemaPath, oldType: Type, newType: Type) extends Breaking {
-    override def toString: String = s"Incompatible type change $oldType to $newType at /${reversedPath.mkString("/")}"
+  case class IncompatibleType(override val reversedPath: ParquetSchemaPath, oldType: Type, newType: Type) extends Breaking {
+    override def toString: String = s"Incompatible type change $oldType to $newType at /${path.mkString("/")}"
   }
 
   private implicit class FocusStruct(val value: Struct) {
@@ -191,18 +194,14 @@ object Migrations {
    */
 
   // [parquet] to access this in tests
-  private[parquet] def suggestSchemaVersionMaskFromMigrations(migrations: ParquetSchemaMigrations): (Boolean, Boolean) = {
-    val finalFlags = migrations.foldLeft((false, false))((flags, migration) =>
+  private[parquet] def isSchemaMigrationBreakingFromMigrations(migrations: ParquetSchemaMigrations):  Boolean =
+   migrations.foldLeft(false)((flag, migration) =>
       migration match {
-        case _: NonBreaking => (flags._1, true)
-        case _: Breaking => (true, flags._2)
+        case _: NonBreaking =>  flag
+        case _: Breaking => true
       })
-    (
-      finalFlags._1,
-      finalFlags._2 & !finalFlags._1
-    )
-  }
 
-  def getSchemaMigrationFlags(source: Field, target: Field): (Boolean, Boolean) =
-    suggestSchemaVersionMaskFromMigrations(MigrationFieldPair(Nil, source, Some(target)).migrations)
+
+  def isSchemaMigrationBreaking(source: Field, target: Field):  Boolean =
+    isSchemaMigrationBreakingFromMigrations(MigrationFieldPair(Nil, source, Some(target)).migrations)
 }
