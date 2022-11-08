@@ -60,4 +60,4 @@ jobs:
       - name: Aggregate coverage data and submit
         run: sbt coveralls
         env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
