@@ -37,6 +37,11 @@ jobs:
       - name: Aggregate coverage data
         run: sbt coverageAggregate
 
+      - name: Aggregate coverage data and submit
+        run: sbt coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish ScalaDoc
         run: |
           project_version=$(sbt version -Dsbt.log.noformat=true | perl -ne 'print "$1\n" if /info.*(\d+\.\d+\.\d+[^\r\n]*)/' | tail -n 1 | tr -d '\n')
@@ -57,7 +62,3 @@ jobs:
             exit 1
           fi
 
-      - name: Aggregate coverage data and submit
-        run: sbt coveralls
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
