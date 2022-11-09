@@ -141,6 +141,7 @@ object FlatSchema {
       case Pointer.Cursor.DownProperty(Pointer.SchemaProperty.Items) => true
       case Pointer.Cursor.DownProperty(Pointer.SchemaProperty.PatternProperties) => true
       case Pointer.Cursor.DownProperty(Pointer.SchemaProperty.OneOf) => true
+      case Pointer.Cursor.DownProperty(Pointer.SchemaProperty.AdditionalProperties) => true
       case _ => false
     } || (pointer.value.lastOption match {
       case Some(Pointer.Cursor.DownProperty(Pointer.SchemaProperty.OneOf)) =>
