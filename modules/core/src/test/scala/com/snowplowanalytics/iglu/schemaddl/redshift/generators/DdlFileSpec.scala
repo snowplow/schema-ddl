@@ -31,6 +31,7 @@ class DdlFileSpec extends Specification { def is = s2"""
     render correct table definition when given schema contains oneOf $e3
     render correct table definition when given schema contains union type $e4
     render correct table definition with table constraints $e5
+    render correct table definition when given schema contains additional properties $e6
   """
 
   def e1 = {
@@ -264,6 +265,74 @@ class DdlFileSpec extends Specification { def is = s2"""
         |SORTKEY (root_tstamp);""".stripMargin
 
 
+    val ddl = DdlFile(List(schemaCreate)).render(Nil)
+    ddl must beEqualTo(expected)
+  }
+
+  def e6 = {
+    val json = json"""
+      {
+        "self": {
+          "vendor": "com.snowplowanalytics.snowplow",
+          "name": "site_search",
+          "format": "jsonschema",
+          "version": "1-0-0"
+        },
+        "type": "object",
+        "properties": {
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "filters": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "boolean"
+              ]
+            }
+          },
+          "totalResults": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "pageResults": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        }
+      }
+    """.schema
+    val expected =
+      """CREATE TABLE IF NOT EXISTS atomic.table_name (
+        |    "schema_vendor"  VARCHAR(128)   ENCODE ZSTD NOT NULL,
+        |    "schema_name"    VARCHAR(128)   ENCODE ZSTD NOT NULL,
+        |    "schema_format"  VARCHAR(128)   ENCODE ZSTD NOT NULL,
+        |    "schema_version" VARCHAR(128)   ENCODE ZSTD NOT NULL,
+        |    "root_id"        CHAR(36)       ENCODE RAW  NOT NULL,
+        |    "root_tstamp"    TIMESTAMP      ENCODE ZSTD NOT NULL,
+        |    "ref_root"       VARCHAR(255)   ENCODE ZSTD NOT NULL,
+        |    "ref_tree"       VARCHAR(1500)  ENCODE ZSTD NOT NULL,
+        |    "ref_parent"     VARCHAR(255)   ENCODE ZSTD NOT NULL,
+        |    "filters"        VARCHAR(1024)  ENCODE ZSTD,
+        |    "page_results"   INT            ENCODE ZSTD,
+        |    "terms"          VARCHAR(65535) ENCODE ZSTD,
+        |    "total_results"  INT            ENCODE ZSTD,
+        |    FOREIGN KEY (root_id) REFERENCES atomic.events(event_id)
+        |)
+        |DISTSTYLE KEY
+        |DISTKEY (root_id)
+        |SORTKEY (root_tstamp);""".stripMargin
+
+    val flatSchema = FlatSchema.build(json)
+    val orderedSubSchemas = FlatSchema.postProcess(flatSchema.subschemas)
+    val schemaCreate = DdlGenerator.generateTableDdl(orderedSubSchemas, "table_name", None, 1024, false)
     val ddl = DdlFile(List(schemaCreate)).render(Nil)
     ddl must beEqualTo(expected)
   }
