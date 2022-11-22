@@ -1,6 +1,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import cats.Show
+import cats.syntax.all._
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.{Array, Struct}
 
 /*
@@ -72,113 +73,157 @@ object Migrations {
     def focus(subkey: String): Option[Field] = value.fields.collectFirst { case x if x.name == subkey => x }
   }
 
+  private case class MergedType(migrations: ParquetSchemaMigrations, result: Option[Type])
+
+  private case class MergedField(migrations: ParquetSchemaMigrations, result: Option[Field])
+
+
   private case class MigrationTypePair(path: ParquetSchemaPath, sourceType: Type, targetType: Type) {
-    def migrations: ParquetSchemaMigrations = {
+
+    def migrations: MergedType = {
       var migrations: Set[ParquetMigration] = Set.empty[ParquetMigration]
 
-      def addIncompatibleType(): Unit =
+      def addIncompatibleType(): Option[Type] = {
         migrations += IncompatibleType(path: ParquetSchemaPath, sourceType: Type, targetType: Type)
+        None
+      }
 
-      def addTypeWidening(): Unit =
+      def addTypeWidening(tgtType: Type): Option[Type] = {
         migrations += TypeWidening(path: ParquetSchemaPath, sourceType: Type, targetType: Type)
+        tgtType.some
+      }
 
-      sourceType match {
+      val mergedType: Option[Type] = sourceType match {
         case Type.String => targetType match {
-          case Type.String => ()
+          case Type.String => targetType.some
+          case Type.Json => addTypeWidening(Type.Json)
           case _ => addIncompatibleType()
         }
         case Type.Boolean => targetType match {
-          case Type.Boolean => ()
+          case Type.Boolean => targetType.some
           case _ => addIncompatibleType()
         }
         case Type.Integer => targetType match {
-          case Type.Integer => ()
-          case Type.Long => addTypeWidening()
-          case Type.Double => addTypeWidening()
+          case Type.Integer => targetType.some
+          case Type.Long => addTypeWidening(Type.Long)
+          case Type.Double => addTypeWidening(Type.Double)
           case _ => addIncompatibleType()
         }
         case Type.Long => targetType match {
-          case Type.Long => ()
-          case Type.Double => addTypeWidening()
+          case Type.Long => Type.Long.some
+          case Type.Integer => Type.Long.some
+          case Type.Double => addTypeWidening(Type.Double)
           case _ => addIncompatibleType()
         }
         case Type.Double => targetType match {
-          case Type.Double => ()
+          case Type.Long => Type.Double.some
+          case Type.Integer => Type.Double.some
+          case Type.Double => targetType.some
           case _ => addIncompatibleType()
         }
         case Type.Decimal(precision, scale) => targetType match {
-          case Type.Double => addTypeWidening()
           case Type.Decimal(targetPrecision, targetScale) =>
             if (targetPrecision == precision & targetScale == scale)
-              ()
+              targetType.some
             else
               addIncompatibleType()
           case _ => addIncompatibleType()
         }
         case Type.Date => targetType match {
-          case Type.Date => ()
-          case Type.Timestamp => addTypeWidening()
+          case Type.Date => targetType.some
           case _ => addIncompatibleType()
         }
         case Type.Timestamp => targetType match {
-          case Type.Timestamp => ()
+          case Type.Timestamp => targetType.some
           case _ => addIncompatibleType()
         }
         case sourceStruct@Struct(sourceFields) => targetType match {
           case targetStruct@Type.Struct(targetFields) =>
-            migrations ++= sourceFields.flatMap(f =>
-              MigrationFieldPair(f.name::path, f, targetStruct.focus(f.name)).migrations) ++
-              // Comparing struct target fields to the source. This will detect additions.
-              targetFields
-                .flatMap(f => MigrationFieldPair(f.name::path, f, sourceStruct.focus(f.name)).migrations)
-                .flatMap {
-                  case KeyRemoval(path, value) => if (path.length == 1) {
-                    List(TopLevelKeyAddition(path, value))
-                  } else {
-                    List(NestedKeyAddition(path, value))
-                  }
-                  case _ => Nil // discard the modification as they will be detected earlier
-                }
+            val forwardFields = sourceFields.map(srcField => MigrationFieldPair(srcField.name :: path, srcField, targetStruct.focus(srcField.name)).migrations)
+
+            // Comparing struct target fields to the source. This will detect additions.
+            val reverseFields = targetFields.map(tgtField => MigrationFieldPair(tgtField.name :: path, tgtField, sourceStruct.focus(tgtField.name)).migrations)
+
+            migrations ++= forwardFields.flatMap(_.migrations)
+
+            migrations ++= reverseFields.flatMap(f => f.migrations.flatMap {
+              case KeyRemoval(path, value) => if (path.length == 1) {
+                List(TopLevelKeyAddition(path, value))
+              } else {
+                List(NestedKeyAddition(path, value))
+              }
+              case _ => Nil // discard the modification as they will be detected earlier
+            })
+
+
+            val maybeMergedField: Option[Type.Struct] = for {
+              srcFields <- forwardFields.traverse(_.result)
+              srcFieldNames = srcFields.map(_.name)
+              extraTgtFields <- reverseFields.traverseFilter(
+                tgtField => tgtField.result.map(tgtField =>
+                  // filter out 
+                  if (srcFieldNames.contains(tgtField.name)) tgtField.some else None)
+              )
+            } yield Type.Struct(srcFields ++ extraTgtFields)
+
+            maybeMergedField
+
           case _ => addIncompatibleType()
         }
         case Array(sourceElement, sourceNullability) => targetType match {
           case Type.Array(targetElement, targetNullability) =>
-            if (sourceNullability.nullable & targetNullability.required)
+            val mergedNullable = if (sourceNullability.nullable & targetNullability.required) {
               migrations += RequiredNullable("[arrayDown]" :: path)
-            else if (sourceNullability.required & targetNullability.nullable) {
+              Type.Nullability.Required
+            } else if (sourceNullability.required & targetNullability.nullable) {
               migrations += NullableRequired("[arrayDown]" :: path)
+              Type.Nullability.Required
+            } else if (sourceNullability.required & targetNullability.required) {
+              Type.Nullability.Required
+            } else {
+              Type.Nullability.Nullable
             }
-            migrations ++= MigrationTypePair("[arrayDown]" :: path, sourceElement, targetElement).migrations
+            val mergedType = MigrationTypePair("[arrayDown]" :: path, sourceElement, targetElement).migrations
+
+            migrations ++= mergedType.migrations
+
+            mergedType.result.map(Array(_, mergedNullable))
           case _ => addIncompatibleType()
         }
         case Type.Json => targetType match {
           // Json is cast down to srting by the transformer
-          case Type.Json => ()
-          case Type.String => addTypeWidening()
+          case Type.Json => targetType.some
+          case Type.String => addTypeWidening(Type.Json)
           case _ => addIncompatibleType()
         }
       }
-      migrations
+      MergedType(migrations, mergedType)
     }
   }
 
   private case class MigrationFieldPair(path: ParquetSchemaPath, sourceField: Field, maybeTargetField: Option[Field]) {
-    def migrations: ParquetSchemaMigrations = maybeTargetField match {
-      case None => Set(KeyRemoval(path, sourceField.fieldType)) // target schema does not have this field
+    def migrations: MergedField = maybeTargetField match {
+      case None => MergedField(Set(KeyRemoval(path, sourceField.fieldType)), sourceField.some) // target schema does not have this field
       case Some(targetField) =>
         var migrations: ParquetSchemaMigrations = Set.empty[ParquetMigration]
         if (sourceField == targetField) {
-          return  Set.empty[ParquetMigration] // Schemas are equal
+          return MergedField(Set.empty[ParquetMigration], sourceField.some) // Schemas are equal
         }
-        if (sourceField.nullability.nullable & targetField.nullability.required)
+        val mergedNullability: Type.Nullability = if (sourceField.nullability.nullable & targetField.nullability.required) {
           migrations += RequiredNullable(path)
-        else if (sourceField.nullability.required & targetField.nullability.nullable) {
+          Type.Nullability.Required
+        } else if (sourceField.nullability.required & targetField.nullability.nullable) {
           migrations += NullableRequired(path)
+          Type.Nullability.Required
+        } else if (sourceField.nullability.required & targetField.nullability.required) {
+          Type.Nullability.Required
+        } else {
+          Type.Nullability.Nullable
         }
 
-        migrations ++= MigrationTypePair(path, sourceField.fieldType, targetField.fieldType).migrations
+        val mergedType = MigrationTypePair(path, sourceField.fieldType, targetField.fieldType).migrations
 
-        migrations
+        MergedField(mergedType.migrations ++ migrations, mergedType.result.map(Field(sourceField.name, _, mergedNullability)))
     }
   }
 
@@ -186,7 +231,7 @@ object Migrations {
     Generates list of all migration for the Schema pair. Top level of schema is always Struct.
    */
   def assessSchemaMigration(source: Field, target: Field): ParquetSchemaMigrations =
-    MigrationFieldPair(Nil, source, Some(target)).migrations
+    MigrationFieldPair(Nil, source, Some(target)).migrations.migrations
 
   /*
     Generates tuple of (Major, Minor, Patch) boolean flags. Indicating which part of schema version should be bumped
@@ -194,14 +239,24 @@ object Migrations {
    */
 
   // [parquet] to access this in tests
-  private[parquet] def isSchemaMigrationBreakingFromMigrations(migrations: ParquetSchemaMigrations):  Boolean =
-   migrations.foldLeft(false)((flag, migration) =>
+  private[parquet] def isSchemaMigrationBreakingFromMigrations(migrations: ParquetSchemaMigrations): Boolean =
+    migrations.foldLeft(false)((flag, migration) =>
       migration match {
-        case _: NonBreaking =>  flag
+        case _: NonBreaking => flag
         case _: Breaking => true
       })
 
+  def mergeSchemas(source: Field, target: Field): Either[List[Breaking], Field] = {
+    val merged = MigrationFieldPair(Nil, source, Some(target)).migrations
+    merged.result match {
+      case Some(field) => field.asRight
+      case None => merged.migrations.foldLeft(List.empty[Breaking])((accErr, migration) => migration match {
+        case _: NonBreaking => accErr
+        case breaking: Breaking => breaking :: accErr
+      }).asLeft
+    }
+  }
 
-  def isSchemaMigrationBreaking(source: Field, target: Field):  Boolean =
-    isSchemaMigrationBreakingFromMigrations(MigrationFieldPair(Nil, source, Some(target)).migrations)
+  def isSchemaMigrationBreaking(source: Field, target: Field): Boolean =
+    isSchemaMigrationBreakingFromMigrations(MigrationFieldPair(Nil, source, Some(target)).migrations.migrations)
 }

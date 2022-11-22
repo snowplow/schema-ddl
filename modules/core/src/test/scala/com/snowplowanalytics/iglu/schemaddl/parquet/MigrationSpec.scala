@@ -1,6 +1,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers
+import cats.syntax.either._
 import com.snowplowanalytics.iglu.schemaddl.parquet.Migrations.{NullableRequired, ParquetMigration, ParquetSchemaMigrations, TopLevelKeyAddition, isSchemaMigrationBreakingFromMigrations}
 
 class MigrationSpec extends org.specs2.Specification {
@@ -27,6 +28,7 @@ class MigrationSpec extends org.specs2.Specification {
   """
 
   def e1 = {
+    Migrations.mergeSchemas(leanBase, leanBase) should beRight(leanBase)
     Migrations.assessSchemaMigration(leanBase, leanBase) shouldEqual Set.empty[ParquetMigration]
   }
 
@@ -57,6 +59,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    Migrations.mergeSchemas(leanBase, schema2) should beRight(schema2)
     Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Nested object key addition at /objectKey/string2Key")
   }
 
@@ -87,6 +90,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    Migrations.mergeSchemas(leanBase, schema2) should beRight(schema2)
     Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Top-level schema key addition at /string2Key")
   }
 
@@ -109,6 +113,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    Migrations.mergeSchemas(leanBase, schema2) should beRight(leanBase)
     Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Key removal at /stringKey")
   }
 
@@ -134,6 +139,8 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+
+    Migrations.mergeSchemas(leanBase, schema2) should beRight(leanBase)
     Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Key removal at /objectKey/nestedKey1")
   }
 
@@ -146,8 +153,7 @@ class MigrationSpec extends org.specs2.Specification {
         |  "arrayKey": {
         |    "type": "array",
         |    "items": {
-        |      "type": "string",
-        |      "format": "date"
+        |      "type": "integer"
         |     }
         |  }
         |}
@@ -162,15 +168,15 @@ class MigrationSpec extends org.specs2.Specification {
         |  "arrayKey": {
         |    "type": "array",
         |    "items": {
-        |      "type": "string",
-        |      "format": "date-time"
+        |      "type": "number"
         |    }
         |  }
         |}
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
-    Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set("Type widening from Date to Timestamp at /arrayKey/[arrayDown]")
+    Migrations.mergeSchemas(schema1, schema2) should beRight(schema2)
+    Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set("Type widening from Long to Double at /arrayKey/[arrayDown]")
   }
 
   //    Produce migration for nullables AND invalid type change in arrays $e7
@@ -204,6 +210,8 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beLeft("Incompatible type change String to Double at /arrayKey/[arrayDown]")
     Migrations.assessSchemaMigration(schema1, schema2).map(_.toString).toSet shouldEqual Set(
       "Incompatible type change String to Double at /arrayKey/[arrayDown]",
       "Changing nullable property to required at /arrayKey/[arrayDown]"
@@ -254,6 +262,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2)
     Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual
       Set("Nested object key addition at /arrayKey/[arrayDown]/nestedKey4")
   }
@@ -300,6 +309,8 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema1)
     Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual
       Set("Key removal at /arrayKey/[arrayDown]/nestedKey3")
   }
@@ -335,6 +346,8 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2)
     Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set(
       "Changing nullable property to required at /arrayKey/[arrayDown]"
     )
@@ -379,6 +392,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2)
     Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set("Type widening from Long to Double at /objectKey/nestedKey1")
   }
 
@@ -403,6 +417,8 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+
+    Migrations.mergeSchemas(leanBase, schema2).leftMap(_.toString) should beLeft("Incompatible type change String to Long at /objectKey/nestedKey1")
     Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set(
       "Incompatible type change String to Long at /objectKey/nestedKey1",
       "Changing required property to nullable at /objectKey/nestedKey3")
@@ -436,6 +452,9 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2)
+    Migrations.mergeSchemas(schema2, schema1).leftMap(_.toString) should beRight(schema2)
     Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set("Type widening from Integer to Long at /numKey")
   }
 
@@ -476,6 +495,8 @@ class MigrationSpec extends org.specs2.Specification {
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
 
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2)
+    Migrations.mergeSchemas(schema2, schema1).leftMap(_.toString) should beRight(schema2)
     Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set(
       "Type widening from Integer to Long at /intKey", "Type widening from Long to Double at /longKey")
   }
