@@ -22,7 +22,8 @@ class MigrationSpec extends org.specs2.Specification {
         Produce migration for removal fields in structs in arrays $e10
         Error for type casting in nested arrays $e11
         Produce migration for nullables arrays $e12
-        Suggest version change correctly $e13
+        Preserve ordering in nested arrays and structs $e13
+        Suggest version change correctly $e14
   """
 
   def e1 = {
@@ -103,8 +104,8 @@ class MigrationSpec extends org.specs2.Specification {
         |  "objectKey": {
         |    "type": "object",
         |    "properties": {
-        |      "nestedKey2": { "type": ["integer", "null"] },
-        |      "nestedKey3": { "type": "boolean" }
+        |      "nestedKey1": { "type": "string" },
+        |      "nestedKey2": { "type": ["integer", "null"] }
         |    },
         |    "required": ["nestedKey3"]
         |  }
@@ -112,9 +113,10 @@ class MigrationSpec extends org.specs2.Specification {
         |}
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    
 
     Migrations.mergeSchemas(leanBase, schema2) should beRight(leanBase) and (
-      Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Key removal at /objectKey/nestedKey1"))
+      Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Key removal at /objectKey/nestedKey3"))
   }
 
   //  Produce migration for new top-level fields $e5
@@ -431,9 +433,82 @@ class MigrationSpec extends org.specs2.Specification {
         "Changing nullable property to required at /arrayKey/[arrayDown]/nestedKey2"
       ))
   }
-
-  //  Suggest version change correctly $e15
+  
+  // Preserve ordering in nested arrays and structs $e13
   def e13 = {
+    val input1 = SpecHelpers.parseSchema(
+      """
+        |{"type": "object",
+        |"properties": {
+        |  "arrayKey": {
+        |    "type": "array",
+        |    "items": {
+        |         "type": "object",
+        |         "properties": {
+        |           "nestedKey1": { "type": "integer" },
+        |           "nestedKey2": { "type": "integer" }
+        |         },
+        |         "required": ["nestedKey2"]
+        |       }
+        |    }
+        |   },
+        |  "objectKey": {
+        |    "type": "object",
+        |    "properties": {
+        |      "nestedKey1": { "type": "string" },
+        |      "nestedKey2": { "type": ["integer", "null"] },
+        |      "nestedKey3": { "type": "boolean" },
+        |      "string2Key": {
+        |           "type": "string",
+        |           "maxLength": 500
+        |         }
+        |  }
+        |}
+        |}
+      """.stripMargin)
+    val schema1 = Field.build("top", input1, enforceValuePresence = false)
+
+    val input2 = SpecHelpers.parseSchema(
+      """
+        |{"type": "object",
+        |"properties": {
+        |  "arrayKey": {
+        |    "type": "array",
+        |    "items": {
+        |         "type": "object",
+        |         "properties": {
+        |           "nestedKey1": { "type": "integer" },
+        |           "nestedKey0": { "type": "integer" },
+        |           "nestedKey2": { "type": "integer" }
+        |         },
+        |         "required": ["nestedKey2"]
+        |       }}
+        |    },
+        |  "objectKey": {
+        |    "type": "object",
+        |    "properties": {
+        |      "nestedKey1": { "type": "string" },
+        |      "nestedKey0": { "type": "integer" },
+        |      "nestedKey2": { "type": ["integer", "null"] },
+        |      "nestedKey3": { "type": "boolean" },
+        |      "string2Key": {
+        |           "type": "string",
+        |           "maxLength": 500
+        |         }
+        |    }
+        |}
+        |}
+      """.stripMargin)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2) and (
+      Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set(
+        "Nested object key addition at /arrayKey/[arrayDown]/nestedKey0"
+      ))
+  }
+
+  //  Suggest version change correctly $e14
+  def e14 = {
     val major: ParquetSchemaMigrations = Set(IncompatibleType(List("/"), Type.Boolean, Type.Double))
     val patch: ParquetSchemaMigrations = Set(TopLevelKeyAddition(Nil, Type.Boolean))
 

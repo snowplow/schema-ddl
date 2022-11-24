@@ -104,11 +104,20 @@ object Migrations {
 
             val tgtFields = reverseMigration.traverse(_.result).toList.flatten
             val tgtFieldNames = tgtFields.map(_.name)
-            val allSrcFields = forwardMigration.traverse(_.result).toList.flatten            
+            val allSrcFields = forwardMigration.traverse(_.result).toList.flatten
+            val allSrcFieldMap = allSrcFields.map(f => f.name -> f).toMap
+            // swap fields in src and target as they would be rearranged in nested structs or arrays
+            val reorderedTgtFields = tgtFields.map { t =>
+              allSrcFieldMap.get(t.name) match {
+                case Some(value) if value.fieldType.isInstanceOf[Struct] => value
+                case Some(value) if value.fieldType.isInstanceOf[Array]  => value
+                case _ => t
+              }
+            }
             val srcFields = allSrcFields.filter(srcField => !tgtFieldNames.contains(srcField.name))
 
             // failed migration would produce no fields in source
-            if (allSrcFields.isEmpty) None else Type.Struct(tgtFields ++ srcFields).some
+            if (allSrcFields.isEmpty) None else Type.Struct(reorderedTgtFields ++ srcFields).some
 
           case _ => addIncompatibleType()
         }
@@ -171,7 +180,7 @@ object Migrations {
   def assessSchemaMigration(source: Field, target: Field): ParquetSchemaMigrations =
     MigrationFieldPair(Nil, source, Some(target)).migrations.migrations
 
- 
+
   // [parquet] to access this in tests
   private[parquet] def isSchemaMigrationBreakingFromMigrations(migrations: ParquetSchemaMigrations): Boolean =
     migrations.foldLeft(false)((flag, migration) =>
