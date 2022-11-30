@@ -4,6 +4,8 @@ import cats.Show
 import cats.syntax.all._
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.{Array, Struct}
 
+import scala.collection.mutable.MutableList
+
 /*
   Parquet schemas are migrated though the `merge.schema = true` loading option in Spark/Databricks.
   Migrations in this package do not define spark 3.0 style `ATLER TABLE` transformations, similar to Redshift. Instead
@@ -32,7 +34,7 @@ object Migrations {
     def path: ParquetSchemaPath = reversedPath.reverse
   }
 
-  type ParquetSchemaMigrations = Set[ParquetMigration]
+  type ParquetSchemaMigrations = List[ParquetMigration]
 
   sealed trait NonBreaking extends ParquetMigration
 
@@ -76,7 +78,7 @@ object Migrations {
   private case class MigrationTypePair(path: ParquetSchemaPath, sourceType: Type, targetType: Type) {
 
     def migrations: MergedType = {
-      var migrations: Set[ParquetMigration] = Set.empty[ParquetMigration]
+      val migrations: MutableList[ParquetMigration] = MutableList.empty[ParquetMigration]
 
       def addIncompatibleType(): Option[Type] = {
         migrations += IncompatibleType(path: ParquetSchemaPath, sourceType: Type, targetType: Type)
@@ -94,10 +96,12 @@ object Migrations {
             migrations ++= forwardMigration.flatMap(_.migrations)
 
             migrations ++= reverseMigration.flatMap(_.migrations.flatMap {
-              case KeyRemoval(path, value) => if (path.length == 1) {
-                List(TopLevelKeyAddition(path, value))
+              case KeyRemoval(path2, value) => if (path2.length == 1) {
+                List(TopLevelKeyAddition(path2, value))
+              } else if (path.length === path2.length - 1){
+                List(NestedKeyAddition(path2, value))
               } else {
-                List(NestedKeyAddition(path, value))
+                Nil
               }
               case _ => Nil // discard the modifications as they would have been detected in forward migration
             })
@@ -144,17 +148,17 @@ object Migrations {
         case _ if targetType === sourceType => targetType.some
         case _ => addIncompatibleType()
       }
-      MergedType(migrations, mergedType)
+      MergedType(migrations.toList, mergedType)
     }
   }
 
   private case class MigrationFieldPair(path: ParquetSchemaPath, sourceField: Field, maybeTargetField: Option[Field]) {
     def migrations: MergedField = maybeTargetField match {
-      case None => MergedField(Set(KeyRemoval(path, sourceField.fieldType)), sourceField.some) // target schema does not have this field
+      case None => MergedField(List(KeyRemoval(path, sourceField.fieldType)), sourceField.some) // target schema does not have this field
       case Some(targetField) =>
-        var migrations: ParquetSchemaMigrations = Set.empty[ParquetMigration]
+        val migrations = MutableList.empty[ParquetMigration]
         if (sourceField == targetField) {
-          return MergedField(Set.empty[ParquetMigration], sourceField.some) // Schemas are equal
+          return MergedField(List.empty[ParquetMigration], sourceField.some) // Schemas are equal
         }
         val mergedNullability: Type.Nullability = if (sourceField.nullability.nullable & targetField.nullability.required) {
           migrations += RequiredNullable(path)
@@ -170,7 +174,7 @@ object Migrations {
 
         val mergedType = MigrationTypePair(path, sourceField.fieldType, targetField.fieldType).migrations
 
-        MergedField(mergedType.migrations ++ migrations, mergedType.result.map(Field(sourceField.name, _, mergedNullability)))
+        MergedField(mergedType.migrations ++ migrations.toList, mergedType.result.map(Field(sourceField.name, _, mergedNullability)))
     }
   }
 
