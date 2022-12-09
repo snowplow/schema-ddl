@@ -10,8 +10,7 @@ import com.snowplowanalytics.iglu.schemaddl.parquet.Type.{Array, Struct}
   they are used to categorize schema changes into 2 categories:
    - Non breaking - Miscellaneous changes that would be handled by the `merge.schema`:
       * `NullableRequired` - nullable to required change
-      * `NestedKeyAddition` - addition of the new Struct key anywhere except for top level Schema.
-      * `TopLevelKeyAddition` - key addition in top level schema
+      * `KeyAddition` - addition of the new Struct key.
       * `KeyRemoval` historical data loss, such as removing field in Struct. Loading will succeed with data loss.
       * `RequiredNullable` Nullable to required field or array migration. Loading will fail.
    - Breaking - Breaking change that would either lead to oen of these outcomes:      
