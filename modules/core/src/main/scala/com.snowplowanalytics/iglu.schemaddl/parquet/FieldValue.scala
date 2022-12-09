@@ -17,13 +17,25 @@ import cats.implicits._
 import cats.data.ValidatedNel
 
 import java.time.Instant
-import java.time.format.DateTimeFormatter
+import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
 import CastError._
 
 /** Run-time value, conforming [[Field]] (type) */
 sealed trait FieldValue extends Product with Serializable
 
 object FieldValue {
+  val dateTimeFormatter = new DateTimeFormatterBuilder()
+    // date/time
+    .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+    // offset (hh:mm - "+00:00" when it's zero)
+    .optionalStart().appendOffset("+HH:MM", "+00:00").optionalEnd()
+    // offset (hhmm - "+0000" when it's zero)
+    .optionalStart().appendOffset("+HHMM", "+0000").optionalEnd()
+    // offset (hh - "Z" when it's zero)
+    .optionalStart().appendOffset("+HH", "Z").optionalEnd()
+    // create formatter
+    .toFormatter();
+
   case object NullValue extends FieldValue
   case class JsonValue(value: Json) extends FieldValue
   case class StringValue(value: String) extends FieldValue
@@ -103,7 +115,7 @@ object FieldValue {
 
   private def castTimestamp(value: Json): CastResult =
     value.asString
-      .flatMap(s => Either.catchNonFatal(DateTimeFormatter.ISO_DATE_TIME.parse(s)).toOption)
+      .flatMap(s => Either.catchNonFatal(dateTimeFormatter.parse(s)).toOption)
       .flatMap(a => Either.catchNonFatal(java.sql.Timestamp.from(Instant.from(a))).toOption)
       .fold(WrongType(value, Type.Timestamp).invalidNel[FieldValue])(TimestampValue(_).validNel)
 

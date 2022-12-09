@@ -36,6 +36,7 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
   cast does not transform unexpected JSON $e13
   cast transforms decimal values with correct scale and precision $e14
   cast does not transform decimal values with invalid scale or precision $e15
+  cast transforms a non-UTC timestamp value without colon in timezone $e16
   """
 
   import FieldValue._
@@ -261,6 +262,12 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
       testInvalidCast(Type.Decimal(Digits18, 2), json"""0.00001"""),
       testInvalidCast(Type.Decimal(Digits38, 2), json"""0.00001"""),
     ).reduce(_ and _)
+  }
+
+  def e16 = {
+    val input = json""""2022-02-02T12:02:03.123+0300""""
+    val expected = TimestampValue(java.sql.Timestamp.valueOf("2022-02-02 09:02:03.123"))
+    testCast(Type.Timestamp, input, expected)
   }
 
 }
