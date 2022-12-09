@@ -26,7 +26,6 @@ object Migrations {
   // Base trait for schema differences, which would result in migration.
   sealed trait ParquetMigration {
     // As Migration logic traverses deeper into the structure keys appended to the head of list.
-    // So path stored is reverse.
     def reversedPath: ParquetSchemaPath
 
     def path: ParquetSchemaPath = reversedPath.reverse
@@ -52,12 +51,8 @@ object Migrations {
     override def toString: String = s"Changing required property to nullable at /${path.mkString("/")}"
   }
 
-  case class TopLevelKeyAddition(override val reversedPath: ParquetSchemaPath, key: Type) extends NonBreaking {
-    override def toString: String = s"Top-level schema key addition at /${path.mkString("/")}"
-  }
-
-  case class NestedKeyAddition(override val reversedPath: ParquetSchemaPath, key: Type) extends NonBreaking {
-    override def toString: String = s"Nested object key addition at /${path.mkString("/")}"
+  case class KeyAddition(override val reversedPath: ParquetSchemaPath, key: Type) extends NonBreaking {
+    override def toString: String = s"Schema key addition at /${path.mkString("/")}"
   }
 
   case class IncompatibleType(override val reversedPath: ParquetSchemaPath, oldType: Type, newType: Type) extends Breaking {
@@ -94,11 +89,7 @@ object Migrations {
             migrations ++= forwardMigration.flatMap(_.migrations)
 
             migrations ++= reverseMigration.flatMap(_.migrations.flatMap {
-              case KeyRemoval(path, value) => if (path.length == 1) {
-                List(TopLevelKeyAddition(path, value))
-              } else {
-                List(NestedKeyAddition(path, value))
-              }
+              case KeyRemoval(path, value) => List(KeyAddition(path, value)) 
               case _ => Nil // discard the modifications as they would have been detected in forward migration
             })
 
@@ -110,7 +101,7 @@ object Migrations {
             val reorderedTgtFields = tgtFields.map { t =>
               allSrcFieldMap.get(t.name) match {
                 case Some(value) if value.fieldType.isInstanceOf[Struct] => value
-                case Some(value) if value.fieldType.isInstanceOf[Array]  => value
+                case Some(value) if value.fieldType.isInstanceOf[Array] => value
                 case _ => t
               }
             }

@@ -59,7 +59,7 @@ class MigrationSpec extends org.specs2.Specification {
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
     Migrations.mergeSchemas(leanBase, schema2) should beRight(schema2) and (
-      Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Nested object key addition at /objectKey/string2Key")
+      Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Schema key addition at /objectKey/string2Key")
       )
   }
 
@@ -147,7 +147,7 @@ class MigrationSpec extends org.specs2.Specification {
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
     Migrations.mergeSchemas(leanBase, schema2) should beRight(schema2) and (
-      Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Top-level schema key addition at /string2Key")
+      Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Schema key addition at /string2Key")
       )
   }
 
@@ -286,7 +286,7 @@ class MigrationSpec extends org.specs2.Specification {
 
     Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2) and (
       Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual
-        Set("Nested object key addition at /arrayKey/[arrayDown]/nestedKey3")
+        Set("Schema key addition at /arrayKey/[arrayDown]/nestedKey3")
       )
   }
 
@@ -503,14 +503,14 @@ class MigrationSpec extends org.specs2.Specification {
 
     Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2) and (
       Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set(
-        "Nested object key addition at /arrayKey/[arrayDown]/nestedKey0"
+        "Schema key addition at /arrayKey/[arrayDown]/nestedKey0"
       ))
   }
 
   //  Suggest version change correctly $e14
   def e14 = {
     val major: ParquetSchemaMigrations = Set(IncompatibleType(List("/"), Type.Boolean, Type.Double))
-    val patch: ParquetSchemaMigrations = Set(TopLevelKeyAddition(Nil, Type.Boolean))
+    val patch: ParquetSchemaMigrations = Set(KeyAddition(Nil, Type.Boolean))
 
     isSchemaMigrationBreakingFromMigrations(major) shouldEqual true
     isSchemaMigrationBreakingFromMigrations(patch) shouldEqual false
