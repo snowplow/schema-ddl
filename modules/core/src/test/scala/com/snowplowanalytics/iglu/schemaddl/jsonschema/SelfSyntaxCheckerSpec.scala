@@ -133,12 +133,84 @@ class SelfSyntaxCheckerSpec extends Specification {
         case NonEmptyList
           (Message(
             pointer,
-            "self is unknown keyword for a $schema \"http://something.com/unexpected#\", use http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+            msg,
             Error
           ),
           Nil
-        ) if pointer.value === List() => ok
+        ) =>
+            (pointer.value must beEmpty) and
+            (msg must beEqualTo("$.$schema: does not have a value in the enumeration [http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#]"))
       }
+    }
+
+    "disallow vendors and names with invalid characters" in {
+
+      val pairs = List(
+        ("com.snowplowanalytics", "example event"),
+        ("com.snowplowanalytics", " example_event"),
+        ("com.snowplowanalytics", "example_event "),
+        ("com.snowplowanalytics", "example❤️❤️event"),
+        ("com.snowplow analytics", "example_event"),
+        ("com.snowplowanalytics ", "example_event"),
+        (" com.snowplowanalytics", "example_event"),
+        ("com.snowplow❤️❤️analytics", "example_event"),
+      )
+
+      pairs.map { case (vendor, name) =>
+
+        val jsonSchema =
+          json"""{
+            "$$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+            "self": {
+                "vendor": $vendor,
+                "name": $name,
+                "format": "jsonschema",
+                "version": "1-0-0"
+            },
+            "type": "object",
+            "properties": { }
+          }"""
+
+        SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+          case NonEmptyList(Message(_, msg, Error), Nil) =>
+            msg must contain("does not match the regex pattern")
+        }
+
+      }.reduce(_ and _)
+    }
+
+    "disallow invalid schema versions" in {
+
+      val versions = List(
+        "1-0-0 ",
+        "0-0-0",
+        "1.0.0",
+        "1-01-0",
+        "1-1",
+        "1-1-1-1"
+      )
+
+      versions.map { version =>
+
+        val jsonSchema =
+          json"""{
+            "$$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+            "self": {
+                "vendor": "com.example",
+                "name": "myschema",
+                "format": "jsonschema",
+                "version": $version
+            },
+            "type": "object",
+            "properties": { }
+          }"""
+
+        SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+          case NonEmptyList(Message(_, msg, Error), Nil) =>
+            msg must contain("does not match the regex pattern")
+        }
+
+      }.reduce(_ and _)
     }
   }
 }
