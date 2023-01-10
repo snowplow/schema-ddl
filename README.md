@@ -15,15 +15,15 @@ Schema DDL itself does not provide any CLI and expose only Scala API.
 Schema DDL is compiled against Scala 2.12 and 2.13 and available on Maven Central. In order to use it with SBT, include following module:
 
 ```scala
-libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.15.2"
+libraryDependencies += "com.snowplowanalytics" %% "schema-ddl" % "0.17.0"
 ```
 
 
 ## Find out more
 
-| **[Iglu][iglu]**          | **[API Reference][api-reference]**          | **[Developer Guide][developer-guide]**          | **[Contributing][contributing]**          |
-|---------------------------|---------------------------------------------|-------------------------------------------------|-------------------------------------------|
-| [![i1][iglu-image]][iglu] | [![i2][api-reference-image]][api-reference] | [![i3][developer-guide-image]][developer-guide] | [![i4][contributing-image]][contributing] |
+| **[Iglu][iglu]**          | **[API Reference][api-reference]**          | **[Contributing][contributing]**          |
+|---------------------------|---------------------------------------------|-------------------------------------------|
+| [![i1][iglu-image]][iglu] | [![i2][api-reference-image]][api-reference] | [![i4][contributing-image]][contributing] |
 
 
 ## Copyright and License
@@ -58,11 +58,11 @@ limitations under the License.
 [developer-guide]: https://github.com/snowplow/schema-ddl/wiki/
 [developer-guide-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/setup.png
 
-[iglu]: https://docs.snowplowanalytics.com/docs/iglu/
+[iglu]: https://docs.snowplow.io/docs/pipeline-components-and-applications/iglu/
 [iglu-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/roadmap.png
 
-[contributing]: https://docs.snowplowanalytics.com/docs/contributing/
+[contributing]: https://docs.snowplow.io/docs/contributing/
 [contributing-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/contributing.png
 
-[api-reference]: https://snowplow.github.io/schema-ddl/0.15.2/com/snowplowanalytics/iglu/schemaddl/index.html
+[api-reference]: https://snowplow.github.io/schema-ddl/0.17.0/com/snowplowanalytics/iglu/schemaddl/index.html
 [api-reference-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/techdocs.png
