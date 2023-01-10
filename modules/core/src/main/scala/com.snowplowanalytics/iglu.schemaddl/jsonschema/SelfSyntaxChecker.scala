@@ -15,7 +15,6 @@ package com.snowplowanalytics.iglu.schemaddl.jsonschema
 import scala.jdk.CollectionConverters._
 
 import cats.data.{Validated, ValidatedNel, NonEmptyList}
-import cats.syntax.apply._
 import cats.syntax.validated._
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -60,7 +59,8 @@ object SelfSyntaxChecker {
       |      "name": {"type":"string"},
       |      "format": {"type":"string"},
       |      "version": {"type":"string"}
-      |    }
+      |    },
+      |    "additionalProperties": false
       |  },
       |  "id":{"type":"string"},
       |  "$schema":{"type":"string"},
@@ -96,6 +96,43 @@ object SelfSyntaxChecker {
       |"additionalProperties": false,
       |"default":{}}""".stripMargin
 
+  private val SelfSchemaText = {
+    val vendorRegex = "^[a-zA-Z0-9-_.]+$"
+    val nameRegex = "^[a-zA-Z0-9-_]+$"
+    val versionRegex = "^[1-9][0-9]*(-(0|[1-9][0-9]*)){2}$"
+    s"""{
+      | "type":"object",
+      | "properties":{
+      |   "$$schema":{
+      |     "type":"string",
+      |     "enum": ["$MetaSchemaUri"]
+      |   },
+      |   "self":{
+      |     "required": ["vendor", "name", "format", "version"],
+      |     "properties":{
+      |       "vendor": {
+      |         "type":"string",
+      |         "pattern": "$vendorRegex"
+      |       },
+      |       "name": {
+      |         "type":"string",
+      |         "pattern": "$nameRegex"
+      |       },
+      |       "format": {
+      |         "type":"string",
+      |         "pattern": "$nameRegex"
+      |       },
+      |       "version": {
+      |         "type":"string",
+      |         "pattern": "$versionRegex"
+      |       }
+      |     }
+      |   }
+      | },
+      | "additionalProperties": true
+      |}|""".stripMargin
+  }
+
   private val V4SchemaInstance: JsonSchemaFactory =
     JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4)
 
@@ -127,12 +164,27 @@ object SelfSyntaxChecker {
       .build()
       .getSchema(new ObjectMapper().readTree(MetaSchemas.JsonSchemaV4Text))
 
+  /** A Json Schema which validates Iglu's `$schema` and `self` properties
+   *
+   *  A schema MUST validate against this schema in order to be generally valid throughout the Iglu System
+   */
+  private lazy val V4SchemaSelfSyntax: JsonSchema =
+    JsonSchemaFactory
+      .builder(V4SchemaInstance)
+      .build()
+      .getSchema(new ObjectMapper().readTree(SelfSchemaText))
+
   def validateSchema(schema: Json): ValidatedNel[Message, Unit] = {
     val jacksonJson = circeToJackson(schema)
     val laxValidation = V4SchemaIgluCore
       .validate(jacksonJson)
       .asScala
-      .map(_ -> Linter.Level.Error) // It is an error to fail the lax validation
+      .map(_ -> Linter.Level.Error) // It is an error to fail validation against v4 spec
+      .toMap
+    val selfValidation = V4SchemaSelfSyntax
+      .validate(jacksonJson)
+      .asScala
+      .map(_ -> Linter.Level.Error) // It is an error to fail validation of Iglu's `$schema` and `self` properties
       .toMap
     val strictValidation = V4SchemaStrict
       .validate(jacksonJson)
@@ -140,7 +192,7 @@ object SelfSyntaxChecker {
       .map(_ -> Linter.Level.Warning) // It is a warning to fail the strict validation
       .toMap
 
-    val validation = (strictValidation ++ laxValidation) // Order is important: Errors override Warnings for identical messages
+    (strictValidation ++ laxValidation ++ selfValidation) // Order is important: Errors override Warnings for identical messages
       .toList
       .map { case (message, level) =>
         val pointer = JsonPath.parse(message.getPath).map(JsonPath.toPointer) match {
@@ -157,17 +209,18 @@ object SelfSyntaxChecker {
       case Validated.Valid(_) =>
         ().validNel
     }
-
-    checkMetaSchema(schema) *> validation
   }
 
   /**
-   * Previous JSON Schema validator was able to recognize $$schema keyword,
-   * now we have to implement this check manually
+   * Validates that a self-describing JSON contains the correct schema keyword.
+   *
+   * A previous JSON Schema validator was not able to recognize $$schema keyword, so this was implemented as a workaround.
+   * This method will be removed in future versions becuase `SelfSyntaxCheck.validateSchema` encompasses this check.
    *
    * @param schema JSON node with a schema
    * @return linting result
    */
+  @deprecated("Use `SelfSyntaxChecker.validateSchema`", "0.17.0")
   def checkMetaSchema(schema: Json): ValidatedNel[Message, Unit] =
     schema.asObject.map(_.toMap) match {
       case None =>
