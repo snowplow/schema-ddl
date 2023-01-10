@@ -1,4 +1,16 @@
-Version 0.16.0 (2022-08-12)
+Version 0.17.0 (2023-01-10)
+---------------------------
+Update license to 2023 (#147)
+Bump jackson-databind to 2.14.1 (#146)
+Bump scala-collection-compat to 2.9.0 (#145)
+Bump cats-parse to 0.3.9 (#144)
+Bump json-schema-validator to 1.0.76 (#143)
+Bump circe to 0.14.3 (#142)
+Bump iglu-scala-core to 1.1.2 (#141)
+Update links in Readme (#131)
+SelfSyntaxChecker validate schema names and vendors (#139)
+
+Version 0.16.0 (2022-12-08)
 ---------------------------
 Detect schema version drift in parquet schemas (#133)
 
