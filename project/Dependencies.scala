@@ -23,7 +23,7 @@ object Dependencies {
     val jsonValidator    = "1.0.76"
     val catsParse        = "0.3.9"
     val libCompat        = "2.9.0"
-    val jacksonDatabind  = "2.13.2.1"
+    val jacksonDatabind  = "2.14.1"
 
     // Scala (test only)
     val specs2           = "4.15.0"
