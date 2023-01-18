@@ -27,6 +27,8 @@ class CommonSpec extends Specification { def is = s2"""
     parse union-typed Schema $e2
     skip unknown type $e3
     parse oneOf property $e4
+    parse not property $e5
+    parse allOf property $e6
   """
 
   def e1 = {
@@ -107,6 +109,26 @@ class CommonSpec extends Specification { def is = s2"""
 
     Schema.parse(schema).flatMap(_.oneOf) must beSome.like {
       case oneOf => oneOf.value.length must beEqualTo(2)
+    }
+  }
+
+  def e5 = {
+
+    val schema = json"""{ "not": {} }"""
+
+    Schema.parse(schema).flatMap(_.not) must beSome.like {
+      case not => not.value must beEqualTo(Schema.empty)
+    }
+  }
+
+  def e6 = {
+
+    val schema = json"""{
+      "allOf": [ { "type": "string" }, { "type": "number" } ]
+    }"""
+
+    Schema.parse(schema).flatMap(_.allOf) must beSome.like {
+      case not => not.value.length must beEqualTo(2)
     }
   }
 }
