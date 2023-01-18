@@ -127,6 +127,19 @@ object CommonProperties {
     val keyword: Keyword = Keyword.AnyOf
   }
 
+  /**
+   * Type representing value for `allOf` key
+   */
+  case class AllOf(value: List[Schema]) extends JsonSchemaProperty {
+    val keyword: Keyword = Keyword.AllOf
+  }
+
+  /**
+   * Type representing value for `not` key
+   */
+  case class Not(value: Schema) extends JsonSchemaProperty {
+    val keyword: Keyword = Keyword.Not
+  }
 
   /**
    * Type representing value for `description` key
