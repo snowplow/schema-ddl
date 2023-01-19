@@ -24,6 +24,7 @@ object Dependencies {
     val catsParse        = "0.3.9"
     val libCompat        = "2.9.0"
     val jacksonDatabind  = "2.14.1"
+    val dregex           = "0.7.0"
 
     // Scala (test only)
     val specs2           = "4.15.0"
@@ -38,6 +39,7 @@ object Dependencies {
     val circeJackson     = "io.circe"                   %% "circe-jackson210"       % V.circeJackson
     val libCompat        = "org.scala-lang.modules"     %% "scala-collection-compat" % V.libCompat
     val catsParse        = "org.typelevel"              %% "cats-parse"             % V.catsParse
+    val dregex           = "com.github.marianobarrios"  %% "dregex"                 % V.dregex
     // Java
     val jacksonDatabind  = "com.fasterxml.jackson.core" % "jackson-databind"        % V.jacksonDatabind
     val jsonValidator    = "com.networknt"              %  "json-schema-validator"  % V.jsonValidator
