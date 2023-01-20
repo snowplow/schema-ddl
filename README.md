@@ -1,3 +1,11 @@
+# Experimental fork, do not use
+
+The main repo can be found here: https://github.com/snowplow/schema-ddl
+
+
+--------------------------
+
+
 # Schema DDL
 
 [![Maven Central][maven-image]][maven]
