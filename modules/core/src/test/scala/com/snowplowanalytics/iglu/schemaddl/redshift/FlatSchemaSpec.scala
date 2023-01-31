@@ -10,20 +10,18 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
-package com.snowplowanalytics.iglu.schemaddl.migrations
+package com.snowplowanalytics.iglu.schemaddl.redshift
 
-import cats.implicits._
 import cats.data._
-import io.circe.literal._
-import org.specs2.mutable.Specification
-import org.specs2.matcher.Matcher
-import com.snowplowanalytics.iglu.core.SelfDescribingSchema
-import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer}
-import com.snowplowanalytics.iglu.schemaddl.SubSchemas
+import cats.implicits._
+import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer, SelfDescribingSchema}
+import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.{Description, Type}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
-import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.FlatSchema
+import io.circe.literal._
+import org.specs2.matcher.Matcher
+import org.specs2.mutable.Specification
 
 
 class FlatSchemaSpec extends Specification {
