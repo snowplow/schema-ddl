@@ -14,18 +14,16 @@ package com.snowplowanalytics.iglu.schemaddl.migrations
 
 import cats.implicits._
 import cats.data._
-
 import io.circe.literal._
-
 import org.specs2.mutable.Specification
 import org.specs2.matcher.Matcher
-
 import com.snowplowanalytics.iglu.core.SelfDescribingSchema
 import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer}
 import com.snowplowanalytics.iglu.schemaddl.SubSchemas
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.{Description, Type}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.FlatSchema
 
 
 class FlatSchemaSpec extends Specification {

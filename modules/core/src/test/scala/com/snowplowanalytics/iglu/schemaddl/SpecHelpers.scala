@@ -14,14 +14,11 @@ package com.snowplowanalytics.iglu.schemaddl
 
 import cats.syntax.either._
 import cats.syntax.show._
-
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.FlatSchema
 import io.circe.Json
-import io.circe.parser.{ parse => parseJson }
-
-import jsonschema.{ Schema, Pointer }
+import io.circe.parser.{parse => parseJson}
+import jsonschema.{Pointer, Schema}
 import jsonschema.circe.implicits._
-
-import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
 
 object SpecHelpers {
   def parseSchema(string: String): Schema =

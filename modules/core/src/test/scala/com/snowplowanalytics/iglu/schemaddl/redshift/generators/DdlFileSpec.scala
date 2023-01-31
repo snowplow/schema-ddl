@@ -14,7 +14,9 @@ package com.snowplowanalytics.iglu.schemaddl.redshift
 package generators
 
 import cats.data.NonEmptyList
-
+import com.snowplowanalytics.iglu.schemaddl.redshift
+import com.snowplowanalytics.iglu.schemaddl.redshift.ddl.statement.{CommentBlock, CreateSchema, CreateTable}
+import com.snowplowanalytics.iglu.schemaddl.redshift.ddl.{Column, CompressionEncoding, DistKey, DistKeyTable, Diststyle, ForeignKeyTable, Key, NotNull, Null, Nullability, PrimaryKeyTable, RawEncoding, RedshiftChar, RedshiftDouble, RedshiftInteger, RedshiftTimestamp, RedshiftVarchar, RefTable, SortKeyTable, UniqueKeyTable, ZstdEncoding}
 import io.circe.literal._
 
 // specs2
@@ -22,7 +24,7 @@ import org.specs2.Specification
 
 import com.snowplowanalytics.iglu.core.{SchemaMap, SchemaVer}
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
-import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.FlatSchema
 
 class DdlFileSpec extends Specification { def is = s2"""
   Check DDL File specification
@@ -46,11 +48,11 @@ class DdlFileSpec extends Specification { def is = s2"""
      "launch_missles_1",
       List(
         Column("status", RedshiftVarchar(64), Set(DistKey), Set(Nullability(NotNull))),
-        Column("missionName", RedshiftVarchar(128), Set(), Set(Nullability(NotNull))),
-        Column("geo_longitude", RedshiftDouble, Set(), Set()),
-        Column("geo_latitude", RedshiftDouble, Set(), Set()),
-        Column("rocket.model", RedshiftInteger, Set(), Set(Nullability(NotNull))),
-        Column("rocket.series", RedshiftInteger, Set(), Set(Nullability(Null)))
+        redshift.ddl.Column("missionName", RedshiftVarchar(128), Set(), Set(Nullability(NotNull))),
+        redshift.ddl.Column("geo_longitude", RedshiftDouble, Set(), Set()),
+        redshift.ddl.Column("geo_latitude", RedshiftDouble, Set(), Set()),
+        redshift.ddl.Column("rocket.model", RedshiftInteger, Set(), Set(Nullability(NotNull))),
+        redshift.ddl.Column("rocket.series", RedshiftInteger, Set(), Set(Nullability(Null)))
       )
     )
     val commentOn = DdlGenerator.getTableComment(
@@ -223,17 +225,17 @@ class DdlFileSpec extends Specification { def is = s2"""
     val schemaCreate = CreateTable(
       "atomic.table_name",
       List(
-        Column("schema_vendor",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("schema_name",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("schema_format",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("schema_version",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("root_id",RedshiftChar(36),Set(CompressionEncoding(RawEncoding)),Set(Nullability(NotNull))),
-        Column("root_tstamp",RedshiftTimestamp,Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("ref_root",RedshiftVarchar(255),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("ref_tree",RedshiftVarchar(1500),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("ref_parent",RedshiftVarchar(255),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("union",ProductType(List("Product type [\"string\",\"object\",\"null\"] encountered in union"),None),Set(CompressionEncoding(ZstdEncoding)),Set()),
-        Column("union2",ProductType(List("Product type [\"string\",\"object\",\"null\"] encountered in union2"),None),Set(CompressionEncoding(ZstdEncoding)),Set())
+        redshift.ddl.Column("schema_vendor",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("schema_name",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("schema_format",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("schema_version",RedshiftVarchar(128),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("root_id",RedshiftChar(36),Set(CompressionEncoding(RawEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("root_tstamp",RedshiftTimestamp,Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("ref_root",RedshiftVarchar(255),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("ref_tree",RedshiftVarchar(1500),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("ref_parent",RedshiftVarchar(255),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("union",ProductType(List("Product type [\"string\",\"object\",\"null\"] encountered in union"),None),Set(CompressionEncoding(ZstdEncoding)),Set()),
+        redshift.ddl.Column("union2",ProductType(List("Product type [\"string\",\"object\",\"null\"] encountered in union2"),None),Set(CompressionEncoding(ZstdEncoding)),Set())
       ),
       Set(
         ForeignKeyTable(NonEmptyList.of("root_id", "root_tstamp"),RefTable("atomic.events",Some("event_id"))),

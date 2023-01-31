@@ -14,7 +14,9 @@ package com.snowplowanalytics.iglu.schemaddl.redshift.generators
 
 
 import cats.data.NonEmptyList
-
+import com.snowplowanalytics.iglu.schemaddl.redshift
+import com.snowplowanalytics.iglu.schemaddl.redshift.ddl.statement.CreateTable
+import com.snowplowanalytics.iglu.schemaddl.redshift.ddl.{Column, CompressionEncoding, DistKeyTable, Diststyle, ForeignKeyTable, Key, NotNull, Nullability, RedshiftBoolean, RedshiftVarchar, RefTable, RunLengthEncoding, SortKeyTable, Text255Encoding, ZstdEncoding}
 import io.circe.literal._
 
 // Specs2
@@ -52,7 +54,7 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       DdlGenerator.parentageColumns ++
       List(
         Column("foo",RedshiftVarchar(30),Set(CompressionEncoding(ZstdEncoding)),Set(Nullability(NotNull))),
-        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set())
+        redshift.ddl.Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set())
       ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
@@ -75,9 +77,9 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       DdlGenerator.selfDescSchemaColumns ++
       DdlGenerator.parentageColumns ++
       List(
-        Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
-        Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
-        Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set(Nullability(NotNull)))
+        redshift.ddl.Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+        redshift.ddl.Column("bar",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set(Nullability(NotNull)))
       ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
@@ -101,9 +103,9 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       DdlGenerator.selfDescSchemaColumns ++
         DdlGenerator.parentageColumns ++
         List(
-          Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
-          Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
-          Column("enum_field",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set())
+          redshift.ddl.Column("foo",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+          redshift.ddl.Column("baz",RedshiftBoolean,Set(CompressionEncoding(RunLengthEncoding)),Set(Nullability(NotNull))),
+          redshift.ddl.Column("enum_field",RedshiftVarchar(5),Set(CompressionEncoding(Text255Encoding)),Set())
         ),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
@@ -162,7 +164,7 @@ class DdlGeneratorSpec extends Specification { def is = s2"""
       "atomic.launch_missles",
       DdlGenerator.selfDescSchemaColumns ++
         DdlGenerator.parentageColumns :+
-        Column("union",RedshiftVarchar(4096),Set(CompressionEncoding(ZstdEncoding)),Set()),
+        redshift.ddl.Column("union",RedshiftVarchar(4096),Set(CompressionEncoding(ZstdEncoding)),Set()),
       Set(ForeignKeyTable(NonEmptyList.of("root_id"),RefTable("atomic.events",Some("event_id")))),
       Set(Diststyle(Key), DistKeyTable("root_id"),SortKeyTable(None,NonEmptyList.of("root_tstamp")))
     ).columns

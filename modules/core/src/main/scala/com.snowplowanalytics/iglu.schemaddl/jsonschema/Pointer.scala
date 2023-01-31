@@ -13,9 +13,9 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema
 
 import cats.syntax.either._
+import com.snowplowanalytics.iglu.schemaddl.StringUtils
 
 import scala.annotation.tailrec
-
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer._
 
 sealed trait Pointer extends Product with Serializable {
@@ -63,6 +63,8 @@ object Pointer {
   final case class SchemaPointer private(value: List[Cursor]) extends Pointer {
     def downProperty(schemaProperty: SchemaProperty): SchemaPointer =
       SchemaPointer(Cursor.DownProperty(schemaProperty) :: value)
+
+    def getName: String = forData.path.map(StringUtils.snakeCase).mkString(".")
 
     /** Filter out all Schema-specific properties and `oneOf`s */
     def forData: JsonPointer = {

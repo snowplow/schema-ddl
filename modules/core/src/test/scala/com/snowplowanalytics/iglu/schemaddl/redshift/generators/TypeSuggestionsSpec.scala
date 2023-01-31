@@ -13,10 +13,9 @@
 package com.snowplowanalytics.iglu.schemaddl.redshift.generators
 
 import io.circe.literal._
-
 import com.snowplowanalytics.iglu.schemaddl.redshift._
-
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
+import com.snowplowanalytics.iglu.schemaddl.redshift.ddl.{RedshiftBigInt, RedshiftChar, RedshiftDate, RedshiftDecimal, RedshiftDouble, RedshiftInteger, RedshiftTimestamp, RedshiftVarchar}
 
 // specs2
 import org.specs2.mutable.Specification
