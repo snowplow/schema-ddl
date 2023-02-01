@@ -7,7 +7,7 @@ import dregex.Regex
 
 package object subschema {
 
-  def isSubSchema(s1: Schema, s2: Schema): Boolean =
+  def isSubSchema(s1: Schema, s2: Schema): Compatibility =
     isSubType(simplify(canonicalize(s1)), simplify(canonicalize(s2)))
 
   def canonicalize(s: Schema): Schema =
@@ -21,15 +21,15 @@ package object subschema {
 
   def simplify(s: Schema): Schema = s
 
-  def isSubType(s1: Schema, s2: Schema): Boolean = (s1, s2) match {
+  def isSubType(s1: Schema, s2: Schema): Compatibility = (s1, s2) match {
     case (s1, s2) if s1.`type` == Some(Number) && s1.`type` == s2.`type` => isNumberSubType(s1, s2)
     case (s1, s2) if s1.`type` == Some(String) && s1.`type` == s2.`type` => isStringSubType(s1, s2)
-    case _ => false
+    case _ => Undecidable
   }
 
   def stripAnchors(r: String): String = r.stripPrefix("^").stripSuffix("$")
 
-  def isStringSubType(s1: Schema, s2: Schema): Boolean = {
+  def isStringSubType(s1: Schema, s2: Schema): Compatibility = {
     val sp1 = (s1.minLength, s1.maxLength) match {
       case (Some(m1), Some(m2)) => s".{${m1.value},${m2.value}}"
       case (None, Some(m2))     => s".{,${m2.value}}"
@@ -53,29 +53,41 @@ package object subschema {
       )
     )
 
-    p1.isSubsetOf(p2) && pl1.isSubsetOf(pl2)
+    (p1.isSubsetOf(p2), pl1.isSubsetOf(pl2)) match {
+      case (true, true) => Compatible
+      case _ => Incompatible
+    }
   }
 
-  def isNumberSubType(s1: Schema, s2: Schema): Boolean = {
+  def isNumberSubType(s1: Schema, s2: Schema): Compatibility = {
     val s1min = s1.minimum.map(_.getAsDecimal)
     val s2min = s2.minimum.map(_.getAsDecimal)
     val s1max = s1.maximum.map(_.getAsDecimal)
     val s2max = s2.maximum.map(_.getAsDecimal)
 
     val minRange = (s1min, s2min) match {
-      case (None, Some(_)) => false
-      case (Some(_), None) => true
-      case (Some(l), Some(r)) => l >= r
-      case (None, None) => true
+      case (None, Some(_)) => Incompatible
+      case (Some(_), None) => Compatible
+      case (Some(l), Some(r)) => if (l >= r) Compatible else Incompatible
+      case (None, None) => Compatible
     }
 
     val maxRange = (s1max, s2max) match {
-      case (None, Some(_)) => false
-      case (Some(_), None) => true
-      case (Some(l), Some(r)) => l <= r
-      case (None, None) => true
+      case (None, Some(_)) => Incompatible
+      case (Some(_), None) => Compatible
+      case (Some(l), Some(r)) => if (l <= r) Compatible else Incompatible
+      case (None, None) => Compatible
     }
 
-    s1.`type` == s2.`type` && minRange && maxRange
+    val typeEquality = if (s1.`type` == s2.`type`) {
+      Compatible
+    } else {
+      Incompatible
+    }
+
+    (typeEquality, minRange, maxRange) match {
+      case (Compatible, Compatible, Compatible) => Compatible
+      case _ => Incompatible
+    }
   }
 }
