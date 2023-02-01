@@ -12,13 +12,13 @@ class NumbersSpec extends Specification with org.specs2.specification.Tables { d
   Number schema ranges
   ${
      "s1min" | "s1max" | "s2max" | "s2max" | "result" |>
-     None    ! None    ! None    ! None    ! true     |
-     Some(1) ! Some(1) ! Some(0) ! Some(2) ! true     |
-     Some(0) ! Some(1) ! Some(1) ! Some(1) ! false    |
-     Some(0) ! None    ! Some(1) ! Some(1) ! false    |
-     None    ! Some(1) ! Some(1) ! Some(1) ! false    |
-     Some(1) ! Some(1) ! None    ! None    ! true     |
-     None    ! None    ! Some(1) ! Some(1) ! false    |
+     None    ! None    ! None    ! None    ! Compatible     |
+     Some(1) ! Some(1) ! Some(0) ! Some(2) ! Compatible     |
+     Some(0) ! Some(1) ! Some(1) ! Some(1) ! Incompatible   |
+     Some(0) ! None    ! Some(1) ! Some(1) ! Incompatible   |
+     None    ! Some(1) ! Some(1) ! Some(1) ! Incompatible   |
+     Some(1) ! Some(1) ! None    ! None    ! Compatible     |
+     None    ! None    ! Some(1) ! Some(1) ! Incompatible   |
      { (a, b, c, d, e) => {
        val s1 = Schema.empty.copy(
          `type`=Some(Number),
