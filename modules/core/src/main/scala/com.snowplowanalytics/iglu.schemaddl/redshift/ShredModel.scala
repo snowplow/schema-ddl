@@ -29,7 +29,7 @@ case class ShredModel(
                        private val migrations: Migrations
                      ) {
 
-  private lazy val tableName: String = if (isRecovery)
+  lazy val tableName: String = if (isRecovery)
     s"${baseTableName}_${schemaKey.version.addition}_${schemaKey.version.revision}_recovered_${abs(entries.show.hashCode())}"
   else
     baseTableName
