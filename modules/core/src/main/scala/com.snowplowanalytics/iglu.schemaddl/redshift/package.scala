@@ -66,19 +66,19 @@ package object redshift {
    * @return
    */
   def foldMapMergeRedshiftSchemas(schemas: NonEmptyList[(SchemaKey, Schema)]): collection.Map[SchemaKey, ShredModel] = {
-    var acc = mutable.Map.empty[SchemaKey, ShredModel]
+    val acc = mutable.Map.empty[SchemaKey, ShredModel]
     var maybeLastGoodModel = Option.empty[ShredModel]
     val models = schemas.map { case (k, s) => ShredModel(k, s) }
 
     // first pass to build the mapping between key and accumulated model
     models.toList.foreach(model => maybeLastGoodModel match {
       case Some(lastModel) => lastModel.merge(model) match {
-        case Left(errors) => acc = acc.updated(model.schemaKey, errors._1)
-        case Right(mergedModel) => acc = acc.updated(mergedModel.schemaKey, mergedModel)
+        case Left(errors) => acc.update(model.schemaKey, errors._1)
+        case Right(mergedModel) => acc.update(mergedModel.schemaKey, mergedModel)
           maybeLastGoodModel = mergedModel.some
       }
       case None =>
-        acc = acc.updated(model.schemaKey, model)
+        acc.update(model.schemaKey, model)
         maybeLastGoodModel = model.some
     })
 
