@@ -1,22 +1,29 @@
 package com.snowplowanalytics.iglu.schemaddl.redshift.internal
 
 import cats.Show
-import cats.syntax.either._
 import cats.syntax.show._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.SchemaPointer
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
 import ColumnTypeSuggestions.columnTypeSuggestions
-import com.snowplowanalytics.iglu.schemaddl.redshift.FactoryError
 import io.circe.{ACursor, Json}
 
 import scala.annotation.tailrec
 
-final case class ShredModelEntry(ptr: SchemaPointer, subSchema: Schema) {
+/**
+ * Single bottom level entry of the schema model. Each entry matches a single column in warehouse.
+ *
+ * @param ptr       - json pointer. A cursor that could be used to extract the data from json event.
+ * @param subSchema - jsonschema of the element to where pointer is directed.
+ */
+final case class ShredModelEntry(ptr: SchemaPointer, subSchema: Schema, isNotNullOverride: Boolean) {
 
+  /**
+   * columnName, nullability, columnType and compressionEncoding are used for SQL statement definition of corresponding
+   * redshift column.
+   */
   lazy val columnName: String = ptr.getName
 
-  lazy val nullability: ShredModelEntry.Nullability =
-    if (!subSchema.canBeNull) ShredModelEntry.Nullability.Null else ShredModelEntry.Nullability.NotNull
+  lazy val isNullable: Boolean = isNotNullOverride || subSchema.canBeNull
 
   lazy val columnType: ShredModelEntry.ColumnType = columnTypeSuggestions
     .find(_.apply(subSchema).isDefined)
@@ -28,43 +35,49 @@ final case class ShredModelEntry(ptr: SchemaPointer, subSchema: Schema) {
       ShredModelEntry.CompressionEncoding.Text255Encoding
     case (_, ShredModelEntry.ColumnType.RedshiftBoolean) => ShredModelEntry.CompressionEncoding.RunLengthEncoding
     case (_, ShredModelEntry.ColumnType.RedshiftDouble) => ShredModelEntry.CompressionEncoding.RawEncoding
-    case (_, ShredModelEntry.ColumnType.RedshiftReal) => ShredModelEntry.CompressionEncoding.RawEncoding
     case _ => ShredModelEntry.CompressionEncoding.ZstdEncoding
   }
 
-  def stringFactory(json: Json): Either[FactoryError, String] = {
+  /**
+   * Extract the string representation of this entry from the event body. Factory relies on the validation done by the 
+   * enrich. So column type is not validated against the jsonTypes.
+   *
+   * @param json body of json event
+   * @return Either a casting error (pointer was incompatible with the event) or string serialization of the payload, 
+   */
+  def stringFactory(json: Json): String = {
     @tailrec
     def go(cursor: List[Pointer.Cursor], data: ACursor): String =
       cursor match {
         case Nil => data.focus.map(
-          _.fold(ShredModelEntry.NullCharacter,
-            if (_) "1" else "0",
-            _ => json.show,
-            ShredModelEntry.escapeTsv,
-            _ => ShredModelEntry.escapeTsv(json.noSpaces),
-            _ => ShredModelEntry.escapeTsv(json.noSpaces)
+          json => json.fold(
+            jsonNull = ShredModelEntry.NullCharacter,
+            jsonBoolean = if (_) "1" else "0",
+            jsonNumber = _ => json.show,
+            jsonString = ShredModelEntry.escapeTsv,
+            jsonArray = _ => ShredModelEntry.escapeTsv(json.noSpaces),
+            jsonObject = _ => ShredModelEntry.escapeTsv(json.noSpaces)
           )
         ).getOrElse(ShredModelEntry.NullCharacter)
         case Pointer.Cursor.DownField(field) :: t =>
           go(t, data.downField(field))
         case Pointer.Cursor.At(i) :: t =>
           go(t, data.downN(i))
-        case Pointer.Cursor.DownProperty(_) :: _ =>
-          throw new IllegalStateException(s"Iglu Schema DDL tried to use invalid pointer ${ptr.show} for payload ${json.noSpaces}")
+        case Pointer.Cursor.DownProperty(_) :: t => go(t, data)
       }
 
-    Either.catchOnly[IllegalStateException](go(ptr.get, json.hcursor)).leftMap(ex => FactoryError(ex.getMessage)
-    )
+    go(ptr.get, json.hcursor)
   }
-
-
 }
 
 object ShredModelEntry {
 
-  private val VARCHAR_SIZE = 65535
+  def apply(ptr: SchemaPointer, subSchema: Schema): ShredModelEntry =
+    ShredModelEntry(ptr, subSchema, isNotNullOverride = false)
 
-  private val NullCharacter: String = "\\N"
+  val VARCHAR_SIZE = 65535
+
+  val NullCharacter: String = "\\N"
 
   private def escapeTsv(s: String): String =
     if (s == NullCharacter) "\\\\N"
@@ -75,28 +88,27 @@ object ShredModelEntry {
 
   implicit val showProps: Show[List[ShredModelEntry]] = Show.show(props => {
     val colsAsString = props.map(prop =>
-      (s"\"${prop.columnName}\"", prop.columnType.show, prop.compressionEncoding.show, prop.nullability.show)
+      (s""""${prop.columnName}"""", prop.columnType.show, prop.compressionEncoding.show, if (prop.isNullable) "" else "NOT NULL")
     )
     val extraCols = List(
-      ("schema_vendor", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
-      ("schema_name", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
-      ("schema_format", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
-      ("schema_version", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
-      ("root_id", "CHAR (36)", "ENCODE RAW", "NOT NULL"),
-      ("root_tstamp", "TIMESTAMP", "ENCODE ZSTD", "NOT NULL"),
-      ("ref_root", "VARCHAR (255)", "ENCODE ZSTD", "NOT NULL"),
-      ("ref_tree", "VARCHAR (1500)", "ENCODE ZSTD", "NOT NULL"),
-      ("ref_parent", "VARCHAR (255)", "ENCODE ZSTD", "NOT NULL")
+      (""""schema_vendor"""", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
+      (""""schema_name"""", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
+      (""""schema_format"""", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
+      (""""schema_version"""", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
+      (""""root_id"""", "CHAR (36)", "ENCODE RAW", "NOT NULL"),
+      (""""root_tstamp"""", "TIMESTAMP", "ENCODE ZSTD", "NOT NULL"),
+      (""""ref_root"""", "VARCHAR (255)", "ENCODE ZSTD", "NOT NULL"),
+      (""""ref_tree"""", "VARCHAR (1500)", "ENCODE ZSTD", "NOT NULL"),
+      (""""ref_parent"""", "VARCHAR (255)", "ENCODE ZSTD", "NOT NULL")
     )
     val allCols = extraCols ++ colsAsString
-    val (mName, mType, mComp, mNull) = allCols.foldLeft((0, 0, 0, 0))(
+    val (mName, mType, mComp) = allCols.foldLeft((0, 0, 0))(
       (acc, col) => (
         math.max(col._1.length, acc._1),
         math.max(col._2.length, acc._2),
         math.max(col._3.length, acc._3),
-        math.max(col._4.length, acc._4)
       ))
-    val fmtStr = s"  %-${mName}s %${mType}s %${mComp}s %${mNull}s"
+    val fmtStr = s"  %-${mName}s %${mType}s %-${mComp}s %s"
 
     allCols
       .map(cols => fmtStr.format(cols._1, cols._2, cols._3, cols._4).stripTrailing)
@@ -131,8 +143,6 @@ object ShredModelEntry {
     case object RedshiftInteger extends ColumnType
 
     case object RedshiftBigInt extends ColumnType
-
-    case object RedshiftReal extends ColumnType
 
     case object RedshiftDouble extends ColumnType
 
@@ -173,25 +183,4 @@ object ShredModelEntry {
     case object ZstdEncoding extends CompressionEncoding
   }
 
-  sealed trait Nullability {
-    def isNarrowing(other: Nullability): Boolean = other match {
-      case Nullability.Null => false
-      case Nullability.NotNull => this match {
-        case Nullability.Null => true
-        case Nullability.NotNull => false
-      }
-    }
-  }
-
-  object Nullability {
-
-    implicit val nullabilityShow: Show[Nullability] = Show.show {
-      case Null => ""
-      case NotNull => "NOT NULL"
-    }
-
-    case object Null extends Nullability
-
-    case object NotNull extends Nullability
-  }
 }

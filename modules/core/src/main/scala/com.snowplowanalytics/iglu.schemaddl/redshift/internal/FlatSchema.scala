@@ -38,7 +38,7 @@ import scala.annotation.tailrec
  *                   some of parent properties still can be `null` and thus not required
  * @param parents    keys that are not primitive, but can contain important information (e.g. nullability)
  */
-private final case class FlatSchema(
+private[redshift] final case class FlatSchema(
                                      subschemas: FlatSchema.SubSchemas,
                                      required: Set[SchemaPointer],
                                      parents: FlatSchema.SubSchemas
@@ -88,7 +88,7 @@ object FlatSchema {
    * Set of Schemas properties attached to corresponding JSON Pointers
    * Unlike their original Schemas, these have `null` among types if they're not required
    */
-  private type SubSchemas = Set[(Pointer.SchemaPointer, Schema)]
+  private[redshift] type SubSchemas = Set[(Pointer.SchemaPointer, Schema)]
 
   /**
    * Main function for flattening multiple schemas, preserving their lineage
@@ -102,11 +102,12 @@ object FlatSchema {
    * @return list of typed pointers which are ordered according to criterias specified
    *         above
    */
-  def extractProperties(schema: Schema): ShredModelEntry = postProcess(build(schema).subschemas)
-  
+  def extractProperties(schema: Schema): List[ShredModelEntry] = postProcess(build(schema).subschemas)
+    .map(pair => ShredModelEntry.apply(pair._1, pair._2))
+
 
   /** Build [[FlatSchema]] from a single schema. Must be used only if there's only one schema */
-  private def build(schema: Schema): FlatSchema =
+  def build(schema: Schema): FlatSchema =
     Schema.traverse(schema, FlatSchema.save).runS(FlatSchema.empty).value
 
   /** Check if `current` JSON Pointer has all parent elements also required */
