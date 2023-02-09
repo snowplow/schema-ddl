@@ -89,6 +89,6 @@ package object redshift {
           maybeLastGoodModel.get
         else
           model
-    )
+    ).toMap
   }
 }
