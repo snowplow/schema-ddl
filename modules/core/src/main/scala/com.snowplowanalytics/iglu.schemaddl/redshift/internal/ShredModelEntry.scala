@@ -111,7 +111,7 @@ object ShredModelEntry {
     val fmtStr = s"  %-${mName}s %${mType}s %-${mComp}s %s"
 
     allCols
-      .map(cols => fmtStr.format(cols._1, cols._2, cols._3, cols._4).stripTrailing)
+      .map(cols => fmtStr.format(cols._1, cols._2, cols._3, cols._4).replaceAll("""\s+$""", ""))
       .mkString(",\n")
   })
 
