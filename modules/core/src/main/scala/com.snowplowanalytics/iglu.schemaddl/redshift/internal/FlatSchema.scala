@@ -106,7 +106,7 @@ object FlatSchema {
     .map(pair => ShredModelEntry.apply(pair._1, pair._2))
 
 
-  /** Build [[FlatSchema]] from a single schema. Must be used only if there's only one schema */
+  /** Build FlatSchema from a single schema. Must be used only if there's only one schema */
   def build(schema: Schema): FlatSchema =
     Schema.traverse(schema, FlatSchema.save).runS(FlatSchema.empty).value
 

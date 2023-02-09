@@ -97,7 +97,7 @@ case class ShredModel(
     (ShredModel, NonEmptyList[Breaking]),
     ShredModel
   ] = {
-    val baseLookup = entries.groupBy(_.columnName).mapValues(_.head)
+    val baseLookup = entries.groupBy(_.columnName).map { case (k, v) => (k, v.head) }.toMap
     val additions: List[ShredModelEntry] =
       that.entries
         .filter(col => !baseLookup.contains(col.columnName))
