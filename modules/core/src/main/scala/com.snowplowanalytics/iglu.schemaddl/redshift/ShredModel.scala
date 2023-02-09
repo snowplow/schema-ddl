@@ -30,7 +30,7 @@ case class ShredModel(
                      ) {
 
   private lazy val tableName: String = if (isRecovery)
-    s"${baseTableName}_${schemaKey.version.addition}_${schemaKey.version.revision}_recovered_${abs(entries.hashCode())}"
+    s"${baseTableName}_${schemaKey.version.addition}_${schemaKey.version.revision}_recovered_${abs(entries.show.hashCode())}"
   else
     baseTableName
 

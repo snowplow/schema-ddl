@@ -50,7 +50,7 @@ class ShredModelSpec extends Specification {
     }
     "render recovery table" in {
       dummyModel.copy(isRecovery = true).toTableSql("custom") must beEqualTo(
-        """CREATE TABLE IF NOT EXISTS custom.com_acme_example_1_0_0_recovered_1689338838 (
+        """CREATE TABLE IF NOT EXISTS custom.com_acme_example_1_0_0_recovered_1291770116 (
           |  "schema_vendor"            VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"              VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_format"            VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -80,7 +80,7 @@ class ShredModelSpec extends Specification {
           |DISTKEY (root_id)
           |SORTKEY (root_tstamp);
           |
-          |COMMENT ON TABLE  custom.com_acme_example_1_0_0_recovered_1689338838 IS 'iglu:com.acme/example/jsonschema/1-0-0';
+          |COMMENT ON TABLE  custom.com_acme_example_1_0_0_recovered_1291770116 IS 'iglu:com.acme/example/jsonschema/1-0-0';
           |""".stripMargin)
     }
   }
@@ -186,7 +186,7 @@ class ShredModelSpec extends Specification {
               }""".schema)
 
       s1.merge(s2).toTestString must beLeft(
-        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_824899456 (
+        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_256857677 (
           |  "schema_vendor"     VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"       VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_format"     VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -203,7 +203,7 @@ class ShredModelSpec extends Specification {
           |DISTKEY (root_id)
           |SORTKEY (root_tstamp);
           |
-          |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_824899456 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+          |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_256857677 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
           |ENCODE ZSTD ENCODE RAW""".stripMargin
       )
@@ -230,7 +230,7 @@ class ShredModelSpec extends Specification {
               }""".schema)
 
       s1.merge(s2).toTestString must beLeft(
-        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_1744100480 (
+        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_1032165134 (
           |  "schema_vendor"   VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"     VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_format"   VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -247,7 +247,7 @@ class ShredModelSpec extends Specification {
           |DISTKEY (root_id)
           |SORTKEY (root_tstamp);
           |
-          |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_1744100480 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+          |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_1032165134 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
           |VARCHAR(20) VARCHAR(10)""".stripMargin
       )
@@ -423,7 +423,7 @@ class ShredModelSpec extends Specification {
 
       foldMapRedshiftSchemas(NonEmptyList.of((dummyKey, s1), (dummyKey1, s2), (dummyKey2, s3)))(dummyKey1)
         .asRight[(ShredModel, NonEmptyList[Migrations.Breaking])].toTestString must beRight(
-        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_824899456 (
+        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_256857677 (
           |  "schema_vendor"     VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"       VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_format"     VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -440,11 +440,11 @@ class ShredModelSpec extends Specification {
           |DISTKEY (root_id)
           |SORTKEY (root_tstamp);
           |
-          |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_824899456 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+          |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_256857677 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
           |-- WARNING: only apply this file to your database if the following SQL returns the expected:
           |--
-          |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1_1_0_recovered_824899456';
+          |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1_1_0_recovered_256857677';
           |--  obj_description
           |-- -----------------
           |--  iglu:com.acme/example/jsonschema/1-0-1
