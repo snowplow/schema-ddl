@@ -4,7 +4,6 @@ import cats.data.NonEmptyList
 import cats.syntax.option._
 import cats.syntax.either._
 import com.snowplowanalytics.iglu.core.SchemaKey
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations
 
 import scala.collection.mutable
@@ -13,19 +12,17 @@ package object redshift {
 
   // See the merge method scala doc for reference
   def assessRedshiftMigration(
-                               srcKey: SchemaKey,
-                               tgtKey: SchemaKey,
-                               srcSchema: Schema,
-                               tgtSchema: Schema
+                               src: IgluSchema,
+                               tgt: IgluSchema
                              ): Either[NonEmptyList[Migrations.Breaking], List[Migrations.NonBreaking]] =
-    ShredModel(srcKey, srcSchema).merge(ShredModel(tgtKey, tgtSchema))
+    ShredModel(src).merge(ShredModel(tgt))
       .map(_.allMigrations)
       .leftMap(_._2)
 
-  def isRedshiftMigrationBreaking(srcKey: SchemaKey, tgtKey: SchemaKey, srcSchema: Schema, tgtSchema: Schema): Boolean =
-    assessRedshiftMigration(srcKey, tgtKey, srcSchema, tgtSchema).isRight
+  def isRedshiftMigrationBreaking(src: IgluSchema, tgt: IgluSchema): Boolean =
+    assessRedshiftMigration(src, tgt).isRight
 
-  def getFinalMergedModel(schemas: NonEmptyList[(SchemaKey, Schema)]): ShredModel =
+  def getFinalMergedModel(schemas: NonEmptyList[(IgluSchema)]): ShredModel =
     foldMapMergeRedshiftSchemas(schemas).values.collectFirst {
       case model: ShredModel if !model.isRecovery => model
     }.get // first schema always would be there due to Nel, so `get` is safe
@@ -36,10 +33,10 @@ package object redshift {
    * @param schemas - ordered list of schemas for the same family
    * @return
    */
-  def foldMapRedshiftSchemas(schemas: NonEmptyList[(SchemaKey, Schema)]): collection.Map[SchemaKey, ShredModel] = {
+  def foldMapRedshiftSchemas(schemas: NonEmptyList[IgluSchema]): collection.Map[SchemaKey, ShredModel] = {
     val acc = mutable.Map.empty[SchemaKey, ShredModel]
     var maybeLastGoodModel = Option.empty[ShredModel]
-    val models = schemas.map { case (k, s) => ShredModel(k, s) }
+    val models = schemas.map(ShredModel.apply)
 
     // first pass to build the mapping between key and corresponding model
     models.toList.foreach(model => maybeLastGoodModel match {
@@ -65,27 +62,26 @@ package object redshift {
    * @param schemas - ordered list of schemas for the same family
    * @return
    */
-  def foldMapMergeRedshiftSchemas(schemas: NonEmptyList[(SchemaKey, Schema)]): collection.Map[SchemaKey, ShredModel] = {
-    val acc = mutable.Map.empty[SchemaKey, ShredModel]
-    var maybeLastGoodModel = Option.empty[ShredModel]
-    val models = schemas.map { case (k, s) => ShredModel(k, s) }
+  def foldMapMergeRedshiftSchemas(schemas: NonEmptyList[IgluSchema]): collection.Map[SchemaKey, ShredModel] = {
+    val models = schemas.map(ShredModel.apply)
+    var lastGoodModel = models.head
+    val acc = mutable.Map(models.head.schemaKey -> models.head)
 
     // first pass to build the mapping between key and accumulated model
-    models.toList.foreach(model => maybeLastGoodModel match {
-      case Some(lastModel) => lastModel.merge(model) match {
-        case Left(errors) => acc.update(model.schemaKey, errors._1)
-        case Right(mergedModel) => acc.update(mergedModel.schemaKey, mergedModel)
-          maybeLastGoodModel = mergedModel.some
+    models.tail.foreach { model =>
+      lastGoodModel.merge(model) match {
+        case Left(errors) =>
+          acc.update(model.schemaKey, errors._1)
+        case Right(mergedModel) =>
+          acc.update(mergedModel.schemaKey, mergedModel)
+          lastGoodModel = mergedModel
       }
-      case None =>
-        acc.update(model.schemaKey, model)
-        maybeLastGoodModel = model.some
-    })
+    }
 
     // seconds pass to backfill the last model version for initial keys.
     acc.map {
       case (k, model) => (k, if (!model.isRecovery)
-        maybeLastGoodModel.get
+        lastGoodModel
       else
         model)
     }.toMap

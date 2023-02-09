@@ -8,7 +8,7 @@ import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry.Co
 import scala.collection.immutable.TreeMap
 import scala.math.Ordered.orderingToOrdered
 
-case class Migrations(migrations: TreeMap[SchemaKey, List[Migrations.NonBreaking]]) {
+private[redshift] case class Migrations(private [Migrations] val migrations: TreeMap[SchemaKey, List[Migrations.NonBreaking]]) {
 
   def values: Iterable[NonBreaking] = migrations.values.flatten
 

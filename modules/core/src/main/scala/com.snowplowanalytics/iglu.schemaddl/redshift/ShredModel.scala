@@ -6,6 +6,7 @@ import cats.syntax.show._
 import cats.syntax.either._
 import io.circe.Json
 import com.snowplowanalytics.iglu.core.SchemaKey
+import com.snowplowanalytics.iglu.schemaddl.IgluSchema
 import com.snowplowanalytics.iglu.schemaddl.StringUtils.snakeCase
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.{FlatSchema, Migrations, ShredModelEntry}
@@ -23,7 +24,7 @@ import math.abs
  * @param migrations - migrations accumulated though merging with next schemas in family.
  */
 case class ShredModel(
-                       entries: List[ShredModelEntry],
+                       private[ShredModel] val entries: List[ShredModelEntry],
                        schemaKey: SchemaKey,
                        isRecovery: Boolean,
                        private val migrations: Migrations
@@ -97,14 +98,14 @@ case class ShredModel(
     (ShredModel, NonEmptyList[Breaking]),
     ShredModel
   ] = {
-    val baseLookup = entries.groupBy(_.columnName).map { case (k, v) => (k, v.head) }.toMap
+    val baseLookup = entries.map { e => (e.columnName, e) }.toMap
     val additions: List[ShredModelEntry] =
       that.entries
         .filter(col => !baseLookup.contains(col.columnName))
         .map(entry => (entry.ptr, entry.subSchema))
         .toSet[(Pointer.SchemaPointer, Schema)] // this toSet, toList preserves the order as it was in the older library versions < 0.18.0
         .toList
-        .map { case (ptr, subSchema) => ShredModelEntry(ptr, subSchema, isNotNullOverride = true) }
+        .map { case (ptr, subSchema) => ShredModelEntry(ptr, subSchema, isLateAddition = true) }
     val additionsMigration: List[ColumnAddition] = additions.map(ColumnAddition.apply)
     val modifications: Either[NonEmptyList[Breaking], List[NonBreaking]] =
       that.entries
@@ -150,6 +151,9 @@ case class ShredModel(
 }
 
 object ShredModel {
+
+  def apply(s: IgluSchema): ShredModel = ShredModel(s.self.schemaKey, s.schema)
+
   def apply(k: SchemaKey, s: Schema): ShredModel =
     ShredModel(FlatSchema.extractProperties(s), k, isRecovery = false, Migrations(k, Nil))
 

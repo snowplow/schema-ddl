@@ -14,8 +14,13 @@ import scala.annotation.tailrec
  *
  * @param ptr       - json pointer. A cursor that could be used to extract the data from json event.
  * @param subSchema - jsonschema of the element to where pointer is directed.
+ * @param isLateAddition - entry added as a result of migration, so it must be NOT NULL.
  */
-final case class ShredModelEntry(ptr: SchemaPointer, subSchema: Schema, isNotNullOverride: Boolean) {
+private[redshift] case class ShredModelEntry(
+                                              ptr: SchemaPointer,
+                                              subSchema: Schema,
+                                              isLateAddition: Boolean
+                                            ) {
 
   /**
    * columnName, nullability, columnType and compressionEncoding are used for SQL statement definition of corresponding
@@ -23,7 +28,7 @@ final case class ShredModelEntry(ptr: SchemaPointer, subSchema: Schema, isNotNul
    */
   lazy val columnName: String = ptr.getName
 
-  lazy val isNullable: Boolean = isNotNullOverride || subSchema.canBeNull
+  lazy val isNullable: Boolean = isLateAddition || subSchema.canBeNull
 
   lazy val columnType: ShredModelEntry.ColumnType = columnTypeSuggestions
     .find(_.apply(subSchema).isDefined)
@@ -73,7 +78,7 @@ final case class ShredModelEntry(ptr: SchemaPointer, subSchema: Schema, isNotNul
 object ShredModelEntry {
 
   def apply(ptr: SchemaPointer, subSchema: Schema): ShredModelEntry =
-    ShredModelEntry(ptr, subSchema, isNotNullOverride = false)
+    ShredModelEntry(ptr, subSchema, isLateAddition = false)
 
   val VARCHAR_SIZE = 65535
 

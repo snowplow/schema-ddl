@@ -3,7 +3,7 @@ package com.snowplowanalytics.iglu.schemaddl.redshift
 import cats.data.NonEmptyList
 import cats.syntax.either._
 import cats.syntax.show._
-import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer}
+import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaMap, SchemaVer, SelfDescribingSchema}
 import org.specs2.mutable.Specification
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelSpec.{ModelMergeOps, dummyKey, dummyKey1, dummyKey2, dummyModel}
@@ -327,7 +327,7 @@ class ShredModelSpec extends Specification {
     }
 
     "should merge multiple schemas skipping broken one in the middle" in {
-      val s1 =
+      val s1 = SelfDescribingSchema(SchemaMap(dummyKey),
         json"""{
                "type": "object",
                "properties": {
@@ -335,16 +335,16 @@ class ShredModelSpec extends Specification {
                    "type": "string",
                    "maxLength": 20
                  }}
-              }""".schema
-      val s2 =
+              }""".schema)
+      val s2 = SelfDescribingSchema(SchemaMap(dummyKey1),
         json"""{
                "type": "object",
                "properties": {
                  "foo": {
                    "type": "number"
                  }}
-              }""".schema
-      val s3 =
+              }""".schema)
+      val s3 = SelfDescribingSchema(SchemaMap(dummyKey2),
         json"""{
          "type": "object",
          "properties": {
@@ -352,9 +352,9 @@ class ShredModelSpec extends Specification {
              "type": "string",
              "maxLength": 30
            }}
-        }""".schema
+        }""".schema)
 
-      getFinalMergedModel(NonEmptyList.of((dummyKey, s1), (dummyKey1, s2), (dummyKey2, s3)))
+      getFinalMergedModel(NonEmptyList.of(s1, s2, s3))
         .asRight[(ShredModel, NonEmptyList[Migrations.Breaking])].toTestString must beRight(
         """CREATE TABLE IF NOT EXISTS s.com_acme_example_1 (
           |  "schema_vendor"   VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -392,9 +392,9 @@ class ShredModelSpec extends Specification {
           |""".stripMargin
       )
     }
-    
+
     "should merge multiple schemas merged with broken one in the middle and it should get a recovery model" in {
-      val s1 =
+      val s1 = SelfDescribingSchema(SchemaMap(dummyKey),
         json"""{
                "type": "object",
                "properties": {
@@ -402,16 +402,16 @@ class ShredModelSpec extends Specification {
                    "type": "string",
                    "maxLength": 20
                  }}
-              }""".schema
-      val s2 =
+              }""".schema)
+      val s2 = SelfDescribingSchema(SchemaMap(dummyKey1),
         json"""{
                "type": "object",
                "properties": {
                  "foo": {
                    "type": "number"
                  }}
-              }""".schema
-      val s3 =
+              }""".schema)
+      val s3 = SelfDescribingSchema(SchemaMap(dummyKey2),
         json"""{
          "type": "object",
          "properties": {
@@ -419,9 +419,9 @@ class ShredModelSpec extends Specification {
              "type": "string",
              "maxLength": 30
            }}
-        }""".schema
+        }""".schema)
 
-      foldMapRedshiftSchemas(NonEmptyList.of((dummyKey, s1), (dummyKey1, s2), (dummyKey2, s3)))(dummyKey1)
+      foldMapRedshiftSchemas(NonEmptyList.of(s1, s2, s3)) (dummyKey1)
         .asRight[(ShredModel, NonEmptyList[Migrations.Breaking])].toTestString must beRight(
         """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_256857677 (
           |  "schema_vendor"     VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -453,7 +453,7 @@ class ShredModelSpec extends Specification {
           |""".stripMargin
       )
     }
-    
+
   }
 }
 

@@ -34,7 +34,7 @@ import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry.Co
 /**
  * Module containing functions for data type suggestions
  */
-object ColumnTypeSuggestions {
+private[internal] object ColumnTypeSuggestions {
 
   val DefaultArraySize: Int = 65535
 
