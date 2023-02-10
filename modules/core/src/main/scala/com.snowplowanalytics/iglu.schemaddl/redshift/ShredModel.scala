@@ -19,22 +19,16 @@ import math.abs
 /**
  * Shredded table model for redshift.
  *
- *  Extracting data from json into tsv-ready List[String]
- *  Warehouse table representation. "Good" version of this trait also supports migrations.
+ * Extracting data from json into tsv-ready List[String]
+ * Warehouse table representation. "Good" version of this trait also supports migrations.
  *
- *  entries   - list of model entries, containing the schema pointers and bottom level sub schemas 
- *  schemaKey - schema key of corresponding top level schema
+ * entries   - list of model entries, containing the schema pointers and bottom level sub schemas 
+ * schemaKey - schema key of corresponding top level schema
  */
 sealed trait ShredModel extends Product with Serializable {
-  private def entries: List[ShredModelEntry] = this match {
-    case ShredModel.GoodModel(entries, _, _) => entries
-    case ShredModel.RecoveryModel(entries, _, _) => entries
-  }
+  def entries: List[ShredModelEntry]
 
-  private def schemaKey: SchemaKey = this match {
-    case ShredModel.GoodModel(_, schemaKey, _) => schemaKey
-    case ShredModel.RecoveryModel(_, schemaKey, _) => schemaKey
-  }
+  def schemaKey: SchemaKey
 
   final def isRecovery: Boolean = this match {
     case _: ShredModel.GoodModel => false
@@ -87,10 +81,9 @@ sealed trait ShredModel extends Product with Serializable {
 
 object ShredModel {
 
-  case class GoodModel(
-                        private[ShredModel] val entries: List[ShredModelEntry],
-                        schemaKey: SchemaKey,
-                        private val migrations: Migrations
+  case class GoodModel(entries: List[ShredModelEntry],
+                       schemaKey: SchemaKey,
+                       migrations: Migrations
                       ) extends ShredModel {
 
     /**
@@ -158,7 +151,7 @@ object ShredModel {
             case s if s.old == entry => s.newEntry
           }.getOrElse(entry)
         )
-      } yield GoodModel(
+      } yield new GoodModel(
         modifedEntries ++ additions,
         that.schemaKey,
         migrations ++ Migrations(that.schemaKey, extensions ++ additionsMigration)
@@ -166,10 +159,10 @@ object ShredModel {
         .leftMap(that.makeRecovery)
     }
 
-    private[redshift] def makeRecovery(errors: NonEmptyList[Breaking]): RecoveryModel = RecoveryModel(entries, schemaKey, errors)
+    private[redshift] def makeRecovery(errors: NonEmptyList[Breaking]): RecoveryModel = new RecoveryModel(entries, schemaKey, errors)
   }
 
-  case class RecoveryModel(private[ShredModel] val entries: List[ShredModelEntry],
+  case class RecoveryModel(entries: List[ShredModelEntry],
                            schemaKey: SchemaKey,
                            errors: NonEmptyList[Breaking]) extends ShredModel {
     def errorAsStrings: NonEmptyList[String] = errors.map(_.report)
@@ -178,6 +171,6 @@ object ShredModel {
 
   def good(s: IgluSchema): GoodModel = good(s.self.schemaKey, s.schema)
 
-  def good(k: SchemaKey, s: Schema): GoodModel = GoodModel(FlatSchema.extractProperties(s), k, Migrations.empty(k))
+  def good(k: SchemaKey, s: Schema): GoodModel = new GoodModel(FlatSchema.extractProperties(s), k, Migrations.empty(k))
 
 }
