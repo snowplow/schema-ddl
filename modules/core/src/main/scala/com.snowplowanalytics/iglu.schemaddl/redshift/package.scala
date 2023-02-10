@@ -21,9 +21,9 @@ package object redshift {
   def isRedshiftMigrationBreaking(src: IgluSchema, tgt: IgluSchema): Boolean =
     assessRedshiftMigration(src, tgt).isRight
 
-  def getFinalMergedModel(schemas: NonEmptyList[(IgluSchema)]): ShredModel =
+  def getFinalMergedModel(schemas: NonEmptyList[IgluSchema]): GoodModel =
     foldMapMergeRedshiftSchemas(schemas).values.collectFirst {
-      case model: ShredModel if !model.isRecovery => model
+      case model: GoodModel => model
     }.get // first schema always would be there due to Nel, so `get` is safe
 
   /**
