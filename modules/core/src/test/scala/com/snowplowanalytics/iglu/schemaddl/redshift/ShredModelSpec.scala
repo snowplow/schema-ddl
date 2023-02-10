@@ -2,13 +2,14 @@ package com.snowplowanalytics.iglu.schemaddl.redshift
 
 import cats.data.NonEmptyList
 import cats.syntax.either._
+import cats.syntax.option._
 import cats.syntax.show._
 import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaMap, SchemaVer, SelfDescribingSchema}
 import org.specs2.mutable.Specification
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelSpec.{ModelMergeOps, dummyKey, dummyKey1, dummyKey2, dummyModel}
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations.{IncompatibleEncoding, IncompatibleTypes}
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations.{IncompatibleEncoding, IncompatibleTypes, NullableRequired}
 import io.circe.literal._
 
 class ShredModelSpec extends Specification {
@@ -49,7 +50,9 @@ class ShredModelSpec extends Specification {
           |""".stripMargin)
     }
     "render recovery table" in {
-      dummyModel.copy(isRecovery = true).toTableSql("custom") must beEqualTo(
+      dummyModel.copy(maybeBreakingMigrations = NonEmptyList.one(NullableRequired(
+        ShredModelEntry("/".jsonPointer, json"""{"type": "string"}""".schema)
+      )).some).toTableSql("custom") must beEqualTo(
         """CREATE TABLE IF NOT EXISTS custom.com_acme_example_1_0_0_recovered_1291770116 (
           |  "schema_vendor"            VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"              VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -355,7 +358,7 @@ class ShredModelSpec extends Specification {
         }""".schema)
 
       getFinalMergedModel(NonEmptyList.of(s1, s2, s3))
-        .asRight[(ShredModel, NonEmptyList[Migrations.Breaking])].toTestString must beRight(
+        .asRight[ShredModel].toTestString must beRight(
         """CREATE TABLE IF NOT EXISTS s.com_acme_example_1 (
           |  "schema_vendor"   VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"     VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -421,8 +424,8 @@ class ShredModelSpec extends Specification {
            }}
         }""".schema)
 
-      foldMapRedshiftSchemas(NonEmptyList.of(s1, s2, s3)) (dummyKey1)
-        .asRight[(ShredModel, NonEmptyList[Migrations.Breaking])].toTestString must beRight(
+      foldMapRedshiftSchemas(NonEmptyList.of(s1, s2, s3))(dummyKey1)
+        .asRight[ShredModel].toTestString must beRight(
         """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_256857677 (
           |  "schema_vendor"     VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"       VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -535,13 +538,11 @@ object ShredModelSpec {
            "required": ["a_field", "e_field"] 
 }""".schema)
 
-  implicit class ModelMergeOps(result: Either[(ShredModel, NonEmptyList[Migrations.Breaking]),
-    ShredModel]) {
-    def toTestString: Either[String, String] = result.leftMap { case (model, errors) => (model.toTableSql("s") + "\n" + errors.collect {
+  implicit class ModelMergeOps(result: Either[ShredModel, ShredModel]) {
+    def toTestString: Either[String, String] = result.leftMap(model => (model.toTableSql("s") + "\n" + model.maybeBreakingMigrations.get.collect {
       case IncompatibleTypes(old, changed) => old.columnType.show + " " + changed.columnType.show
       case IncompatibleEncoding(old, changed) => old.compressionEncoding.show + " " + changed.compressionEncoding.show
-    }.mkString("\n"))
-    }.map(s => s.toTableSql("s") + "\n" + s.migrationSql("s", None))
+    }.mkString("\n"))).map(s => s.toTableSql("s") + "\n" + s.migrationSql("s", None))
   }
 
 }

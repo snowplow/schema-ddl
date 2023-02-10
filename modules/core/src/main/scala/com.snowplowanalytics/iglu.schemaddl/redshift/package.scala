@@ -17,7 +17,7 @@ package object redshift {
                              ): Either[NonEmptyList[Migrations.Breaking], List[Migrations.NonBreaking]] =
     ShredModel(src).merge(ShredModel(tgt))
       .map(_.allMigrations)
-      .leftMap(_._2)
+      .leftMap(_.maybeBreakingMigrations.get)
 
   def isRedshiftMigrationBreaking(src: IgluSchema, tgt: IgluSchema): Boolean =
     assessRedshiftMigration(src, tgt).isRight
@@ -41,7 +41,7 @@ package object redshift {
     // first pass to build the mapping between key and corresponding model
     models.toList.foreach(model => maybeLastGoodModel match {
       case Some(lastModel) => lastModel.merge(model) match {
-        case Left(errors) => acc.update(model.schemaKey, errors._1)
+        case Left(badModel) => acc.update(model.schemaKey, badModel)
         // We map original model here, as opposed to merged one.
         case Right(mergedModel) => acc.update(model.schemaKey, model)
           maybeLastGoodModel = mergedModel.some
@@ -70,8 +70,8 @@ package object redshift {
     // first pass to build the mapping between key and accumulated model
     models.tail.foreach { model =>
       lastGoodModel.merge(model) match {
-        case Left(errors) =>
-          acc.update(model.schemaKey, errors._1)
+        case Left(badModel) =>
+          acc.update(model.schemaKey, badModel)
         case Right(mergedModel) =>
           acc.update(mergedModel.schemaKey, mergedModel)
           lastGoodModel = mergedModel

@@ -3,6 +3,7 @@ package com.snowplowanalytics.iglu.schemaddl.redshift
 import cats.data.NonEmptyList
 import cats.syntax.parallel._
 import cats.syntax.show._
+import cats.syntax.option._
 import cats.syntax.either._
 import io.circe.Json
 import com.snowplowanalytics.iglu.core.SchemaKey
@@ -18,15 +19,16 @@ import math.abs
 
 /**
  *
- * @param entries    - list of model entries, containing the schema pointers and bottom level sub schemas 
- * @param schemaKey  - schema key of corresponding top level schema 
- * @param isRecovery - whether or not this model is used for automatic recovery. Only affects the SQL representation.
- * @param migrations - migrations accumulated though merging with next schemas in family.
+ * @param entries                 - list of model entries, containing the schema pointers and bottom level sub schemas 
+ * @param schemaKey               - schema key of corresponding top level schema 
+ * @param maybeBreakingMigrations - possible list of breaking migrations. Having such list means this is a recovery 
+ *                                model (only affect SQL representation)
+ * @param migrations              - migrations accumulated though merging with next schemas in family.
  */
 case class ShredModel(
                        private[ShredModel] val entries: List[ShredModelEntry],
                        schemaKey: SchemaKey,
-                       isRecovery: Boolean,
+                       maybeBreakingMigrations: Option[NonEmptyList[Breaking]],
                        private val migrations: Migrations
                      ) {
 
@@ -34,6 +36,8 @@ case class ShredModel(
     s"${baseTableName}_${schemaKey.version.addition}_${schemaKey.version.revision}_recovered_${abs(entries.show.hashCode())}"
   else
     baseTableName
+
+  val isRecovery: Boolean = maybeBreakingMigrations.nonEmpty
 
   private lazy val baseTableName: String = {
     // Split the vendor's reversed domain name using underscores rather than dots
@@ -94,10 +98,7 @@ case class ShredModel(
    *         Right merged ModelShred of this with that schema tupled with list of non breaking changes required to make a
    *         perform a merge.
    */
-  def merge(that: ShredModel): Either[
-    (ShredModel, NonEmptyList[Breaking]),
-    ShredModel
-  ] = {
+  def merge(that: ShredModel): Either[ShredModel, ShredModel] = {
     val baseLookup = entries.map { e => (e.columnName, e) }.toMap
     val additions: List[ShredModelEntry] =
       that.entries
@@ -140,10 +141,10 @@ case class ShredModel(
     } yield ShredModel(
       modifedEntries ++ additions,
       that.schemaKey,
-      isRecovery = false,
+      None,
       migrations ++ Migrations(that.schemaKey, extensions ++ additionsMigration)
     ))
-      .leftMap(breaking => (that.copy(isRecovery = true), breaking))
+      .leftMap(breaking => that.copy(maybeBreakingMigrations = breaking.some))
   }
 
   def jsonToStrings(json: Json): List[String] = entries.map(e => e.stringFactory(json))
@@ -155,6 +156,6 @@ object ShredModel {
   def apply(s: IgluSchema): ShredModel = ShredModel(s.self.schemaKey, s.schema)
 
   def apply(k: SchemaKey, s: Schema): ShredModel =
-    ShredModel(FlatSchema.extractProperties(s), k, isRecovery = false, Migrations(k, Nil))
+    ShredModel(FlatSchema.extractProperties(s), k, None, Migrations(k, Nil))
 
 }
