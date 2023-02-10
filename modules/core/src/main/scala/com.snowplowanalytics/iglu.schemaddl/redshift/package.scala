@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import cats.syntax.option._
 import cats.syntax.either._
 import com.snowplowanalytics.iglu.core.SchemaKey
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModel.GoodModel
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations
 
 import scala.collection.mutable
@@ -15,9 +16,7 @@ package object redshift {
                                src: IgluSchema,
                                tgt: IgluSchema
                              ): Either[NonEmptyList[Migrations.Breaking], List[Migrations.NonBreaking]] =
-    ShredModel(src).merge(ShredModel(tgt))
-      .map(_.allMigrations)
-      .leftMap(_.maybeBreakingMigrations.get)
+    ShredModel.good(src).merge(ShredModel.good(tgt)).map(_.allMigrations).leftMap(_.errors)
 
   def isRedshiftMigrationBreaking(src: IgluSchema, tgt: IgluSchema): Boolean =
     assessRedshiftMigration(src, tgt).isRight
@@ -35,8 +34,8 @@ package object redshift {
    */
   def foldMapRedshiftSchemas(schemas: NonEmptyList[IgluSchema]): collection.Map[SchemaKey, ShredModel] = {
     val acc = mutable.Map.empty[SchemaKey, ShredModel]
-    var maybeLastGoodModel = Option.empty[ShredModel]
-    val models = schemas.map(ShredModel.apply)
+    var maybeLastGoodModel = Option.empty[GoodModel]
+    val models = schemas.map(ShredModel.good)
 
     // first pass to build the mapping between key and corresponding model
     models.toList.foreach(model => maybeLastGoodModel match {
@@ -63,9 +62,9 @@ package object redshift {
    * @return
    */
   def foldMapMergeRedshiftSchemas(schemas: NonEmptyList[IgluSchema]): collection.Map[SchemaKey, ShredModel] = {
-    val models = schemas.map(ShredModel.apply)
+    val models = schemas.map(ShredModel.good)
     var lastGoodModel = models.head
-    val acc = mutable.Map(models.head.schemaKey -> models.head)
+    val acc: mutable.Map[SchemaKey, ShredModel] = mutable.Map(models.head.schemaKey -> models.head)
 
     // first pass to build the mapping between key and accumulated model
     models.tail.foreach { model =>

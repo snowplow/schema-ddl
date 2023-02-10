@@ -2,14 +2,13 @@ package com.snowplowanalytics.iglu.schemaddl.redshift
 
 import cats.data.NonEmptyList
 import cats.syntax.either._
-import cats.syntax.option._
-import cats.syntax.show._
 import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaMap, SchemaVer, SelfDescribingSchema}
 import org.specs2.mutable.Specification
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModel.{GoodModel, RecoveryModel}
 import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelSpec.{ModelMergeOps, dummyKey, dummyKey1, dummyKey2, dummyModel}
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations.{IncompatibleEncoding, IncompatibleTypes, NullableRequired}
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations.NullableRequired
 import io.circe.literal._
 
 class ShredModelSpec extends Specification {
@@ -50,9 +49,9 @@ class ShredModelSpec extends Specification {
           |""".stripMargin)
     }
     "render recovery table" in {
-      dummyModel.copy(maybeBreakingMigrations = NonEmptyList.one(NullableRequired(
+      dummyModel.makeRecovery(NonEmptyList.one(NullableRequired(
         ShredModelEntry("/".jsonPointer, json"""{"type": "string"}""".schema)
-      )).some).toTableSql("custom") must beEqualTo(
+      ))).toTableSql("custom") must beEqualTo(
         """CREATE TABLE IF NOT EXISTS custom.com_acme_example_1_0_0_recovered_1291770116 (
           |  "schema_vendor"            VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"              VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -112,7 +111,7 @@ class ShredModelSpec extends Specification {
 
   "model migrations" should {
     "should merge with varchar widening" in {
-      val s1 = ShredModel(dummyKey,
+      val s1 = ShredModel.good(dummyKey,
         json"""{
        "type": "object",
        "properties": {
@@ -121,7 +120,7 @@ class ShredModelSpec extends Specification {
            "maxLength": 20
          }}
       }""".schema)
-      val s2 = ShredModel(dummyKey1,
+      val s2 = ShredModel.good(dummyKey1,
         json"""{
        "type": "object",
        "properties": {
@@ -170,7 +169,7 @@ class ShredModelSpec extends Specification {
 
     "should make a recovery model when incompatible encodings are merged" in {
 
-      val s1 = ShredModel(dummyKey,
+      val s1 = ShredModel.good(dummyKey,
         json"""{
                "type": "object",
                "properties": {
@@ -179,7 +178,7 @@ class ShredModelSpec extends Specification {
                    "maxLength": 20
                  }}
               }""".schema)
-      val s2 = ShredModel(dummyKey1,
+      val s2 = ShredModel.good(dummyKey1,
         json"""{
                "type": "object",
                "properties": {
@@ -208,12 +207,12 @@ class ShredModelSpec extends Specification {
           |
           |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_256857677 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
-          |ENCODE ZSTD ENCODE RAW""".stripMargin
+          |Incompatible encoding in column foo old type RedshiftVarchar(20)/ZstdEncoding new type RedshiftDouble/RawEncoding""".stripMargin
       )
     }
 
     "should make a recovery model when varchar is narrowing" in {
-      val s1 = ShredModel(dummyKey,
+      val s1 = ShredModel.good(dummyKey,
         json"""{
                "type": "object",
                "properties": {
@@ -222,7 +221,7 @@ class ShredModelSpec extends Specification {
                    "maxLength": 20
                  }}
               }""".schema)
-      val s2 = ShredModel(dummyKey1,
+      val s2 = ShredModel.good(dummyKey1,
         json"""{
                "type": "object",
                "properties": {
@@ -252,12 +251,12 @@ class ShredModelSpec extends Specification {
           |
           |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_1032165134 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
-          |VARCHAR(20) VARCHAR(10)""".stripMargin
+          |Incompatible types in column foo old RedshiftVarchar(20) new RedshiftVarchar(10)""".stripMargin
       )
     }
 
     "should merge multiple schemas" in {
-      val s1 = ShredModel(dummyKey,
+      val s1 = ShredModel.good(dummyKey,
         json"""{
                "type": "object",
                "properties": {
@@ -266,7 +265,7 @@ class ShredModelSpec extends Specification {
                    "maxLength": 20
                  }}
               }""".schema)
-      val s2 = ShredModel(dummyKey1,
+      val s2 = ShredModel.good(dummyKey1,
         json"""{
                "type": "object",
                "properties": {
@@ -275,7 +274,7 @@ class ShredModelSpec extends Specification {
                    "maxLength": 10
                  }}
               }""".schema)
-      val s3 = ShredModel(dummyKey2,
+      val s3 = ShredModel.good(dummyKey2,
         json"""{
          "type": "object",
          "properties": {
@@ -357,8 +356,8 @@ class ShredModelSpec extends Specification {
            }}
         }""".schema)
 
-      getFinalMergedModel(NonEmptyList.of(s1, s2, s3))
-        .asRight[ShredModel].toTestString must beRight(
+      getFinalMergedModel(NonEmptyList.of(s1, s2, s3)).asInstanceOf[GoodModel]
+        .asRight[RecoveryModel].toTestString must beRight(
         """CREATE TABLE IF NOT EXISTS s.com_acme_example_1 (
           |  "schema_vendor"   VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"     VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -424,8 +423,8 @@ class ShredModelSpec extends Specification {
            }}
         }""".schema)
 
-      foldMapRedshiftSchemas(NonEmptyList.of(s1, s2, s3))(dummyKey1)
-        .asRight[ShredModel].toTestString must beRight(
+      foldMapRedshiftSchemas(NonEmptyList.of(s1, s2, s3))(dummyKey1).asInstanceOf[RecoveryModel]
+        .asLeft[GoodModel].toTestString must beLeft(
         """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_256857677 (
           |  "schema_vendor"     VARCHAR (128) ENCODE ZSTD NOT NULL,
           |  "schema_name"       VARCHAR (128) ENCODE ZSTD NOT NULL,
@@ -445,15 +444,7 @@ class ShredModelSpec extends Specification {
           |
           |COMMENT ON TABLE  s.com_acme_example_1_1_0_recovered_256857677 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
-          |-- WARNING: only apply this file to your database if the following SQL returns the expected:
-          |--
-          |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1_1_0_recovered_256857677';
-          |--  obj_description
-          |-- -----------------
-          |--  iglu:com.acme/example/jsonschema/1-0-1
-          |--  (1 row)
-          |
-          |""".stripMargin
+          |Incompatible encoding in column foo old type RedshiftVarchar(20)/ZstdEncoding new type RedshiftDouble/RawEncoding""".stripMargin
       )
     }
 
@@ -464,7 +455,7 @@ object ShredModelSpec {
   val dummyKey = SchemaKey("com.acme", "example", "jsonschema", SchemaVer.Full(1, 0, 0))
   val dummyKey1 = SchemaKey("com.acme", "example", "jsonschema", SchemaVer.Full(1, 0, 1))
   val dummyKey2 = SchemaKey("com.acme", "example", "jsonschema", SchemaVer.Full(1, 0, 2))
-  val dummyModel = ShredModel(dummyKey,
+  val dummyModel = ShredModel.good(dummyKey,
     json"""{
            "type": "object",
            "properties": {
@@ -538,11 +529,10 @@ object ShredModelSpec {
            "required": ["a_field", "e_field"] 
 }""".schema)
 
-  implicit class ModelMergeOps(result: Either[ShredModel, ShredModel]) {
-    def toTestString: Either[String, String] = result.leftMap(model => (model.toTableSql("s") + "\n" + model.maybeBreakingMigrations.get.collect {
-      case IncompatibleTypes(old, changed) => old.columnType.show + " " + changed.columnType.show
-      case IncompatibleEncoding(old, changed) => old.compressionEncoding.show + " " + changed.compressionEncoding.show
-    }.mkString("\n"))).map(s => s.toTableSql("s") + "\n" + s.migrationSql("s", None))
+  implicit class ModelMergeOps(result: Either[RecoveryModel, GoodModel]) {
+    def toTestString: Either[String, String] = result.leftMap(badModel =>
+      (badModel.toTableSql("s") + "\n" + badModel.errorAsStrings.toList.mkString("\n")))
+      .map(goodModel => goodModel.toTableSql("s") + "\n" + goodModel.migrationSql("s", None))
   }
 
 }

@@ -68,6 +68,9 @@ private[redshift] case class Migrations(private[Migrations] val migrations: Tree
 }
 
 object Migrations {
+  
+  def empty(k: SchemaKey): Migrations = Migrations(k, Nil)
+  
   def apply(schemaKey: SchemaKey, migrations: List[Migrations.NonBreaking]): Migrations = Migrations(TreeMap((schemaKey, migrations))
   )
 
@@ -83,11 +86,11 @@ object Migrations {
 
   sealed trait Breaking extends Product with Serializable {
     def report: String = this match {
-      case IncompatibleTypes(old, changed) => 
+      case IncompatibleTypes(old, changed) =>
         s"Incompatible types in column ${old.columnName} old ${old.columnType} new ${changed.columnType}"
-      case IncompatibleEncoding(old, changed) => 
+      case IncompatibleEncoding(old, changed) =>
         s"Incompatible encoding in column ${old.columnName} old type ${old.columnType}/${old.compressionEncoding} new type ${changed.columnType}/${changed.compressionEncoding}"
-      case NullableRequired(old) =>  s"Making required column nullable ${old.columnName}"
+      case NullableRequired(old) => s"Making required column nullable ${old.columnName}"
     }
   }
 
