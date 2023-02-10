@@ -8,7 +8,7 @@ import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry.Co
 import scala.collection.immutable.TreeMap
 import scala.math.Ordered.orderingToOrdered
 
-private[redshift] case class Migrations(private [Migrations] val migrations: TreeMap[SchemaKey, List[Migrations.NonBreaking]]) {
+private[redshift] case class Migrations(private[Migrations] val migrations: TreeMap[SchemaKey, List[Migrations.NonBreaking]]) {
 
   def values: Iterable[NonBreaking] = migrations.values.flatten
 
@@ -51,9 +51,9 @@ private[redshift] case class Migrations(private [Migrations] val migrations: Tre
                |""".stripMargin
           } match {
             case Nil => s"""|-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
-                          |
-                          |COMMENT ON TABLE  $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
-                          |""".stripMargin
+                            |
+                            |COMMENT ON TABLE  $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
+                            |""".stripMargin
             case h :: t => s"""BEGIN TRANSACTION;
                               |
                               |${(h :: t).mkString}
@@ -81,7 +81,15 @@ object Migrations {
 
   case object NoChanges extends NonBreaking
 
-  sealed trait Breaking extends Product with Serializable
+  sealed trait Breaking extends Product with Serializable {
+    def report: String = this match {
+      case IncompatibleTypes(old, changed) => 
+        s"Incompatible types in column ${old.columnName} old ${old.columnType} new ${changed.columnType}"
+      case IncompatibleEncoding(old, changed) => 
+        s"Incompatible encoding in column ${old.columnName} old type ${old.columnType}/${old.compressionEncoding} new type ${changed.columnType}/${changed.compressionEncoding}"
+      case NullableRequired(old) =>  s"Making required column nullable ${old.columnName}"
+    }
+  }
 
   case class IncompatibleTypes(old: ShredModelEntry, changed: ShredModelEntry) extends Breaking
 
