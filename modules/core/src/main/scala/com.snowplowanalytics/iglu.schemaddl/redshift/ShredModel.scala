@@ -19,11 +19,11 @@ import math.abs
 /**
  * Shredded table model for redshift.
  *
- * @usecase Extracting data from json into tsv-ready List[String]
- * @usecase Warehouse table representation. "Good" version of this trait also supports migrations.
+ *  Extracting data from json into tsv-ready List[String]
+ *  Warehouse table representation. "Good" version of this trait also supports migrations.
  *
- *          entries   - list of model entries, containing the schema pointers and bottom level sub schemas 
- *          schemaKey - schema key of corresponding top level schema
+ *  entries   - list of model entries, containing the schema pointers and bottom level sub schemas 
+ *  schemaKey - schema key of corresponding top level schema
  */
 sealed trait ShredModel extends Product with Serializable {
   private def entries: List[ShredModelEntry] = this match {
