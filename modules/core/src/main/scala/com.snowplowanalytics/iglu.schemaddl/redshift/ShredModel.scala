@@ -30,17 +30,9 @@ sealed trait ShredModel extends Product with Serializable {
 
   def schemaKey: SchemaKey
 
-  final def isRecovery: Boolean = this match {
-    case _: ShredModel.GoodModel => false
-    case _: ShredModel.RecoveryModel => true
-  }
-
-  final lazy val tableName: String = if (isRecovery)
-    s"${baseTableName}_${schemaKey.version.addition}_${schemaKey.version.revision}_recovered_${abs(entries.show.hashCode())}"
-  else
-    baseTableName
-
-
+  def tableName: String
+  
+˚
   final private lazy val baseTableName: String = {
     // Split the vendor's reversed domain name using underscores rather than dots
     val snakeCaseOrganization = schemaKey
@@ -158,6 +150,8 @@ object ShredModel {
       ))
         .leftMap(that.makeRecovery)
     }
+    
+    val tableName: String = baseTableName
 
     private[redshift] def makeRecovery(errors: NonEmptyList[Breaking]): RecoveryModel = new RecoveryModel(entries, schemaKey, errors)
   }
@@ -166,6 +160,8 @@ object ShredModel {
                            schemaKey: SchemaKey,
                            errors: NonEmptyList[Breaking]) extends ShredModel {
     def errorAsStrings: NonEmptyList[String] = errors.map(_.report)
+
+    val tableName = s"${baseTableName}_${schemaKey.version.addition}_${schemaKey.version.revision}_recovered_${abs(entries.show.hashCode())}"
   }
 
 
