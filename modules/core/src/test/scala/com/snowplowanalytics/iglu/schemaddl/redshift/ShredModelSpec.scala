@@ -153,10 +153,10 @@ class ShredModelSpec extends Specification {
           |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1';
           |--  obj_description
           |-- -----------------
-          |--  iglu:com.acme/example/jsonschema/1-0-1
+          |--  iglu:com.acme/example/jsonschema/1-0-0
           |--  (1 row)
           |
-          |  ALTER TABLE com_acme_example_1
+          |  ALTER TABLE s.com_acme_example_1
           |     ALTER COLUMN "foo" TYPE VARCHAR(30);
           |
           |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
@@ -308,19 +308,19 @@ class ShredModelSpec extends Specification {
           |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1';
           |--  obj_description
           |-- -----------------
-          |--  iglu:com.acme/example/jsonschema/1-0-2
+          |--  iglu:com.acme/example/jsonschema/1-0-0
           |--  (1 row)
           |
-          |  ALTER TABLE com_acme_example_1
+          |  ALTER TABLE s.com_acme_example_1
           |     ALTER COLUMN "foo" TYPE VARCHAR(30);
           |
           |BEGIN TRANSACTION;
           |
-          |  ALTER TABLE com_acme_example_1
+          |  ALTER TABLE s.com_acme_example_1
           |     ADD COLUMN "bar" VARCHAR(10) ENCODE ZSTD;
           |
           |  COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-2';
-          |  
+          |
           |END TRANSACTION;""".stripMargin
       )
     }
@@ -381,19 +381,19 @@ class ShredModelSpec extends Specification {
           |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1';
           |--  obj_description
           |-- -----------------
-          |--  iglu:com.acme/example/jsonschema/1-0-2
+          |--  iglu:com.acme/example/jsonschema/1-0-0
           |--  (1 row)
           |
           |BEGIN TRANSACTION;
           |
-          |  ALTER TABLE com_acme_example_1
+          |  ALTER TABLE s.com_acme_example_1
           |     ADD COLUMN "zoo" DOUBLE PRECISION ENCODE RAW;
           |
-          |  ALTER TABLE com_acme_example_1
+          |  ALTER TABLE s.com_acme_example_1
           |     ADD COLUMN "foo1" VARCHAR(30) ENCODE ZSTD;
           |
           |  COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-2';
-          |  
+          |
           |END TRANSACTION;""".stripMargin
       )
     }
@@ -452,10 +452,10 @@ class ShredModelSpec extends Specification {
           |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1';
           |--  obj_description
           |-- -----------------
-          |--  iglu:com.acme/example/jsonschema/1-0-2
+          |--  iglu:com.acme/example/jsonschema/1-0-0
           |--  (1 row)
           |
-          |  ALTER TABLE com_acme_example_1
+          |  ALTER TABLE s.com_acme_example_1
           |     ALTER COLUMN "foo" TYPE VARCHAR(30);
           |
           |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION

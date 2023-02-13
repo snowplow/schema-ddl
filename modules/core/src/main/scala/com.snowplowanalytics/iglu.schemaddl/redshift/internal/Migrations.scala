@@ -36,18 +36,18 @@ private[redshift] case class Migrations(private[Migrations] val migrations: Tree
         |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = '$tableName';
         |--  obj_description
         |-- -----------------
-        |--  ${migrations.lastKey.toSchemaUri}
+        |--  ${maybeBase.getOrElse(migrations.firstKey).toSchemaUri}
         |--  (1 row)
         |
         |""".stripMargin +
       outTransaction(maybeBase).map { case Migrations.VarcharExtension(old, newEntry) =>
-        s"""  ALTER TABLE $tableName
+        s"""  ALTER TABLE $dbSchema.$tableName
            |     ALTER COLUMN "${old.columnName}" TYPE ${newEntry.columnType.show};
            |
            |""".stripMargin
       }.mkString +
       (inTransaction(maybeBase).map { case Migrations.ColumnAddition(column) =>
-        s"""  ALTER TABLE $tableName
+        s"""  ALTER TABLE $dbSchema.$tableName
            |     ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
            |
            |""".stripMargin
@@ -59,7 +59,7 @@ private[redshift] case class Migrations(private[Migrations] val migrations: Tree
         case h :: t => s"""BEGIN TRANSACTION;
                           |
                           |${(h :: t).mkString}  COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
-                          |  
+                          |
                           |END TRANSACTION;""".stripMargin
       })
 
