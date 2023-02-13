@@ -20,6 +20,7 @@ import cats.instances.option._
 import cats.syntax.eq._
 import cats.syntax.foldable._
 import cats.syntax.traverse._
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry
 import io.circe.Json
 
 import scala.annotation.tailrec
@@ -29,12 +30,12 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.NumberProperty.{Maximum, MultipleOf}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.StringProperty.{Format, MaxLength, MinLength}
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry.ColumnType._
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry.ColumnType._
 
 /**
  * Module containing functions for data type suggestions
  */
-private[internal] object ColumnTypeSuggestions {
+private[redshift] object ColumnTypeSuggestions {
 
   val DefaultArraySize: Int = 65535
 

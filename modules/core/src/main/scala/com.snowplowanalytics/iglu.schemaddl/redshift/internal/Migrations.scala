@@ -2,8 +2,9 @@ package com.snowplowanalytics.iglu.schemaddl.redshift.internal
 
 import cats.syntax.show._
 import com.snowplowanalytics.iglu.core.SchemaKey
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations._
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry.ColumnType._
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry.ColumnType._
 
 import scala.collection.immutable.TreeMap
 import scala.math.Ordered.orderingToOrdered

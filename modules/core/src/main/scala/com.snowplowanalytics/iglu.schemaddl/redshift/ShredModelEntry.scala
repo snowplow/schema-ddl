@@ -1,10 +1,10 @@
-package com.snowplowanalytics.iglu.schemaddl.redshift.internal
+package com.snowplowanalytics.iglu.schemaddl.redshift
 
 import cats.Show
 import cats.syntax.show._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Pointer.SchemaPointer
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
-import ColumnTypeSuggestions.columnTypeSuggestions
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ColumnTypeSuggestions.columnTypeSuggestions
 import io.circe.{ACursor, Json}
 
 import scala.annotation.tailrec
@@ -12,15 +12,15 @@ import scala.annotation.tailrec
 /**
  * Single bottom level entry of the schema model. Each entry matches a single column in warehouse.
  *
- * @param ptr       - json pointer. A cursor that could be used to extract the data from json event.
- * @param subSchema - jsonschema of the element to where pointer is directed.
+ * @param ptr            - json pointer. A cursor that could be used to extract the data from json event.
+ * @param subSchema      - jsonschema of the element to where pointer is directed.
  * @param isLateAddition - entry added as a result of migration, so it must be NOT NULL.
  */
-private[redshift] case class ShredModelEntry(
-                                              ptr: SchemaPointer,
-                                              subSchema: Schema,
-                                              isLateAddition: Boolean
-                                            ) {
+case class ShredModelEntry(
+                            ptr: SchemaPointer,
+                            subSchema: Schema,
+                            isLateAddition: Boolean
+                          ) {
 
   /**
    * columnName, nullability, columnType and compressionEncoding are used for SQL statement definition of corresponding

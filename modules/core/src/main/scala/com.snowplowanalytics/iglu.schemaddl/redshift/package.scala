@@ -79,7 +79,7 @@ package object redshift {
 
     // seconds pass to backfill the last model version for initial keys.
     acc.map {
-      case (k, model) => (k, if (!model.isRecovery)
+      case (k, model) => (k, if (model.isInstanceOf[GoodModel])
         lastGoodModel
       else
         model)

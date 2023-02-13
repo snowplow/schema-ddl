@@ -7,7 +7,6 @@ import org.specs2.mutable.Specification
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModel.{GoodModel, RecoveryModel}
 import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelSpec.{ModelMergeOps, dummyKey, dummyKey1, dummyKey2, dummyModel}
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations.NullableRequired
 import io.circe.literal._
 

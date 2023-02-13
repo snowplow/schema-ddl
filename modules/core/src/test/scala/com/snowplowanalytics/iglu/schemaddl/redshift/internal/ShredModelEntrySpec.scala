@@ -16,11 +16,12 @@ import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntrySpec.{dummyPtr, refJson}
 import io.circe.literal._
 import cats.syntax.show._
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry
 
 // specs2
 import org.specs2.mutable.Specification
-import ShredModelEntry.ColumnType._
-import ShredModelEntry.CompressionEncoding._
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry.ColumnType._
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry.CompressionEncoding._
 
 class ShredModelEntrySpec extends Specification {
 

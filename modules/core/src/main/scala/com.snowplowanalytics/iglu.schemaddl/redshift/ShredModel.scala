@@ -9,9 +9,9 @@ import com.snowplowanalytics.iglu.core.SchemaKey
 import com.snowplowanalytics.iglu.schemaddl.IgluSchema
 import com.snowplowanalytics.iglu.schemaddl.StringUtils.snakeCase
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.{FlatSchema, Migrations, ShredModelEntry}
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry.ColumnType
-import com.snowplowanalytics.iglu.schemaddl.redshift.internal.ShredModelEntry.CompressionEncoding.Text255Encoding
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.{FlatSchema, Migrations}
+import ShredModelEntry.ColumnType
+import ShredModelEntry.CompressionEncoding.Text255Encoding
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations._
 
 import math.abs
@@ -32,8 +32,8 @@ sealed trait ShredModel extends Product with Serializable {
 
   def tableName: String
   
-˚
-  final private lazy val baseTableName: String = {
+  
+  final lazy val baseTableName: String = {
     // Split the vendor's reversed domain name using underscores rather than dots
     val snakeCaseOrganization = schemaKey
       .vendor
