@@ -11,7 +11,6 @@ import com.snowplowanalytics.iglu.schemaddl.StringUtils.snakeCase
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.{Pointer, Schema}
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.{FlatSchema, Migrations}
 import ShredModelEntry.ColumnType
-import ShredModelEntry.CompressionEncoding.Text255Encoding
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations._
 
 import math.abs
@@ -31,8 +30,8 @@ sealed trait ShredModel extends Product with Serializable {
   def schemaKey: SchemaKey
 
   def tableName: String
-  
-  
+
+
   final lazy val baseTableName: String = {
     // Split the vendor's reversed domain name using underscores rather than dots
     val snakeCaseOrganization = schemaKey
@@ -126,8 +125,8 @@ object ShredModel {
               IncompatibleEncoding(oldCol, newCol).asLeft.toEitherNel
             else newType match {
               case ColumnType.RedshiftVarchar(newSize) => oldType match {
-                case ColumnType.RedshiftVarchar(oldSize) if (newSize > oldSize) & (oldEncoding != Text255Encoding) =>
-                  VarcharExtension(oldCol, newCol).asRight
+                case ColumnType.RedshiftVarchar(oldSize) if newSize > oldSize => VarcharExtension(oldCol, newCol).asRight
+                case ColumnType.RedshiftVarchar(oldSize) if newSize <= oldSize => NoChanges.asRight
                 case _ if newType != oldType => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
                 case _ => NoChanges.asRight
               }
@@ -143,14 +142,14 @@ object ShredModel {
             case s if s.old == entry => s.newEntry
           }.getOrElse(entry)
         )
-      } yield new GoodModel(
+      } yield GoodModel(
         modifedEntries ++ additions,
         that.schemaKey,
         migrations ++ Migrations(that.schemaKey, extensions ++ additionsMigration)
       ))
         .leftMap(that.makeRecovery)
     }
-    
+
     val tableName: String = baseTableName
 
     private[redshift] def makeRecovery(errors: NonEmptyList[Breaking]): RecoveryModel = new RecoveryModel(entries, schemaKey, errors)

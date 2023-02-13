@@ -42,13 +42,13 @@ private[redshift] case class Migrations(private[Migrations] val migrations: Tree
         |""".stripMargin +
       outTransaction(maybeBase).map { case Migrations.VarcharExtension(old, newEntry) =>
         s"""  ALTER TABLE $dbSchema.$tableName
-           |     ALTER COLUMN "${old.columnName}" TYPE ${newEntry.columnType.show};
+           |    ALTER COLUMN "${old.columnName}" TYPE ${newEntry.columnType.show};
            |
            |""".stripMargin
       }.mkString +
       (inTransaction(maybeBase).map { case Migrations.ColumnAddition(column) =>
         s"""  ALTER TABLE $dbSchema.$tableName
-           |     ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
+           |    ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
            |
            |""".stripMargin
       } match {
@@ -70,8 +70,8 @@ object Migrations {
 
   def empty(k: SchemaKey): Migrations = Migrations(k, Nil)
 
-  def apply(schemaKey: SchemaKey, migrations: List[Migrations.NonBreaking]): Migrations = Migrations(TreeMap((schemaKey, migrations))
-  )
+  def apply(schemaKey: SchemaKey, migrations: List[Migrations.NonBreaking]): Migrations =
+    Migrations(TreeMap((schemaKey, migrations)))
 
   implicit val ord: Ordering[SchemaKey] = SchemaKey.ordering
 

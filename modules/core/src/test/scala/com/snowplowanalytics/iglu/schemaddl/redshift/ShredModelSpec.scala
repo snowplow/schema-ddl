@@ -157,7 +157,7 @@ class ShredModelSpec extends Specification {
           |--  (1 row)
           |
           |  ALTER TABLE s.com_acme_example_1
-          |     ALTER COLUMN "foo" TYPE VARCHAR(30);
+          |    ALTER COLUMN "foo" TYPE VARCHAR(30);
           |
           |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
           |
@@ -210,7 +210,7 @@ class ShredModelSpec extends Specification {
       )
     }
 
-    "should make a recovery model when varchar is narrowing" in {
+    "should make a ignore varchar narrowing" in {
       val s1 = ShredModel.good(dummyKey,
         json"""{
                "type": "object",
@@ -230,8 +230,8 @@ class ShredModelSpec extends Specification {
                  }}
               }""".schema)
 
-      s1.merge(s2).toTestString must beLeft(
-        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_907755218 (
+      s1.merge(s2).toTestString must beRight(
+        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1 (
           |  "schema_vendor"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
           |  "schema_name"    VARCHAR(128)  ENCODE ZSTD NOT NULL,
           |  "schema_format"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
@@ -241,16 +241,27 @@ class ShredModelSpec extends Specification {
           |  "ref_root"       VARCHAR(255)  ENCODE ZSTD NOT NULL,
           |  "ref_tree"       VARCHAR(1500) ENCODE ZSTD NOT NULL,
           |  "ref_parent"     VARCHAR(255)  ENCODE ZSTD NOT NULL,
-          |  "foo"            VARCHAR(10)   ENCODE ZSTD,
+          |  "foo"            VARCHAR(20)   ENCODE ZSTD,
           |  FOREIGN KEY (root_id) REFERENCES s.events(event_id)
           |)
           |DISTSTYLE KEY
           |DISTKEY (root_id)
           |SORTKEY (root_tstamp);
           |
-          |COMMENT ON TABLE s.com_acme_example_1_1_0_recovered_907755218 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+          |COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
-          |Incompatible types in column foo old RedshiftVarchar(20) new RedshiftVarchar(10)""".stripMargin
+          |-- WARNING: only apply this file to your database if the following SQL returns the expected:
+          |--
+          |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1';
+          |--  obj_description
+          |-- -----------------
+          |--  iglu:com.acme/example/jsonschema/1-0-0
+          |--  (1 row)
+          |
+          |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
+          |
+          |COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+          |""".stripMargin
       )
     }
 
@@ -312,12 +323,12 @@ class ShredModelSpec extends Specification {
           |--  (1 row)
           |
           |  ALTER TABLE s.com_acme_example_1
-          |     ALTER COLUMN "foo" TYPE VARCHAR(30);
+          |    ALTER COLUMN "foo" TYPE VARCHAR(30);
           |
           |BEGIN TRANSACTION;
           |
           |  ALTER TABLE s.com_acme_example_1
-          |     ADD COLUMN "bar" VARCHAR(10) ENCODE ZSTD;
+          |    ADD COLUMN "bar" VARCHAR(10) ENCODE ZSTD;
           |
           |  COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-2';
           |
@@ -387,10 +398,10 @@ class ShredModelSpec extends Specification {
           |BEGIN TRANSACTION;
           |
           |  ALTER TABLE s.com_acme_example_1
-          |     ADD COLUMN "zoo" DOUBLE PRECISION ENCODE RAW;
+          |    ADD COLUMN "zoo" DOUBLE PRECISION ENCODE RAW;
           |
           |  ALTER TABLE s.com_acme_example_1
-          |     ADD COLUMN "foo1" VARCHAR(30) ENCODE ZSTD;
+          |    ADD COLUMN "foo1" VARCHAR(30) ENCODE ZSTD;
           |
           |  COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-2';
           |
@@ -456,7 +467,7 @@ class ShredModelSpec extends Specification {
           |--  (1 row)
           |
           |  ALTER TABLE s.com_acme_example_1
-          |     ALTER COLUMN "foo" TYPE VARCHAR(30);
+          |    ALTER COLUMN "foo" TYPE VARCHAR(30);
           |
           |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
           |
