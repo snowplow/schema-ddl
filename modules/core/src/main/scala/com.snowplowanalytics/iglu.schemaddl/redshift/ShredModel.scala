@@ -64,7 +64,7 @@ sealed trait ShredModel extends Product with Serializable {
        |DISTKEY (root_id)
        |SORTKEY (root_tstamp);
        |
-       |COMMENT ON TABLE  $dbSchema.$tableName IS '${schemaKey.toSchemaUri}';
+       |COMMENT ON TABLE $dbSchema.$tableName IS '${schemaKey.toSchemaUri}';
        |""".stripMargin
 
   final def jsonToStrings(json: Json): List[String] = entries.map(e => e.stringFactory(json))

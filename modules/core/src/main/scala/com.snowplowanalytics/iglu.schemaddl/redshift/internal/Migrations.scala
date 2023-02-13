@@ -53,13 +53,13 @@ private[redshift] case class Migrations(private[Migrations] val migrations: Tree
           } match {
             case Nil => s"""|-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
                             |
-                            |COMMENT ON TABLE  $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
+                            |COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
                             |""".stripMargin
             case h :: t => s"""BEGIN TRANSACTION;
                               |
                               |${(h :: t).mkString}
                               |
-                              |  COMMENT ON TABLE  $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
+                              |  COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
                               |  
                               |END TRANSACTION;""".stripMargin
           })

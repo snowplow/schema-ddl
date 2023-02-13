@@ -96,15 +96,15 @@ object ShredModelEntry {
       (s""""${prop.columnName}"""", prop.columnType.show, prop.compressionEncoding.show, if (prop.isNullable) "" else "NOT NULL")
     )
     val extraCols = List(
-      (""""schema_vendor"""", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_name"""", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_format"""", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_version"""", "VARCHAR (128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""root_id"""", "CHAR (36)", "ENCODE RAW", "NOT NULL"),
+      (""""schema_vendor"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+      (""""schema_name"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+      (""""schema_format"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+      (""""schema_version"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+      (""""root_id"""", "CHAR(36)", "ENCODE RAW", "NOT NULL"),
       (""""root_tstamp"""", "TIMESTAMP", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_root"""", "VARCHAR (255)", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_tree"""", "VARCHAR (1500)", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_parent"""", "VARCHAR (255)", "ENCODE ZSTD", "NOT NULL")
+      (""""ref_root"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL"),
+      (""""ref_tree"""", "VARCHAR(1500)", "ENCODE ZSTD", "NOT NULL"),
+      (""""ref_parent"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL")
     )
     val allCols = extraCols ++ colsAsString
     val (mName, mType, mComp) = allCols.foldLeft((0, 0, 0))(
@@ -136,7 +136,7 @@ object ShredModelEntry {
       case RedshiftBoolean => "BOOLEAN"
       case RedshiftVarchar(size) => s"VARCHAR($size)"
       case RedshiftChar(size) => s"CHAR($size)"
-      case ProductType(size) => s"VARCHAR(${size.getOrElse(4096)})"
+      case ProductType(size) => s"VARCHAR(${size.getOrElse(VARCHAR_SIZE)})"
     }
 
     case object RedshiftTimestamp extends ColumnType
