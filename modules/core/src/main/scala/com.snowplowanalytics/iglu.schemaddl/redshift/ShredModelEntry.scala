@@ -80,7 +80,7 @@ object ShredModelEntry {
   def apply(ptr: SchemaPointer, subSchema: Schema): ShredModelEntry =
     ShredModelEntry(ptr, subSchema, isLateAddition = false)
 
-  val VARCHAR_SIZE = 65535
+  val VARCHAR_SIZE = 4096
 
   val NullCharacter: String = "\\N"
 
@@ -113,7 +113,7 @@ object ShredModelEntry {
         math.max(col._2.length, acc._2),
         math.max(col._3.length, acc._3),
       ))
-    val fmtStr = s"  %-${mName}s %${mType}s %-${mComp}s %s"
+    val fmtStr = s"  %-${mName}s %${-mType}s %-${mComp}s %s"
 
     allCols
       .map(cols => fmtStr.format(cols._1, cols._2, cols._3, cols._4).replaceAll("""\s+$""", ""))

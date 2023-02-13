@@ -114,36 +114,36 @@ class ShredModelEntrySpec extends Specification {
         ShredModelEntry("/ptrlooong1111".jsonPointer, json"""{"type": ["number","null"]}""".schema),
       )
       cols.show must beEqualTo(
-        """|  "schema_vendor"     VARCHAR (128) ENCODE ZSTD      NOT NULL,
-           |  "schema_name"       VARCHAR (128) ENCODE ZSTD      NOT NULL,
-           |  "schema_format"     VARCHAR (128) ENCODE ZSTD      NOT NULL,
-           |  "schema_version"    VARCHAR (128) ENCODE ZSTD      NOT NULL,
-           |  "root_id"               CHAR (36) ENCODE RAW       NOT NULL,
-           |  "root_tstamp"           TIMESTAMP ENCODE ZSTD      NOT NULL,
-           |  "ref_root"          VARCHAR (255) ENCODE ZSTD      NOT NULL,
-           |  "ref_tree"         VARCHAR (1500) ENCODE ZSTD      NOT NULL,
-           |  "ref_parent"        VARCHAR (255) ENCODE ZSTD      NOT NULL,
-           |  "ptr"              VARCHAR(65535) ENCODE ZSTD      NOT NULL,
-           |  "ptrlooong"               BOOLEAN ENCODE RUNLENGTH NOT NULL,
-           |  "ptrlooon"         VARCHAR(65535) ENCODE ZSTD      NOT NULL,
-           |  "ptrs"                  TIMESTAMP ENCODE ZSTD      NOT NULL,
-           |  "ptrlooong1111"  DOUBLE PRECISION ENCODE RAW""".stripMargin)
+        """  "schema_vendor"  VARCHAR (128)    ENCODE ZSTD      NOT NULL,
+          |  "schema_name"    VARCHAR (128)    ENCODE ZSTD      NOT NULL,
+          |  "schema_format"  VARCHAR (128)    ENCODE ZSTD      NOT NULL,
+          |  "schema_version" VARCHAR (128)    ENCODE ZSTD      NOT NULL,
+          |  "root_id"        CHAR (36)        ENCODE RAW       NOT NULL,
+          |  "root_tstamp"    TIMESTAMP        ENCODE ZSTD      NOT NULL,
+          |  "ref_root"       VARCHAR (255)    ENCODE ZSTD      NOT NULL,
+          |  "ref_tree"       VARCHAR (1500)   ENCODE ZSTD      NOT NULL,
+          |  "ref_parent"     VARCHAR (255)    ENCODE ZSTD      NOT NULL,
+          |  "ptr"            VARCHAR(65535)   ENCODE ZSTD      NOT NULL,
+          |  "ptrlooong"      BOOLEAN          ENCODE RUNLENGTH NOT NULL,
+          |  "ptrlooon"       VARCHAR(4096)    ENCODE ZSTD      NOT NULL,
+          |  "ptrs"           TIMESTAMP        ENCODE ZSTD      NOT NULL,
+          |  "ptrlooong1111"  DOUBLE PRECISION ENCODE RAW""".stripMargin)
     }
     "align column width to extra columns when other columns are smaller" in {
       val cols = List(
-        ShredModelEntry("/ptr".jsonPointer, json"""{"type": "array"}""".schema)
+        ShredModelEntry("/ptr".jsonPointer, json"""{"type": "string"}""".schema)
       )
       cols.show must beEqualTo(
-        """|  "schema_vendor"   VARCHAR (128) ENCODE ZSTD NOT NULL,
-           |  "schema_name"     VARCHAR (128) ENCODE ZSTD NOT NULL,
-           |  "schema_format"   VARCHAR (128) ENCODE ZSTD NOT NULL,
-           |  "schema_version"  VARCHAR (128) ENCODE ZSTD NOT NULL,
-           |  "root_id"             CHAR (36) ENCODE RAW  NOT NULL,
-           |  "root_tstamp"         TIMESTAMP ENCODE ZSTD NOT NULL,
-           |  "ref_root"        VARCHAR (255) ENCODE ZSTD NOT NULL,
-           |  "ref_tree"       VARCHAR (1500) ENCODE ZSTD NOT NULL,
-           |  "ref_parent"      VARCHAR (255) ENCODE ZSTD NOT NULL,
-           |  "ptr"            VARCHAR(65535) ENCODE ZSTD NOT NULL""".stripMargin)
+        """|  "schema_vendor"  VARCHAR (128)  ENCODE ZSTD NOT NULL,
+          |  "schema_name"    VARCHAR (128)  ENCODE ZSTD NOT NULL,
+          |  "schema_format"  VARCHAR (128)  ENCODE ZSTD NOT NULL,
+          |  "schema_version" VARCHAR (128)  ENCODE ZSTD NOT NULL,
+          |  "root_id"        CHAR (36)      ENCODE RAW  NOT NULL,
+          |  "root_tstamp"    TIMESTAMP      ENCODE ZSTD NOT NULL,
+          |  "ref_root"       VARCHAR (255)  ENCODE ZSTD NOT NULL,
+          |  "ref_tree"       VARCHAR (1500) ENCODE ZSTD NOT NULL,
+          |  "ref_parent"     VARCHAR (255)  ENCODE ZSTD NOT NULL,
+          |  "ptr"            VARCHAR(4096)  ENCODE ZSTD NOT NULL""".stripMargin)
     }
   }
 
