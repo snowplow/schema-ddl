@@ -44,34 +44,32 @@ private[redshift] case class Migrations(private[Migrations] val migrations: Tree
         s"""  ALTER TABLE $tableName
            |     ALTER COLUMN "${old.columnName}" TYPE ${newEntry.columnType.show};
            |
-           |""".stripMargin +
-          (inTransaction(maybeBase).map { case Migrations.ColumnAddition(column) =>
-            s"""  ALTER TABLE $tableName
-               |     ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
-               |
-               |""".stripMargin
-          } match {
-            case Nil => s"""|-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
-                            |
-                            |COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
-                            |""".stripMargin
-            case h :: t => s"""BEGIN TRANSACTION;
-                              |
-                              |${(h :: t).mkString}
-                              |
-                              |  COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
-                              |  
-                              |END TRANSACTION;""".stripMargin
-          })
-      }.mkString
+           |""".stripMargin
+      }.mkString +
+      (inTransaction(maybeBase).map { case Migrations.ColumnAddition(column) =>
+        s"""  ALTER TABLE $tableName
+           |     ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
+           |
+           |""".stripMargin
+      } match {
+        case Nil => s"""|-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
+                        |
+                        |COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
+                        |""".stripMargin
+        case h :: t => s"""BEGIN TRANSACTION;
+                          |
+                          |${(h :: t).mkString}  COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
+                          |  
+                          |END TRANSACTION;""".stripMargin
+      })
 
   def ++(that: Migrations): Migrations = Migrations(migrations ++ that.migrations)
 }
 
 object Migrations {
-  
+
   def empty(k: SchemaKey): Migrations = Migrations(k, Nil)
-  
+
   def apply(schemaKey: SchemaKey, migrations: List[Migrations.NonBreaking]): Migrations = Migrations(TreeMap((schemaKey, migrations))
   )
 

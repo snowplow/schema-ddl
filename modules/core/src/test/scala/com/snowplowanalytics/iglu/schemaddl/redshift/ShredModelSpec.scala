@@ -319,7 +319,78 @@ class ShredModelSpec extends Specification {
           |  ALTER TABLE com_acme_example_1
           |     ADD COLUMN "bar" VARCHAR(10) ENCODE ZSTD;
           |
+          |  COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-2';
+          |  
+          |END TRANSACTION;""".stripMargin
+      )
+    }
+    
+    "should merge multiple schemas when only adding columns" in {
+      val s1 = SelfDescribingSchema(SchemaMap(dummyKey),
+        json"""{
+               "type": "object",
+               "properties": {
+                 "foo": {
+                   "type": "string",
+                   "maxLength": 20
+                 }}
+              }""".schema)
+      val s2 = SelfDescribingSchema(SchemaMap(dummyKey1),
+        json"""{
+               "type": "object",
+               "properties": {
+                 "zoo": {
+                   "type": "number"
+                 }}
+              }""".schema)
+      val s3 = SelfDescribingSchema(SchemaMap(dummyKey2),
+        json"""{
+         "type": "object",
+         "properties": {
+           "foo1": {
+             "type": "string",
+             "maxLength": 30
+           }}
+        }""".schema)
+
+      getFinalMergedModel(NonEmptyList.of(s1, s2, s3))
+        .asRight[RecoveryModel].toTestString must beRight(
+        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1 (
+          |  "schema_vendor"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
+          |  "schema_name"    VARCHAR(128)     ENCODE ZSTD NOT NULL,
+          |  "schema_format"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
+          |  "schema_version" VARCHAR(128)     ENCODE ZSTD NOT NULL,
+          |  "root_id"        CHAR(36)         ENCODE RAW  NOT NULL,
+          |  "root_tstamp"    TIMESTAMP        ENCODE ZSTD NOT NULL,
+          |  "ref_root"       VARCHAR(255)     ENCODE ZSTD NOT NULL,
+          |  "ref_tree"       VARCHAR(1500)    ENCODE ZSTD NOT NULL,
+          |  "ref_parent"     VARCHAR(255)     ENCODE ZSTD NOT NULL,
+          |  "foo"            VARCHAR(20)      ENCODE ZSTD,
+          |  "zoo"            DOUBLE PRECISION ENCODE RAW,
+          |  "foo1"           VARCHAR(30)      ENCODE ZSTD,
+          |  FOREIGN KEY (root_id) REFERENCES s.events(event_id)
+          |)
+          |DISTSTYLE KEY
+          |DISTKEY (root_id)
+          |SORTKEY (root_tstamp);
           |
+          |COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-2';
+          |
+          |-- WARNING: only apply this file to your database if the following SQL returns the expected:
+          |--
+          |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = 'com_acme_example_1';
+          |--  obj_description
+          |-- -----------------
+          |--  iglu:com.acme/example/jsonschema/1-0-2
+          |--  (1 row)
+          |
+          |BEGIN TRANSACTION;
+          |
+          |  ALTER TABLE com_acme_example_1
+          |     ADD COLUMN "zoo" DOUBLE PRECISION ENCODE RAW;
+          |
+          |  ALTER TABLE com_acme_example_1
+          |     ADD COLUMN "foo1" VARCHAR(30) ENCODE ZSTD;
           |
           |  COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-2';
           |  
