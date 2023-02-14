@@ -18,6 +18,18 @@ package object redshift {
                              ): Either[NonEmptyList[Migrations.Breaking], List[Migrations.NonBreaking]] =
     ShredModel.good(src).merge(ShredModel.good(tgt)).map(_.allMigrations).leftMap(_.errors)
 
+  def assessRedshiftMigration(
+                               src: List[IgluSchema],
+                               tgt: IgluSchema
+                             ): Either[NonEmptyList[Migrations.Breaking], List[Migrations.NonBreaking]] =
+    src match {
+      case Nil => Nil.asRight
+      case ::(head, tl) => getFinalMergedModel(NonEmptyList(head, tl))
+        .merge(ShredModel.good(tgt))
+        .leftMap(_.errors)
+        .map(_.getMigrationsFor(tgt.self.schemaKey))
+    }
+
   def isRedshiftMigrationBreaking(src: IgluSchema, tgt: IgluSchema): Boolean =
     assessRedshiftMigration(src, tgt).isRight
 

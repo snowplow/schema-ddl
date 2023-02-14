@@ -77,7 +77,7 @@ object ShredModel {
                        migrations: Migrations
                       ) extends ShredModel {
 
-    /** 
+    /**
      * Generates a sql snippet for migration between lower and upper bounds, if no bounds provided migrates from the 
      * first schema in family to the last
      *
@@ -93,6 +93,9 @@ object ShredModel {
     def migrationsOutTransaction(maybeLowerBound: Option[SchemaKey] = None, maybeUpperBound: Option[SchemaKey] = None): List[VarcharExtension] = migrations.outTransaction(maybeLowerBound, maybeUpperBound)
 
     def allMigrations: List[NonBreaking] = migrations.values.toList
+
+
+    def getMigrationsFor(key: SchemaKey): List[NonBreaking] = migrations.getMigrationsFor(key)
 
     /**
      * Merge two good models, evaluating feasibility of this merge and updating migrations.  

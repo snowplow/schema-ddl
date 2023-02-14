@@ -12,6 +12,8 @@ import scala.math.Ordered.orderingToOrdered
 private[redshift] case class Migrations(private[Migrations] val migrations: TreeMap[SchemaKey, List[Migrations.NonBreaking]]) {
 
   def values: Iterable[NonBreaking] = migrations.values.flatten
+  
+  def getMigrationsFor(key: SchemaKey) = migrations(key)
 
   def inTransaction(maybeLowerBound: Option[SchemaKey], maybeUpperBound: Option[SchemaKey] = None): List[Migrations.ColumnAddition] =
     migrations
