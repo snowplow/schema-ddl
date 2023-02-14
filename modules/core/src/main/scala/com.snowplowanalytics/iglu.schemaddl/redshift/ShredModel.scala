@@ -77,18 +77,20 @@ object ShredModel {
                        migrations: Migrations
                       ) extends ShredModel {
 
-    /**
+    /** 
+     * Generates a sql snippet for migration between lower and upper bounds, if no bounds provided migrates from the 
+     * first schema in family to the last
      *
-     * @param dbSchema     - name of the warehouse schema
-     * @param maybeBaseKey - base schema key, that is currently represented in the warehouse, None if schema wasn't 
-     *                     created yet.
+     * @param dbSchema        - name of the warehouse schema
+     * @param maybeLowerBound - lower bound for schema versions
+     * @param maybeUpperBound - upper bound for schema versions
      * @return SQL script for upgrading schema
      */
-    def migrationSql(dbSchema: String, maybeBaseKey: Option[SchemaKey]): String = migrations.toSql(tableName, dbSchema, maybeBaseKey)
+    def migrationSql(dbSchema: String, maybeLowerBound: Option[SchemaKey] = None, maybeUpperBound: Option[SchemaKey] = None): String = migrations.toSql(tableName, dbSchema, maybeLowerBound, maybeUpperBound)
 
-    def migrationsInTransaction(maybeBase: Option[SchemaKey]): List[ColumnAddition] = migrations.inTransaction(maybeBase)
+    def migrationsInTransaction(maybeLowerBound: Option[SchemaKey] = None, maybeUpperBound: Option[SchemaKey] = None): List[ColumnAddition] = migrations.inTransaction(maybeLowerBound, maybeUpperBound)
 
-    def migrationsOutTransaction(maybeBase: Option[SchemaKey]): List[VarcharExtension] = migrations.outTransaction(maybeBase)
+    def migrationsOutTransaction(maybeLowerBound: Option[SchemaKey] = None, maybeUpperBound: Option[SchemaKey] = None): List[VarcharExtension] = migrations.outTransaction(maybeLowerBound, maybeUpperBound)
 
     def allMigrations: List[NonBreaking] = migrations.values.toList
 

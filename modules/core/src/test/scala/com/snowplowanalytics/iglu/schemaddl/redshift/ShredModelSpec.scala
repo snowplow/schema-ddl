@@ -258,6 +258,7 @@ class ShredModelSpec extends Specification {
           |--  iglu:com.acme/example/jsonschema/1-0-0
           |--  (1 row)
           |
+          |
           |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
           |
           |COMMENT ON TABLE s.com_acme_example_1 IS 'iglu:com.acme/example/jsonschema/1-0-1';
@@ -395,11 +396,11 @@ class ShredModelSpec extends Specification {
           |--  iglu:com.acme/example/jsonschema/1-0-0
           |--  (1 row)
           |
+          |
           |BEGIN TRANSACTION;
           |
           |  ALTER TABLE s.com_acme_example_1
           |    ADD COLUMN "zoo" DOUBLE PRECISION ENCODE RAW;
-          |
           |  ALTER TABLE s.com_acme_example_1
           |    ADD COLUMN "foo1" VARCHAR(30) ENCODE ZSTD;
           |

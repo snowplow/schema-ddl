@@ -13,54 +13,56 @@ private[redshift] case class Migrations(private[Migrations] val migrations: Tree
 
   def values: Iterable[NonBreaking] = migrations.values.flatten
 
-  def inTransaction(maybeBase: Option[SchemaKey]): List[Migrations.ColumnAddition] =
+  def inTransaction(maybeLowerBound: Option[SchemaKey], maybeUpperBound: Option[SchemaKey] = None): List[Migrations.ColumnAddition] =
     migrations
-      .dropWhile { case (k, _) => maybeBase.exists(_ >= k) }
+      .dropWhile { case (k, _) => maybeLowerBound.exists(_ >= k) }
+      .takeWhile { case (k, _) => maybeUpperBound.forall(_ >= k) }
       .values
       .flatten
       .collect { case a: Migrations.ColumnAddition => a }
       .toList
 
-  def outTransaction(maybeBase: Option[SchemaKey]): List[Migrations.VarcharExtension] =
+  def outTransaction(maybeLowerBound: Option[SchemaKey], maybeUpperBound: Option[SchemaKey] = None): List[Migrations.VarcharExtension] =
     migrations
-      .dropWhile { case (k, _) => maybeBase.exists(_ >= k) }
+      .dropWhile { case (k, _) => maybeLowerBound.exists(_ >= k) }
+      .takeWhile { case (k, _) => maybeUpperBound.forall(_ >= k) }
       .values
       .flatten
       .collect { case a: Migrations.VarcharExtension => a }
       .toList
-
-
-  def toSql(tableName: String, dbSchema: String, maybeBase: Option[SchemaKey]): String =
+  
+  def toSql(tableName: String, dbSchema: String, maybeLowerBound: Option[SchemaKey] = None, maybeUpperBound: Option[SchemaKey] = None): String =
     s"""|-- WARNING: only apply this file to your database if the following SQL returns the expected:
         |--
         |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = '$tableName';
         |--  obj_description
         |-- -----------------
-        |--  ${maybeBase.getOrElse(migrations.firstKey).toSchemaUri}
+        |--  ${maybeLowerBound.getOrElse(migrations.firstKey).toSchemaUri}
         |--  (1 row)
         |
         |""".stripMargin +
-      outTransaction(maybeBase).map { case Migrations.VarcharExtension(old, newEntry) =>
+      outTransaction(maybeLowerBound, maybeUpperBound).map { case Migrations.VarcharExtension(old, newEntry) =>
         s"""  ALTER TABLE $dbSchema.$tableName
            |    ALTER COLUMN "${old.columnName}" TYPE ${newEntry.columnType.show};
-           |
            |""".stripMargin
       }.mkString +
-      (inTransaction(maybeBase).map { case Migrations.ColumnAddition(column) =>
+      (inTransaction(maybeLowerBound, maybeUpperBound).map { case Migrations.ColumnAddition(column) =>
         s"""  ALTER TABLE $dbSchema.$tableName
            |    ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
-           |
            |""".stripMargin
       } match {
-        case Nil => s"""|-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
+        case Nil => s"""|
+                        |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
                         |
-                        |COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
+                        |COMMENT ON TABLE $dbSchema.$tableName IS '${maybeUpperBound.getOrElse(migrations.lastKey).toSchemaUri}';
                         |""".stripMargin
-        case h :: t => s"""BEGIN TRANSACTION;
-                          |
-                          |${(h :: t).mkString}  COMMENT ON TABLE $dbSchema.$tableName IS '${migrations.lastKey.toSchemaUri}';
-                          |
-                          |END TRANSACTION;""".stripMargin
+        case h :: t => s"""|
+                          |BEGIN TRANSACTION;
+                           |
+                           |${(h :: t).mkString}
+                           |  COMMENT ON TABLE $dbSchema.$tableName IS '${maybeUpperBound.getOrElse(migrations.lastKey).toSchemaUri}';
+                           |
+                           |END TRANSACTION;""".stripMargin
       })
 
   def ++(that: Migrations): Migrations = Migrations(migrations ++ that.migrations)
