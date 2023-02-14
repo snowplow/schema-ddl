@@ -113,7 +113,8 @@ object ShredModel {
         that.entries
           .filter(col => !baseLookup.contains(col.columnName))
           .map(entry => (entry.ptr, entry.subSchema))
-          .toSet[(Pointer.SchemaPointer, Schema)] // this toSet, toList preserves the order as it was in the older library versions < 0.18.0
+          .foldLeft(Set.empty[(Pointer.SchemaPointer, Schema)])((acc, s) => acc + s)
+          // this fold, toList preserves the order as it was in the older library versions < 0.18.0
           .toList
           .map { case (ptr, subSchema) => ShredModelEntry(ptr, subSchema, isLateAddition = true) }
       val additionsMigration: List[ColumnAddition] = additions.map(ColumnAddition.apply)
@@ -132,10 +133,10 @@ object ShredModel {
               case ColumnType.RedshiftVarchar(newSize) => oldType match {
                 case ColumnType.RedshiftVarchar(oldSize) if newSize > oldSize => VarcharExtension(oldCol, newCol).asRight
                 case ColumnType.RedshiftVarchar(oldSize) if newSize <= oldSize => NoChanges.asRight
-                case _ if newType != oldType => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
-                case _ => NoChanges.asRight
+                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
               }
-              case _ => NoChanges.asRight
+              case _ if newType == oldType => NoChanges.asRight
+              case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
             }
           })
 

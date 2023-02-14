@@ -166,6 +166,47 @@ class ShredModelSpec extends Specification {
         ))
     }
 
+    "should detect int to str conversion errors" in {
+      val s1 = SelfDescribingSchema(
+        SchemaMap(SchemaKey("dummy-vendor", "dummy-name", "jsonschema", SchemaVer.Full(1, 0, 0))),
+        json"""{
+              "type": "object",
+              "properties": {
+                "stringKey": {
+                  "type": "string"
+                }
+              },
+              "self": {
+                "vendor": "com.snowplowanalytics",
+                "name": "json1",
+                "format": "jsonschema",
+                "version": "1-0-0"
+              },
+              "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#"
+            }""".schema)
+
+
+      val s2 = SelfDescribingSchema(
+        SchemaMap(SchemaKey("test.lukasz", "snowman", "jsonschema", SchemaVer.Full(1, 0, 0))),
+        json"""{
+              "type": "object",
+              "properties": {
+                "stringKey": {
+                  "type": "integer"
+                }
+              },
+              "self": {
+                "vendor": "dummy-vendor",
+                "name": "dummy-name",
+                "format": "jsonschema",
+                "version": "1-0-0"
+              },
+              "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#"
+            }""".schema)
+
+      isRedshiftMigrationBreaking(List(s1), s2) must beTrue
+    }
+    
     "should make a recovery model when incompatible encodings are merged" in {
 
       val s1 = ShredModel.good(dummyKey,

@@ -6,49 +6,49 @@ import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations._
 import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry.ColumnType._
 
-import scala.collection.immutable.TreeMap
-import scala.math.Ordered.orderingToOrdered
 
-private[redshift] case class Migrations(private[Migrations] val migrations: TreeMap[SchemaKey, List[Migrations.NonBreaking]]) {
+private[redshift] case class Migrations(private[Migrations] val migrations: List[(SchemaKey, List[Migrations.NonBreaking])]) {
 
-  def values: Iterable[NonBreaking] = migrations.values.flatten
-  
-  def getMigrationsFor(key: SchemaKey) = migrations(key)
+  def values: Iterable[NonBreaking] = migrations.flatMap(_._2)
 
-  def inTransaction(maybeLowerBound: Option[SchemaKey], maybeUpperBound: Option[SchemaKey] = None): List[Migrations.ColumnAddition] =
+  def getMigrationsFor(key: SchemaKey): List[NonBreaking] = migrations.collectFirst {
+    case (k, nonBreaking) if k == key => nonBreaking
+  }.get
+
+  def inTransaction(maybeExclLowerBound: Option[SchemaKey], maybeIncUpperBound: Option[SchemaKey] = None): List[Migrations.ColumnAddition] =
     migrations
-      .dropWhile { case (k, _) => maybeLowerBound.exists(_ >= k) }
-      .takeWhile { case (k, _) => maybeUpperBound.forall(_ >= k) }
-      .values
-      .flatten
+      .reverse
+      .dropWhile { case (k, _) => maybeIncUpperBound.getOrElse(migrations.last._1) != k }
+      .takeWhile { case (k, _) => maybeExclLowerBound.getOrElse(migrations.head._1) != k }
+      .reverse
+      .flatMap { case (_, a) => a }
       .collect { case a: Migrations.ColumnAddition => a }
-      .toList
 
-  def outTransaction(maybeLowerBound: Option[SchemaKey], maybeUpperBound: Option[SchemaKey] = None): List[Migrations.VarcharExtension] =
+  def outTransaction(maybeExclLowerBound: Option[SchemaKey], maybeIncUpperBound: Option[SchemaKey] = None): List[Migrations.VarcharExtension] =
     migrations
-      .dropWhile { case (k, _) => maybeLowerBound.exists(_ >= k) }
-      .takeWhile { case (k, _) => maybeUpperBound.forall(_ >= k) }
-      .values
-      .flatten
+      .reverse
+      .dropWhile { case (k, _) => maybeIncUpperBound.getOrElse(migrations.last._1) != k }
+      .takeWhile { case (k, _) => maybeExclLowerBound.getOrElse(migrations.head._1) != k }
+      .reverse
+      .flatMap { case (_, a) => a }
       .collect { case a: Migrations.VarcharExtension => a }
-      .toList
-  
-  def toSql(tableName: String, dbSchema: String, maybeLowerBound: Option[SchemaKey] = None, maybeUpperBound: Option[SchemaKey] = None): String =
+
+  def toSql(tableName: String, dbSchema: String, maybeExclLowerBound: Option[SchemaKey] = None, maybeIncUpperBound: Option[SchemaKey] = None): String =
     s"""|-- WARNING: only apply this file to your database if the following SQL returns the expected:
         |--
         |-- SELECT pg_catalog.obj_description(c.oid) FROM pg_catalog.pg_class c WHERE c.relname = '$tableName';
         |--  obj_description
         |-- -----------------
-        |--  ${maybeLowerBound.getOrElse(migrations.firstKey).toSchemaUri}
+        |--  ${maybeExclLowerBound.getOrElse(migrations.head._1).toSchemaUri}
         |--  (1 row)
         |
         |""".stripMargin +
-      outTransaction(maybeLowerBound, maybeUpperBound).map { case Migrations.VarcharExtension(old, newEntry) =>
+      outTransaction(maybeExclLowerBound, maybeIncUpperBound).map { case Migrations.VarcharExtension(old, newEntry) =>
         s"""  ALTER TABLE $dbSchema.$tableName
            |    ALTER COLUMN "${old.columnName}" TYPE ${newEntry.columnType.show};
            |""".stripMargin
       }.mkString +
-      (inTransaction(maybeLowerBound, maybeUpperBound).map { case Migrations.ColumnAddition(column) =>
+      (inTransaction(maybeExclLowerBound, maybeIncUpperBound).map { case Migrations.ColumnAddition(column) =>
         s"""  ALTER TABLE $dbSchema.$tableName
            |    ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
            |""".stripMargin
@@ -56,13 +56,13 @@ private[redshift] case class Migrations(private[Migrations] val migrations: Tree
         case Nil => s"""|
                         |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
                         |
-                        |COMMENT ON TABLE $dbSchema.$tableName IS '${maybeUpperBound.getOrElse(migrations.lastKey).toSchemaUri}';
+                        |COMMENT ON TABLE $dbSchema.$tableName IS '${maybeIncUpperBound.getOrElse(migrations.last._1).toSchemaUri}';
                         |""".stripMargin
         case h :: t => s"""|
                           |BEGIN TRANSACTION;
                            |
                            |${(h :: t).mkString}
-                           |  COMMENT ON TABLE $dbSchema.$tableName IS '${maybeUpperBound.getOrElse(migrations.lastKey).toSchemaUri}';
+                           |  COMMENT ON TABLE $dbSchema.$tableName IS '${maybeIncUpperBound.getOrElse(migrations.last._1).toSchemaUri}';
                            |
                            |END TRANSACTION;""".stripMargin
       })
@@ -75,7 +75,7 @@ object Migrations {
   def empty(k: SchemaKey): Migrations = Migrations(k, Nil)
 
   def apply(schemaKey: SchemaKey, migrations: List[Migrations.NonBreaking]): Migrations =
-    Migrations(TreeMap((schemaKey, migrations)))
+    Migrations(List((schemaKey, migrations)))
 
   implicit val ord: Ordering[SchemaKey] = SchemaKey.ordering
 

@@ -30,8 +30,12 @@ package object redshift {
         .map(_.getMigrationsFor(tgt.self.schemaKey))
     }
 
+  def isRedshiftMigrationBreaking(src: List[IgluSchema],
+                                  tgt: IgluSchema): Boolean =
+    assessRedshiftMigration(src, tgt).isLeft
+
   def isRedshiftMigrationBreaking(src: IgluSchema, tgt: IgluSchema): Boolean =
-    assessRedshiftMigration(src, tgt).isRight
+    assessRedshiftMigration(src, tgt).isLeft
 
   def getFinalMergedModel(schemas: NonEmptyList[IgluSchema]): GoodModel =
     foldMapMergeRedshiftSchemas(schemas).values.collectFirst {
