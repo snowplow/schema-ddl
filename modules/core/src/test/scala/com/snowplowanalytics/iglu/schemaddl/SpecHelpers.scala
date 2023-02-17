@@ -14,14 +14,10 @@ package com.snowplowanalytics.iglu.schemaddl
 
 import cats.syntax.either._
 import cats.syntax.show._
-
 import io.circe.Json
-import io.circe.parser.{ parse => parseJson }
-
-import jsonschema.{ Schema, Pointer }
+import io.circe.parser.{parse => parseJson}
+import jsonschema.{Pointer, Schema}
 import jsonschema.circe.implicits._
-
-import com.snowplowanalytics.iglu.schemaddl.migrations.FlatSchema
 
 object SpecHelpers {
   def parseSchema(string: String): Schema =
@@ -30,11 +26,6 @@ object SpecHelpers {
       .flatMap(json => Schema.parse[Json](json).toRight("SpecHelpers.parseSchema received invalid JSON Schema"))
       .fold(s => throw new RuntimeException(s), identity)
 
-  def extractOrder(orderedSubSchemas: Properties): List[String] =
-    orderedSubSchemas.map {
-      case (p, _) => FlatSchema.getName(p)
-    }
-
   implicit class JsonOps(json: Json) {
     def schema: Schema =
       Schema.parse(json).getOrElse(throw new RuntimeException("SpecHelpers.parseSchema received invalid JSON Schema"))
@@ -42,6 +33,6 @@ object SpecHelpers {
 
   implicit class StringOps(str: String) {
     def jsonPointer: Pointer.SchemaPointer =
-      Pointer.parseSchemaPointer(str).fold(x => x, x => x)
+      Pointer.parseSchemaPointer(str).fold(identity, identity)
   }
 }

@@ -40,16 +40,27 @@ lazy val core = project.in(file("modules/core"))
     Dependencies.Libraries.specs2Cats
   ))
 
-lazy val json4s = project.in(file("modules/json4s"))
+lazy val subschema = project.in(file("modules/subschema"))
   .settings(
-    name               := "schema-ddl-json4s",
-    description        := "Json4s-compatible entities for Schema DDL",
+    name               := "schema-ddl-subschema",
+    description        := "jsonschema subschema compatibility checking",
   )
-  .settings(BuildSettings.basicSettigns)
+  .enablePlugins(SiteScaladocPlugin)
   .settings(BuildSettings.commonSettings)
+  .settings(BuildSettings.sbtSiteSettings)
+  .settings(BuildSettings.basicSettigns)
   .settings(BuildSettings.publishSettings)
+  .settings(BuildSettings.scoverage)
   .settings(libraryDependencies ++= Seq(
-    Dependencies.Libraries.igluCoreJson4s,
+    "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+    Dependencies.Libraries.igluCoreCirce,
+    Dependencies.Libraries.circeGeneric,
+    Dependencies.Libraries.circeJackson,
+    Dependencies.Libraries.circeLiteral,
+    Dependencies.Libraries.circeParser,
+    Dependencies.Libraries.catsParse,
+    Dependencies.Libraries.dregex,
+    // Scala (test only)
     Dependencies.Libraries.specs2,
     Dependencies.Libraries.scalaCheck,
     Dependencies.Libraries.specs2Scalacheck,
