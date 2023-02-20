@@ -108,21 +108,28 @@ object ShredModel {
      *         perform a merge.
      */
     def merge(that: GoodModel): Either[RecoveryModel, GoodModel] = {
-      val baseLookup = entries.map { e => (e.columnName, e) }.toMap
+      val thisLookup = entries.map { e => (e.columnName, e) }.toMap
+      val thatLookup = that.entries.map { e => (e.columnName, e) }.toMap
       val additions: List[ShredModelEntry] =
         that.entries
-          .filter(col => !baseLookup.contains(col.columnName))
+          .filter(col => !thisLookup.contains(col.columnName))
           .map(entry => (entry.ptr, entry.subSchema))
           .foldLeft(Set.empty[(Pointer.SchemaPointer, Schema)])((acc, s) => acc + s)
           // this fold, toList preserves the order as it was in the older library versions < 0.18.0
           .toList
           .map { case (ptr, subSchema) => ShredModelEntry(ptr, subSchema, isLateAddition = true) }
       val additionsMigration: List[ColumnAddition] = additions.map(ColumnAddition.apply)
+      val removals: Either[NonEmptyList[Breaking], List[NonBreaking]] = entries
+        .filter(col => !thatLookup.contains(col.columnName))
+        .parTraverse {
+          case s if !s.isNullable => NullableRequired(s).asLeft.toEitherNel
+          case _ => NoChanges.asRight
+        }
       val modifications: Either[NonEmptyList[Breaking], List[NonBreaking]] =
         that.entries
-          .filter(col => baseLookup.contains(col.columnName))
+          .filter(col => thisLookup.contains(col.columnName))
           .parTraverse(newCol => {
-            val oldCol = baseLookup(newCol.columnName)
+            val oldCol = thisLookup(newCol.columnName)
             val (newType, newNullability, newEncoding) = (newCol.columnType, newCol.isNullable, newCol.compressionEncoding)
             val (oldType, oldNullability, oldEncoding) = (oldCol.columnType, oldCol.isNullable, oldCol.compressionEncoding)
             if (!oldNullability & newNullability)
@@ -139,10 +146,15 @@ object ShredModel {
               case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
             }
           })
-
+      val allChanges: Either[NonEmptyList[Breaking], List[NonBreaking]] = (modifications, removals) match {
+        case (Right(x), Right(y)) => (x ++ y).asRight[NonEmptyList[Breaking]]
+        case (Right(_), l@Left(_)) => l
+        case (l@Left(_), Right(_)) => l
+        case (Left(x), Left(y)) => (x ::: y).asLeft[List[NonBreaking]]
+      }
       (for {
-        mods <- modifications
-        extensions = mods.collect { case e: VarcharExtension => e }
+        changes <- allChanges
+        extensions = changes.collect { case e: VarcharExtension => e }
         modifedEntries = entries.map(
           entry => extensions.collectFirst {
             case s if s.old == entry => s.newEntry
@@ -168,7 +180,6 @@ object ShredModel {
 
     val tableName = s"${baseTableName}_${schemaKey.version.addition}_${schemaKey.version.revision}_recovered_${abs(entries.show.hashCode())}"
   }
-
 
   def good(s: IgluSchema): GoodModel = good(s.self.schemaKey, s.schema)
 
