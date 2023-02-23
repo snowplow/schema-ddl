@@ -1,9 +1,11 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema.subschema
 
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type._
-import dregex.Regex
 
+import dregex.Regex
+import io.circe.Json
 
 package object subschema {
 
@@ -12,9 +14,11 @@ package object subschema {
 
   def canonicalize(s: Schema): Schema =
     s match {
-      case s if s.`type` == Some(Integer) => s.copy(`type` = Some(Number))
-      case s if s.`type` == Some(Number)  => s
-      case s if s.`type` == Some(String)  => s
+      case s if s.`type`.contains(Null)    => s
+      case s if s.`type`.contains(Boolean) => s.copy(`type` = None, `enum` = Some(Enum(List(Json.True, Json.False))))
+      case s if s.`type`.contains(Integer) => s.copy(`type` = Some(Number))
+      case s if s.`type`.contains(Number)  => s
+      case s if s.`type`.contains(String)  => s
       case _ => s
     }
 
@@ -22,8 +26,8 @@ package object subschema {
   def simplify(s: Schema): Schema = s
 
   def isSubType(s1: Schema, s2: Schema): Compatibility = (s1, s2) match {
-    case (s1, s2) if s1.`type` == Some(Number) && s1.`type` == s2.`type` => isNumberSubType(s1, s2)
-    case (s1, s2) if s1.`type` == Some(String) && s1.`type` == s2.`type` => isStringSubType(s1, s2)
+    case (s1, s2) if s1.`type`.contains(Number) && s1.`type` == s2.`type` => isNumberSubType(s1, s2)
+    case (s1, s2) if s1.`type`.contains(String) && s1.`type` == s2.`type` => isStringSubType(s1, s2)
     case _ => Undecidable
   }
 
