@@ -15,7 +15,8 @@ package object subschema {
   def canonicalize(s: Schema): Schema =
     s match {
       case s if s.`type`.contains(Null)    => s
-      case s if s.`type`.contains(Boolean) => s.copy(`type` = None, `enum` = Some(Enum(List(Json.True, Json.False))))
+      case s if s.`type`.contains(Boolean) =>
+        if (s.`enum`.isDefined) s else s.copy(`enum` = Some(Enum(List(Json.True, Json.False))))
       case s if s.`type`.contains(Integer) => s.copy(`type` = Some(Number))
       case s if s.`type`.contains(Number)  => s
       case s if s.`type`.contains(String)  => s
@@ -26,12 +27,20 @@ package object subschema {
   def simplify(s: Schema): Schema = s
 
   def isSubType(s1: Schema, s2: Schema): Compatibility = (s1, s2) match {
-    case (s1, s2) if s1.`type`.contains(Number) && s1.`type` == s2.`type` => isNumberSubType(s1, s2)
-    case (s1, s2) if s1.`type`.contains(String) && s1.`type` == s2.`type` => isStringSubType(s1, s2)
+    case (s1, s2) if s1.`type`.contains(Null) && s1.`type` == s2.`type`    => Compatible
+    case (s1, s2) if s1.`type`.contains(Boolean) && s1.`type` == s2.`type` => isBooleanSubType(s1, s2)
+    case (s1, s2) if s1.`type`.contains(Number) && s1.`type` == s2.`type`  => isNumberSubType(s1, s2)
+    case (s1, s2) if s1.`type`.contains(String) && s1.`type` == s2.`type`  => isStringSubType(s1, s2)
     case _ => Undecidable
   }
 
   def stripAnchors(r: String): String = r.stripPrefix("^").stripSuffix("$")
+
+  def isBooleanSubType(s1: Schema, s2: Schema): Compatibility =
+    (s1.`enum`.map(_.value.toSet), s2.`enum`.map(_.value.toSet)) match {
+      case (maybeXe1, Some(xe2)) if !maybeXe1.getOrElse(Set(Json.True, Json.False)).subsetOf(xe2) => Incompatible
+      case _ => Compatible
+    }
 
   def isStringSubType(s1: Schema, s2: Schema): Compatibility = {
     val sp1 = (s1.minLength, s1.maxLength) match {
