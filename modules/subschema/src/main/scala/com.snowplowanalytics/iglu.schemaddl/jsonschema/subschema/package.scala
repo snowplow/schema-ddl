@@ -16,7 +16,7 @@ package object subschema {
   @tailrec
   def canonicalize(s: Schema): Schema =
     s match {
-      case s if s.`type`.contains(Null)                => s
+      case s if s.`type`.contains(Null)                => s.copy(`enum` = None)
       case s if s.`type`.contains(Boolean)             => canonicalizeBoolean(s)
       case s if s.`type`.contains(Integer)             => s.copy(`type` = Some(Number))
       case s if s.`type`.contains(Number)              => s
@@ -29,22 +29,23 @@ package object subschema {
     if (s.`enum`.isDefined) s else s.copy(`enum` = Some(Enum(List(Json.True, Json.False))))
 
   def canonicalizeEnum(s: Schema): Schema = {
-    val typeValue: Json => Option[(Type, Json)] =
+    val typeValue: Json => (Type, Option[Json]) =
       _.fold(
-        jsonNull    = Some(Null -> Json.Null),
-        jsonBoolean = v => Some(Boolean -> Json.fromBoolean(v)),
-        jsonNumber  = v => Some(Number -> Json.fromJsonNumber(v)),
-        jsonString  = v => Some(String -> Json.fromString(v)),
-        jsonArray   = v => Some(Array -> Json.fromValues(v)),
-        jsonObject  = v => Some(Object -> Json.fromJsonObject(v))
+        jsonNull    = Null -> None,
+        jsonBoolean = v => Boolean -> Some(Json.fromBoolean(v)),
+        jsonNumber  = v => Number -> Some(Json.fromJsonNumber(v)),
+        jsonString  = v => String -> Some(Json.fromString(v)),
+        jsonArray   = v => Array -> Some(Json.fromValues(v)),
+        jsonObject  = v => Object -> Some(Json.fromJsonObject(v))
       )
 
     val splitByType: List[Json] => List[Schema] =
-      _.flatMap(typeValue(_))
+      _.map(typeValue(_))
         .groupBy(_._1)
-        .mapValues(_.map(_._2))
+        .mapValues(_.flatMap(_._2))
+        .mapValues(values => if (values.isEmpty) None else Some(Enum(values)))
         .toList
-        .map({ case (t, xv) => Schema.empty.copy(`type` = Some(t), `enum` = Some(Enum(xv)))})
+        .map({ case (t, e) => Schema.empty.copy(`type` = Some(t), `enum` = e)})
 
     s.`enum`
       .map(_.value)

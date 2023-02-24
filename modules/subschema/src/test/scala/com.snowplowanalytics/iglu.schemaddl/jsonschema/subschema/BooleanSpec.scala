@@ -9,7 +9,7 @@ import org.specs2.Specification
 
 
 class BooleanSpec extends Specification with org.specs2.specification.Tables { def is = s2"""
-  Number schema ranges
+  Booleans
   ${
     "s1enum"                | "s2enum"                | "result"     |>
     Some(List(true))        ! Some(List(true, false)) ! Compatible   |
