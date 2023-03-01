@@ -3,6 +3,8 @@ package com.snowplowanalytics.iglu.schemaddl.jsonschema.subschema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty.AdditionalProperties.{AdditionalPropertiesAllowed, AdditionalPropertiesSchema}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty._
 import dregex.Regex
 import io.circe.Json
 
@@ -21,6 +23,7 @@ package object subschema {
       case s if s.`type`.contains(Integer)             => s.copy(`type` = Some(Number))
       case s if s.`type`.contains(Number)              => s
       case s if s.`type`.contains(String)              => s
+      case s if s.`type`.contains(Object)              => canonicalizeObject(s)
       case s if s.`type`.isEmpty && s.`enum`.isDefined => canonicalize(canonicalizeEnum(s))
       case _ => s
     }
@@ -53,6 +56,21 @@ package object subschema {
       .map(anyOf => s.copy(`enum` = None, anyOf = Some(AnyOf(anyOf))))
       .getOrElse(s)
   }
+
+  @tailrec
+  def canonicalizeObject(s: Schema): Schema =
+    (s.properties, s.additionalProperties, s.patternProperties) match {
+      case (_, Some(AdditionalPropertiesAllowed(allowed)), _) =>
+        val any = Schema.empty
+        val none = Schema.empty.copy(not = Some(Not(Schema.empty)))
+        canonicalizeObject(s.copy(additionalProperties = Some(AdditionalPropertiesSchema(if (allowed) any else none))))
+      case (Some(Properties(props)), Some(AdditionalPropertiesSchema(_)), pProps) =>
+        val newPatternProps = props.map({case (k, v) => (s"^$k$$", v)}) ++ pProps.map(_.value).getOrElse(Map.empty)
+        // TODO: rewrite additionalProperties into patternProperties
+        s.copy(properties = None, patternProperties = Some(PatternProperties(newPatternProps)))
+      // TODO: handle overlapping patternProperties
+      case _ => s
+    }
 
   def simplify(s: Schema): Schema = s
 
