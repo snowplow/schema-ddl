@@ -1,9 +1,11 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema.subschema
 
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ArrayProperty.AdditionalItems._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ArrayProperty.Items._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type._
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty.AdditionalProperties.{AdditionalPropertiesAllowed, AdditionalPropertiesSchema}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty.AdditionalProperties._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty._
 import dregex.Regex
 import io.circe.Json
@@ -11,6 +13,9 @@ import io.circe.Json
 import scala.annotation.tailrec
 
 package object subschema {
+
+  val any: Schema  = Schema.empty
+  val none: Schema = Schema.empty.copy(not = Some(Not(any)))
 
   def isSubSchema(s1: Schema, s2: Schema): Compatibility =
     isSubType(simplify(canonicalize(s1)), simplify(canonicalize(s2)))
@@ -24,6 +29,7 @@ package object subschema {
       case s if s.`type`.contains(Number)              => s
       case s if s.`type`.contains(String)              => s
       case s if s.`type`.contains(Object)              => canonicalizeObject(s)
+      case s if s.`type`.contains(Array)               => canonicalizeArray(s)
       case s if s.`type`.isEmpty && s.`enum`.isDefined => canonicalize(canonicalizeEnum(s))
       case _ => s
     }
@@ -61,14 +67,21 @@ package object subschema {
   def canonicalizeObject(s: Schema): Schema =
     (s.properties, s.additionalProperties, s.patternProperties) match {
       case (_, Some(AdditionalPropertiesAllowed(allowed)), _) =>
-        val any = Schema.empty
-        val none = Schema.empty.copy(not = Some(Not(Schema.empty)))
         canonicalizeObject(s.copy(additionalProperties = Some(AdditionalPropertiesSchema(if (allowed) any else none))))
       case (Some(Properties(props)), Some(AdditionalPropertiesSchema(_)), pProps) =>
         val newPatternProps = props.map({case (k, v) => (s"^$k$$", v)}) ++ pProps.map(_.value).getOrElse(Map.empty)
         // TODO: rewrite additionalProperties into patternProperties
         s.copy(properties = None, patternProperties = Some(PatternProperties(newPatternProps)))
       // TODO: handle overlapping patternProperties
+      case _ => s
+    }
+
+  def canonicalizeArray(s: Schema): Schema =
+    (s.items, s.additionalItems) match {
+      case (Some(ListItems(schema)), _) =>
+        s.copy(items = Some(TupleItems(List.empty)), additionalItems = Some(AdditionalItemsSchema(schema)))
+      case (_, Some(AdditionalItemsAllowed(false))) =>
+        s.copy(additionalItems = Some(AdditionalItemsSchema(none)))
       case _ => s
     }
 
