@@ -3,26 +3,56 @@ package com.snowplowanalytics.iglu.schemaddl.jsonschema.subschema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type._
-
 import dregex.Regex
 import io.circe.Json
+
+import scala.annotation.tailrec
 
 package object subschema {
 
   def isSubSchema(s1: Schema, s2: Schema): Compatibility =
     isSubType(simplify(canonicalize(s1)), simplify(canonicalize(s2)))
 
+  @tailrec
   def canonicalize(s: Schema): Schema =
     s match {
-      case s if s.`type`.contains(Null)    => s
-      case s if s.`type`.contains(Boolean) =>
-        if (s.`enum`.isDefined) s else s.copy(`enum` = Some(Enum(List(Json.True, Json.False))))
-      case s if s.`type`.contains(Integer) => s.copy(`type` = Some(Number))
-      case s if s.`type`.contains(Number)  => s
-      case s if s.`type`.contains(String)  => s
+      case s if s.`type`.contains(Null)                => s.copy(`enum` = None)
+      case s if s.`type`.contains(Boolean)             => canonicalizeBoolean(s)
+      case s if s.`type`.contains(Integer)             => s.copy(`type` = Some(Number))
+      case s if s.`type`.contains(Number)              => s
+      case s if s.`type`.contains(String)              => s
+      case s if s.`type`.isEmpty && s.`enum`.isDefined => canonicalize(canonicalizeEnum(s))
       case _ => s
     }
 
+  def canonicalizeBoolean(s: Schema): Schema =
+    if (s.`enum`.isDefined) s else s.copy(`enum` = Some(Enum(List(Json.True, Json.False))))
+
+  def canonicalizeEnum(s: Schema): Schema = {
+    val typeValue: Json => (Type, Option[Json]) =
+      _.fold(
+        jsonNull    = Null -> None,
+        jsonBoolean = v => Boolean -> Some(Json.fromBoolean(v)),
+        jsonNumber  = v => Number -> Some(Json.fromJsonNumber(v)),
+        jsonString  = v => String -> Some(Json.fromString(v)),
+        jsonArray   = v => Array -> Some(Json.fromValues(v)),
+        jsonObject  = v => Object -> Some(Json.fromJsonObject(v))
+      )
+
+    val splitByType: List[Json] => List[Schema] =
+      _.map(typeValue(_))
+        .groupBy(_._1)
+        .mapValues(_.flatMap(_._2))
+        .mapValues(values => if (values.isEmpty) None else Some(Enum(values)))
+        .toList
+        .map({ case (t, e) => Schema.empty.copy(`type` = Some(t), `enum` = e)})
+
+    s.`enum`
+      .map(_.value)
+      .map(splitByType(_))
+      .map(anyOf => s.copy(`enum` = None, anyOf = Some(AnyOf(anyOf))))
+      .getOrElse(s)
+  }
 
   def simplify(s: Schema): Schema = s
 
