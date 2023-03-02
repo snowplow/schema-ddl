@@ -119,7 +119,14 @@ package object subschema {
       )
     )
 
-    if (p1.isSubsetOf(p2) && pl1.isSubsetOf(pl2))
+    val compatibleFormat: Boolean =
+      (s1.format, s2.format) match {
+        case (Some(f1), Some(f2)) if f1 == f2 => true
+        case (_, None) => true
+        case _ => false
+      }
+
+    if (p1.isSubsetOf(p2) && pl1.isSubsetOf(pl2) && compatibleFormat)
       Compatible
     else
       Incompatible
