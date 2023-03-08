@@ -63,8 +63,8 @@ package object subschema {
   }
 
   def canonicalizeObject(s: Schema): Schema =
-    (s.properties, s.additionalProperties, s.patternProperties) match {
-      case (_, Some(AdditionalPropertiesAllowed(allowed)), _) =>
+    s.additionalProperties match {
+      case Some(AdditionalPropertiesAllowed(allowed)) =>
         s.copy(additionalProperties = Some(AdditionalPropertiesSchema(if (allowed) any else none)))
       case _ => s
     }
@@ -81,11 +81,14 @@ package object subschema {
   def simplify(s: Schema): Schema = s
 
   def isSubType(s1: Schema, s2: Schema): Compatibility = (s1, s2) match {
+    case (_, `any`)                                                        => Compatible
+    case (`none`, _)                                                       => Compatible
     case (s1, s2) if s1.`type`.contains(Null) && s1.`type` == s2.`type`    => Compatible
     case (s1, s2) if s1.`type`.contains(Boolean) && s1.`type` == s2.`type` => isBooleanSubType(s1, s2)
     case (s1, s2) if isNumber(s1) && isNumber(s2)                          => isNumberSubType(s1, s2)
     case (s1, s2) if s1.`type`.contains(String) && s1.`type` == s2.`type`  => isStringSubType(s1, s2)
     case (s1, s2) if s1.`type`.contains(Object) && s1.`type` == s2.`type`  => isObjectSubType(s1, s2)
+    case (s1, s2) if s1.`type` != s2.`type`                                => Incompatible
     case _ => Undecidable
   }
 
@@ -176,7 +179,7 @@ package object subschema {
           val canonicalized1: List[(Regex, Schema)] =
             (ap1Regex +: (p1Regexes ++ pp1Regexes)).zip(ap1 +: (p1 ++ pp1).map(_._2))
 
-          val (p2Regexes, rawPp2Regexes) = (t.take(p2.size), t.slice(p2.size, p2.size + pp2.size))
+          val (p2Regexes, rawPp2Regexes) = (t.slice(p1.size + pp1.size, p1.size + pp1.size + p2.size), t.drop(p1.size + pp1.size + p2.size))
           val pp2Regexes = rawPp2Regexes.map(raw => raw.diff(union(p2Regexes)))
           val ap2Regex = matchAnything.diff(union(p2Regexes ++ rawPp2Regexes))
           val canonicalized2: List[(Regex, Schema)] =
