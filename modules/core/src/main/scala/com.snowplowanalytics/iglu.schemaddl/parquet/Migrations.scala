@@ -115,10 +115,10 @@ object Migrations {
           case Type.Array(targetElement, targetNullability) =>
             val mergedNullable = if (sourceNullability.nullable & targetNullability.required) {
               migrations += RequiredNullable("[arrayDown]" :: path)
-              Type.Nullability.Required
+              Type.Nullability.Nullable
             } else if (sourceNullability.required & targetNullability.nullable) {
               migrations += NullableRequired("[arrayDown]" :: path)
-              Type.Nullability.Required
+              Type.Nullability.Nullable
             } else if (sourceNullability.required & targetNullability.required) {
               Type.Nullability.Required
             } else {
@@ -148,10 +148,10 @@ object Migrations {
         }
         val mergedNullability: Type.Nullability = if (sourceField.nullability.nullable & targetField.nullability.required) {
           migrations += RequiredNullable(path)
-          Type.Nullability.Required
+          Type.Nullability.Nullable
         } else if (sourceField.nullability.required & targetField.nullability.nullable) {
           migrations += NullableRequired(path)
-          Type.Nullability.Required
+          Type.Nullability.Nullable
         } else if (sourceField.nullability.required & targetField.nullability.required) {
           Type.Nullability.Required
         } else {
