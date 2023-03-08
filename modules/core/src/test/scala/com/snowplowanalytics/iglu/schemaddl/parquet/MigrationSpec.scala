@@ -428,7 +428,7 @@ class MigrationSpec extends org.specs2.Specification {
       """.stripMargin)
     val schema2 = Field.build("top", input2, enforceValuePresence = false)
 
-    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2) and (
+    Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema1) and (
       Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set(
         "Changing nullable property to required at /arrayKey/[arrayDown]/nestedKey2"
       ))
