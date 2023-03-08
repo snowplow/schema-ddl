@@ -6,7 +6,6 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ArrayProperty.
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty.AdditionalProperties._
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty._
 import dregex.Regex
 import io.circe.Json
 
@@ -63,16 +62,10 @@ package object subschema {
       .getOrElse(s)
   }
 
-  @tailrec
   def canonicalizeObject(s: Schema): Schema =
     (s.properties, s.additionalProperties, s.patternProperties) match {
       case (_, Some(AdditionalPropertiesAllowed(allowed)), _) =>
-        canonicalizeObject(s.copy(additionalProperties = Some(AdditionalPropertiesSchema(if (allowed) any else none))))
-      case (Some(Properties(props)), Some(AdditionalPropertiesSchema(_)), pProps) =>
-        val newPatternProps = props.map({case (k, v) => (s"^$k$$", v)}) ++ pProps.map(_.value).getOrElse(Map.empty)
-        // TODO: rewrite additionalProperties into patternProperties
-        s.copy(properties = None, patternProperties = Some(PatternProperties(newPatternProps)))
-      // TODO: handle overlapping patternProperties
+        s.copy(additionalProperties = Some(AdditionalPropertiesSchema(if (allowed) any else none)))
       case _ => s
     }
 
@@ -92,6 +85,7 @@ package object subschema {
     case (s1, s2) if s1.`type`.contains(Boolean) && s1.`type` == s2.`type` => isBooleanSubType(s1, s2)
     case (s1, s2) if isNumber(s1) && isNumber(s2)                          => isNumberSubType(s1, s2)
     case (s1, s2) if s1.`type`.contains(String) && s1.`type` == s2.`type`  => isStringSubType(s1, s2)
+    case (s1, s2) if s1.`type`.contains(Object) && s1.`type` == s2.`type`  => isObjectSubType(s1, s2)
     case _ => Undecidable
   }
 
@@ -143,6 +137,61 @@ package object subschema {
       case (Some(Integer), Some(Number), true)    => Compatible
       case _ => Incompatible
     }
+  }
+
+  def isObjectSubType(s1: Schema, s2: Schema): Compatibility = {
+    val required: Schema => Set[String] =
+      _.required.map(_.value).getOrElse(List.empty).toSet
+
+    val properties: Schema => List[(String, Schema)] =
+      _.properties.map(_.value).getOrElse(Map.empty).toList
+
+    val patternProperties: Schema => List[(String, Schema)] =
+      _.patternProperties.map(_.value).getOrElse(Map.empty).toList
+
+    val additionalProperties: Schema => Schema =
+      _.additionalProperties.collect({ case AdditionalPropertiesSchema(value) => value }).getOrElse(any)
+
+    val p1: List[(String, Schema)] = properties(s1)
+    val p2: List[(String, Schema)] = properties(s2)
+
+    val pp1: List[(String, Schema)] = patternProperties(s1)
+    val pp2: List[(String, Schema)] = patternProperties(s2)
+
+    val ap1: Schema = additionalProperties(s1)
+    val ap2: Schema = additionalProperties(s2)
+
+    val (pp1WithRegexes: List[(Regex, Schema)], pp2WithRegexes: List[(Regex, Schema)]) =
+      Regex.compile(".*" :: "(?!x)x" :: (p1 ++ pp1 ++ p2 ++ pp2).map(_._1).map(stripAnchors)).toList match {
+        case compiled =>
+          val matchAnything = compiled.head
+          val matchNothing = compiled(1)
+          val t = compiled.drop(2)
+
+          val union: List[Regex] => Regex = _.fold[Regex](matchNothing)(_ union _)
+
+          val (p1Regexes, rawPp1Regexes) = (t.take(p1.size), t.slice(p1.size, p1.size + pp1.size))
+          val pp1Regexes = rawPp1Regexes.map(raw => raw.diff(union(p1Regexes)))
+          val ap1Regex = matchAnything.diff(union(p1Regexes ++ rawPp1Regexes))
+          val canonicalized1: List[(Regex, Schema)] =
+            (ap1Regex +: (p1Regexes ++ pp1Regexes)).zip(ap1 +: (p1 ++ pp1).map(_._2))
+
+          val (p2Regexes, rawPp2Regexes) = (t.take(p2.size), t.slice(p2.size, p2.size + pp2.size))
+          val pp2Regexes = rawPp2Regexes.map(raw => raw.diff(union(p2Regexes)))
+          val ap2Regex = matchAnything.diff(union(p2Regexes ++ rawPp2Regexes))
+          val canonicalized2: List[(Regex, Schema)] =
+            (ap2Regex +: (p2Regexes ++ pp2Regexes)).zip(ap2 +: (p2 ++ pp2).map(_._2))
+
+          (canonicalized1, canonicalized2)
+      }
+
+    val subSchemaCheckOverlappingOnly: List[Compatibility] =
+      for { (r1, s1) <- pp1WithRegexes; (r2, s2) <- pp2WithRegexes; if r1.doIntersect(r2) } yield isSubSchema(s1, s2)
+
+    if (required(s2).subsetOf(required(s1)) && subSchemaCheckOverlappingOnly.forall(_ == Compatible))
+      Compatible
+    else
+      Incompatible
   }
 
   def isNumber(s: Schema): Boolean =
