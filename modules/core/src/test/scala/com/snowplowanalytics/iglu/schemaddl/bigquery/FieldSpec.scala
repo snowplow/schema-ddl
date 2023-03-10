@@ -23,6 +23,9 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   build generates repeated string for empty schema in items $e7
   build generates repeated record for nullable array $e8
   normalName handles camel case and disallowed characters $e9
+  build generates nullable field for oneOf types $e10
+  build generates nullable field for nullable object without nested keys $e11
+  build generates nullable field for nullable array without items $e12
   """
 
   def e1 = {
@@ -229,6 +232,85 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       (fieldNormalName("_.test1,test2.test3;test4") must beEqualTo("__test1_test2_test3_test4")) and
       (fieldNormalName(",.;:") must beEqualTo("____")) and
       (fieldNormalName("1test1,Test2Test3Test4.test5;test6") must beEqualTo("_1test1_test2_test3_test4_test5_test6"))
+  }
+
+  def e10 = {
+    val input = SpecHelpers.parseSchema(
+      """
+        |  {
+        |    "type": "object",
+        |    "required": ["xyz"],
+        |    "properties": {
+        |      "xyz": {
+        |        "oneOf": [
+        |           {"type": "string"},
+        |           {"type": "number"},
+        |           {"type": "null"}
+        |        ]
+        |      }
+        |    }
+        |  }
+      """.stripMargin)
+
+    val expected = Field(
+      "foo",
+      Type.Record(List(
+        Field("xyz", Type.String, Mode.Nullable)
+      )),
+      Mode.Nullable
+    )
+
+    Field.build("foo", input, false) must beEqualTo(expected)
+  }
+
+  def e11 = {
+    val input = SpecHelpers.parseSchema(
+      """
+        |  {
+        |    "type": "object",
+        |    "required": ["xyz"],
+        |    "properties": {
+        |      "xyz": {
+        |        "type": ["object", "null"]
+        |      }
+        |    }
+        |  }
+      """.stripMargin)
+
+    val expected = Field(
+      "foo",
+      Type.Record(List(
+        Field("xyz", Type.String, Mode.Nullable)
+      )),
+      Mode.Nullable
+    )
+
+    Field.build("foo", input, false) must beEqualTo(expected)
+  }
+
+  def e12 = {
+    val input = SpecHelpers.parseSchema(
+      """
+        |  {
+        |    "type": "object",
+        |    "required": ["xyz"],
+        |    "properties": {
+        |      "xyz": {
+        |        "type": ["array", "null"]
+        |      }
+        |    }
+        |  }
+      """.stripMargin)
+
+    val expected = Field(
+      "foo",
+      Type.Record(List(
+        Field("xyz", Type.String, Mode.Nullable)
+      )),
+      Mode.Nullable
+    )
+
+    Field.build("foo", input, false) must beEqualTo(expected)
   }
 
   private def fieldNormalName(name: String) = Field(name, Type.String, Mode.Nullable).normalName
