@@ -52,6 +52,28 @@ class ObjectSpec extends Specification with org.specs2.specification.Tables {
     additionalProperties = Some(AdditionalPropertiesAllowed(false))
   )
 
+  val s7 = Schema.empty.copy(
+    `type` = Some(Object),
+    properties = Some(Properties(Map(
+      "a" -> Schema.empty.copy(`type` = Some(Boolean))
+    ))),
+    patternProperties = Some(PatternProperties(Map(
+      "a.*" -> Schema.empty.copy(`type` = Some(String))
+    ))),
+    required = Some(Required(List("a"))),
+    additionalProperties = Some(AdditionalPropertiesAllowed(false))
+  )
+
+  val s8 = Schema.empty.copy(
+    `type` = Some(Object),
+    properties = Some(Properties(Map(
+      "a" -> Schema.empty.copy(`type` = Some(Boolean)),
+      "ab" -> Schema.empty.copy(`type` = Some(String))
+    ))),
+    required = Some(Required(List("a", "b"))),
+    additionalProperties = Some(AdditionalPropertiesAllowed(false))
+  )
+
   def is =
     s2"""
       Objects
@@ -66,6 +88,11 @@ class ObjectSpec extends Specification with org.specs2.specification.Tables {
         s5   ! s4   ! Compatible   |
         s4   ! s5   ! Incompatible | // interesting...
         s6   ! s5   ! Compatible   |
+        s7   ! s4   ! Compatible   |
+        s7   ! s5   ! Compatible   |
+        s7   ! s6   ! Incompatible |
+        s7   ! s7   ! Compatible   |
+        s8   ! s7   ! Compatible   |
         { (s1, s2, result) => isSubSchema(s1, s2) mustEqual result }
       }
     """

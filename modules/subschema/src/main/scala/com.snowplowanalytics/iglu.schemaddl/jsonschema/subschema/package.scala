@@ -37,6 +37,7 @@ package object subschema {
     if (s.`enum`.isDefined) s else s.copy(`enum` = Some(Enum(List(Json.True, Json.False))))
 
   def canonicalizeEnum(s: Schema): Schema = {
+    // enum values are plain JSON values, not schemas
     val typeValue: Json => (Type, Option[Json]) =
       _.fold(
         jsonNull    = Null -> None,
