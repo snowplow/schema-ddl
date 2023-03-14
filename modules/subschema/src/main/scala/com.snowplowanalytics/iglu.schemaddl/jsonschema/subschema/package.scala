@@ -72,10 +72,11 @@ package object subschema {
 
   def canonicalizeArray(s: Schema): Schema =
     (s.items, s.additionalItems) match {
+      // make sure items is only used for tuples and additionalItems is always a schema
       case (Some(ListItems(schema)), _) =>
         s.copy(items = Some(TupleItems(List.empty)), additionalItems = Some(AdditionalItemsSchema(schema)))
-      case (_, Some(AdditionalItemsAllowed(false))) =>
-        s.copy(additionalItems = Some(AdditionalItemsSchema(none)))
+      case (Some(TupleItems(_)), Some(AdditionalItemsAllowed(allowed))) =>
+        s.copy(additionalItems = Some(AdditionalItemsSchema(if (allowed) any else none)))
       case _ => s
     }
 
@@ -89,6 +90,7 @@ package object subschema {
     case (s1, s2) if isNumber(s1) && isNumber(s2)                          => isNumberSubType(s1, s2)
     case (s1, s2) if s1.`type`.contains(String) && s1.`type` == s2.`type`  => isStringSubType(s1, s2)
     case (s1, s2) if s1.`type`.contains(Object) && s1.`type` == s2.`type`  => isObjectSubType(s1, s2)
+    case (s1, s2) if s1.`type`.contains(Array) && s1.`type` == s2.`type`   => isArraySubType(s1, s2)
     case (s1, s2) if s1.`type` != s2.`type`                                => Incompatible
     case _ => Undecidable
   }
@@ -192,10 +194,38 @@ package object subschema {
     val subSchemaCheckOverlappingOnly: List[Compatibility] =
       for { (r1, s1) <- pp1WithRegexes; (r2, s2) <- pp2WithRegexes; if r1.doIntersect(r2) } yield isSubSchema(s1, s2)
 
-    if (required(s2).subsetOf(required(s1)) && subSchemaCheckOverlappingOnly.forall(_ == Compatible))
-      Compatible
-    else
-      Incompatible
+    (required(s2).subsetOf(required(s1)), subSchemaCheckOverlappingOnly) match {
+      case (false, _) => Incompatible
+      case (true, xs) => combineAll(xs.head, xs.tail: _*)
+    }
+  }
+
+  def isArraySubType(s1: Schema, s2: Schema): Compatibility = {
+    val items: Schema => List[Schema] =
+      _.items.collect({ case TupleItems(schemas) => schemas }).getOrElse(List.empty)
+
+    val additionalItems: Schema => Schema =
+      _.additionalItems.collect({ case AdditionalItemsSchema(schema) => schema }).getOrElse(any)
+
+    val i1 = items(s1)
+    val i2 = items(s2)
+
+    val ai1 = additionalItems(s1)
+    val ai2 = additionalItems(s2)
+
+    val max = Math.max(i1.length, i2.length)
+    val zippedItems = i1.padTo(max + 1, ai1).zip(i2.padTo(max + 1, ai2))
+    val subSchemaCheckZipped = zippedItems.map((isSubSchema _).tupled)
+
+    val s1min = s1.minItems.map(v => BigDecimal(v.value))
+    val s1max = s1.maxItems.map(v => BigDecimal(v.value))
+    val s2min = s2.minItems.map(v => BigDecimal(v.value))
+    val s2max = s2.maxItems.map(v => BigDecimal(v.value))
+
+    (isSubRange((s1min, s1max), (s2min, s2max)), subSchemaCheckZipped) match {
+      case (false, _) => Incompatible
+      case (true, xs) => combineAll(xs.head, xs.tail:_*)
+    }
   }
 
   def isNumber(s: Schema): Boolean =
@@ -220,5 +250,18 @@ package object subschema {
 
     minCheck && maxCheck
   }
+
+  // Semigroup for Compatibility
+  def combine(c1: Compatibility, c2: Compatibility): Compatibility =
+    (c1, c2) match {
+      case (Compatible, Compatible) => Compatible
+      case (Incompatible, _) | (_, Incompatible) => Incompatible
+      case _ => Undecidable
+    }
+
+  // Emulates a NonEmptyList without relying on cats. Required because Compatibility cannot form a Monoid since
+  // an "empty" element doesn't exist
+  def combineAll(c1: Compatibility, c2: Compatibility*): Compatibility =
+    (c1 +: c2.toList).reduce[Compatibility](combine)
 
 }
