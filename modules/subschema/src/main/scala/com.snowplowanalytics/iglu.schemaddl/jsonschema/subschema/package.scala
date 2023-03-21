@@ -157,6 +157,7 @@ package object subschema {
     case (s1, s2) if s1.`type`.contains(Object) && s1.`type` == s2.`type`  => isObjectSubType(s1, s2)
     case (s1, s2) if s1.`type`.contains(Array) && s1.`type` == s2.`type`   => isArraySubType(s1, s2)
     case (s1, s2) if s1.`type` != s2.`type`                                => Incompatible
+    case (s1, s2) if s1.anyOf.isDefined && s2.anyOf.isDefined              => anyOfSubType(s1, s2)
     case _ => Undecidable
   }
 
@@ -261,7 +262,7 @@ package object subschema {
 
     (required(s2).subsetOf(required(s1)), subSchemaCheckOverlappingOnly) match {
       case (false, _) => Incompatible
-      case (true, xs) => combineAll(xs.head, xs.tail: _*)
+      case (true, xs) => combineAll(combineAnd)(xs.head, xs.tail: _*)
     }
   }
 
@@ -289,9 +290,21 @@ package object subschema {
 
     (isSubRange((s1min, s1max), (s2min, s2max)), subSchemaCheckZipped) match {
       case (false, _) => Incompatible
-      case (true, xs) => combineAll(xs.head, xs.tail:_*)
+      case (true, xs) => combineAll(combineAnd)(xs.head, xs.tail:_*)
     }
   }
+
+  def anyOfSubType(s1: Schema, s2: Schema): Compatibility =
+    (s1.anyOf, s2.anyOf) match {
+      case (Some(AnyOf(ao1)), Some(AnyOf(ao2))) =>
+        val h :: t = ao1.map(i => {
+          val h :: t = ao2.map(j => isSubType(i, j))
+          combineAll(combineOr)(h, t:_*)
+        })
+        combineAll(combineAnd)(h, t:_*)
+      case _ =>
+        Undecidable
+    }
 
   def isNumber(s: Schema): Boolean =
     s.`type`.contains(Integer) || s.`type`.contains(Number)
@@ -316,17 +329,25 @@ package object subschema {
     minCheck && maxCheck
   }
 
-  // Semigroup for Compatibility
-  def combine(c1: Compatibility, c2: Compatibility): Compatibility =
+  // Semigroup for "AND" on Compatibility
+  def combineAnd(c1: Compatibility, c2: Compatibility): Compatibility =
     (c1, c2) match {
       case (Compatible, Compatible) => Compatible
       case (Incompatible, _) | (_, Incompatible) => Incompatible
       case _ => Undecidable
     }
 
+  // Semigroup for "OR" on Compatibility
+  def combineOr(c1: Compatibility, c2: Compatibility): Compatibility =
+    (c1, c2) match {
+      case (Compatible, _) | (_, Compatible) => Compatible
+      case (Incompatible, Incompatible) => Incompatible
+      case _ => Undecidable
+    }
+
   // Emulates a NonEmptyList without relying on cats. Required because Compatibility cannot form a Monoid since
   // an "empty" element doesn't exist
-  def combineAll(c1: Compatibility, c2: Compatibility*): Compatibility =
-    (c1 +: c2.toList).reduce[Compatibility](combine)
+  def combineAll(op: (Compatibility, Compatibility) => Compatibility)(c1: Compatibility, c2: Compatibility*): Compatibility =
+    (c1 +: c2.toList).reduce[Compatibility](op)
 
 }
