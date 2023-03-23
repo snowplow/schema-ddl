@@ -3,9 +3,14 @@ package com.snowplowanalytics.iglu.schemaddl.jsonschema.subschema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ArrayProperty.AdditionalItems._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ArrayProperty.Items._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ArrayProperty.{MaxItems, MinItems}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.CommonProperties.Type._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.NumberProperty.Maximum.{IntegerMaximum, NumberMaximum}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.NumberProperty.Minimum.{IntegerMinimum, NumberMinimum}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty.AdditionalProperties._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.ObjectProperty.{Properties, Required}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.StringProperty.Pattern
 import dregex.Regex
 import io.circe.Json
 
@@ -20,36 +25,27 @@ package object subschema {
     isSubType(simplify(canonicalize(s1)), simplify(canonicalize(s2)))
 
   @tailrec
-  def canonicalize(s: Schema): Schema =
-    s match {
-      case s if s.`type`.contains(Null)                => s.copy(`enum` = None)
-      case s if s.`type`.contains(Boolean)             => canonicalizeBoolean(s)
-      case s if s.`type`.contains(Integer)             => s
-      case s if s.`type`.contains(Number)              => s
-      case s if s.`type`.contains(String)              => s
-      case s if s.`type`.contains(Object)              => canonicalizeObject(s)
-      case s if s.`type`.contains(Array)               => canonicalizeArray(s)
-      case s if s.`type`.isEmpty && s.`enum`.isDefined => canonicalize(canonicalizeEnum(s))
-      case _ => s
+  def canonicalize(s: Schema): Schema = {
+    s.`type` match {
+      case None           => if (s.`enum`.isDefined) canonicalize(canonicalizeEnum(s)) else s
+      case Some(Null)     => s
+      case Some(Boolean)  => canonicalizeBoolean(s)
+      case Some(Integer)  => s
+      case Some(Number)   => s
+      case Some(String)   => s
+      case Some(Object)   => canonicalizeObject(s)
+      case Some(Array)    => canonicalizeArray(s)
+      case Some(Union(_)) => canonicalize(canonicalizeUnion(s))
+      case _              => s
     }
+  }
 
   def canonicalizeBoolean(s: Schema): Schema =
     if (s.`enum`.isDefined) s else s.copy(`enum` = Some(Enum(List(Json.True, Json.False))))
 
   def canonicalizeEnum(s: Schema): Schema = {
-    // enum values are plain JSON values, not schemas
-    val typeValue: Json => (Type, Option[Json]) =
-      _.fold(
-        jsonNull    = Null -> None,
-        jsonBoolean = v => Boolean -> Some(Json.fromBoolean(v)),
-        jsonNumber  = v => Number -> Some(Json.fromJsonNumber(v)),
-        jsonString  = v => String -> Some(Json.fromString(v)),
-        jsonArray   = v => Array -> Some(Json.fromValues(v)),
-        jsonObject  = v => Object -> Some(Json.fromJsonObject(v))
-      )
-
     val splitByType: List[Json] => List[Schema] =
-      _.map(typeValue(_))
+      _.map(inferType(_))
         .groupBy(_._1)
         .mapValues(_.flatMap(_._2))
         .mapValues(values => if (values.isEmpty) None else Some(Enum(values)))
@@ -80,7 +76,76 @@ package object subschema {
       case _ => s
     }
 
-  def simplify(s: Schema): Schema = s
+  def canonicalizeUnion(s: Schema): Schema = {
+    s.`type` match {
+      case Some(Union(types)) =>
+        val anyOf = types.map(t => Schema.empty.copy(`type` = Some(t))).toList
+        s.copy(`type` = None, anyOf = Some(AnyOf(anyOf)))
+      case _ => s
+    }
+  }
+
+  def inferType(j: Json): (Type, Option[Json]) =
+    // enum values are plain JSON values, not schemas
+    j.fold(
+      jsonNull = Null -> None,
+      jsonBoolean = v => Boolean -> Some(Json.fromBoolean(v)),
+      jsonNumber = v => Number -> Some(Json.fromJsonNumber(v)),
+      jsonString = v => String -> Some(Json.fromString(v)),
+      jsonArray = v => Array -> Some(Json.fromValues(v)),
+      jsonObject = v => Object -> Some(Json.fromJsonObject(v))
+    )
+
+  def simplify(s: Schema): Schema =
+    (simplifyMultiValuedEnum _)
+      .andThen(simplifyEnum)(s)
+
+  def simplifyMultiValuedEnum(s: Schema): Schema =
+    (s.`type`, s.`enum`) match {
+      case (t@Some(typ), Some(Enum(values))) if typ != Boolean && values.length > 1 =>
+        val anyOf = values.map(v => Schema.empty.copy(`type` = t, `enum` = Some(Enum(List(v))))).map(simplifyEnum(_))
+        Schema.empty.copy(anyOf = Some(AnyOf(anyOf)))
+      case _ => s
+    }
+
+  def simplifyEnum(s: Schema): Schema =
+    (s.`type`, s.`enum`) match {
+      case (t@Some(Null), Some(Enum(List(Json.Null)))) =>
+        Schema.empty.copy(`type` = t, `enum` = None)
+      case (t@Some(String), Some(Enum(v :: Nil))) =>
+        Schema.empty.copy(`type` = t, pattern = v.asString.map(s => Pattern(s"^$s$$")))
+      case (t@Some(Integer), Some(Enum(v :: Nil))) =>
+        val intV = v.asNumber.flatMap(_.toBigInt)
+        Schema.empty.copy(`type` = t, minimum = intV.map(IntegerMinimum(_)), maximum = intV.map(IntegerMaximum(_)))
+      case (t@Some(Number), Some(Enum(v :: Nil))) =>
+        val decV = v.asNumber.flatMap(_.toBigDecimal)
+        Schema.empty.copy(`type` = t, minimum = decV.map(NumberMinimum(_)), maximum = decV.map(NumberMaximum(_)))
+      case (t@Some(Array), Some(Enum(vArr :: Nil))) =>
+        val maybeArr = vArr.asArray
+        val arrSize = maybeArr.map(_.size)
+        val tupleItems = maybeArr.map(xv => xv.map(schemaForEnumValue).map(simplifyEnum).toList)
+        Schema.empty.copy(
+          `type` = t,
+          minItems = arrSize.map(MinItems(_)),
+          maxItems = arrSize.map(MaxItems(_)),
+          items = tupleItems.map(TupleItems(_))
+        )
+      case (t@Some(Object), Some(Enum(vObj :: Nil))) =>
+        val maybeObj = vObj.asObject
+        val props = maybeObj.map(_.toMap.mapValues(schemaForEnumValue).mapValues(simplifyEnum))
+        Schema.empty.copy(
+          `type` = t,
+          required = maybeObj.map(_.keys.toList).map(Required(_)),
+          additionalProperties = Some(AdditionalPropertiesSchema(none)),
+          properties = props.map(Properties(_))
+        )
+      case _ => s
+    }
+
+  def schemaForEnumValue(v: Json): Schema = {
+    val (t, value) = inferType(v)
+    Schema.empty.copy(`type` = Some(t), `enum` = value.map(v => Enum(List(v))))
+  }
 
   def isSubType(s1: Schema, s2: Schema): Compatibility = (s1, s2) match {
     case (_, `any`)                                                        => Compatible
@@ -92,6 +157,7 @@ package object subschema {
     case (s1, s2) if s1.`type`.contains(Object) && s1.`type` == s2.`type`  => isObjectSubType(s1, s2)
     case (s1, s2) if s1.`type`.contains(Array) && s1.`type` == s2.`type`   => isArraySubType(s1, s2)
     case (s1, s2) if s1.`type` != s2.`type`                                => Incompatible
+    case (s1, s2) if s1.anyOf.isDefined && s2.anyOf.isDefined              => anyOfSubType(s1, s2)
     case _ => Undecidable
   }
 
@@ -196,7 +262,7 @@ package object subschema {
 
     (required(s2).subsetOf(required(s1)), subSchemaCheckOverlappingOnly) match {
       case (false, _) => Incompatible
-      case (true, xs) => combineAll(xs.head, xs.tail: _*)
+      case (true, xs) => combineAll(combineAnd)(xs.head, xs.tail: _*)
     }
   }
 
@@ -224,9 +290,21 @@ package object subschema {
 
     (isSubRange((s1min, s1max), (s2min, s2max)), subSchemaCheckZipped) match {
       case (false, _) => Incompatible
-      case (true, xs) => combineAll(xs.head, xs.tail:_*)
+      case (true, xs) => combineAll(combineAnd)(xs.head, xs.tail:_*)
     }
   }
+
+  def anyOfSubType(s1: Schema, s2: Schema): Compatibility =
+    (s1.anyOf, s2.anyOf) match {
+      case (Some(AnyOf(ao1)), Some(AnyOf(ao2))) =>
+        val h :: t = ao1.map(i => {
+          val h :: t = ao2.map(j => isSubType(i, j))
+          combineAll(combineOr)(h, t:_*)
+        })
+        combineAll(combineAnd)(h, t:_*)
+      case _ =>
+        Undecidable
+    }
 
   def isNumber(s: Schema): Boolean =
     s.`type`.contains(Integer) || s.`type`.contains(Number)
@@ -251,17 +329,25 @@ package object subschema {
     minCheck && maxCheck
   }
 
-  // Semigroup for Compatibility
-  def combine(c1: Compatibility, c2: Compatibility): Compatibility =
+  // Semigroup for "AND" on Compatibility
+  def combineAnd(c1: Compatibility, c2: Compatibility): Compatibility =
     (c1, c2) match {
       case (Compatible, Compatible) => Compatible
       case (Incompatible, _) | (_, Incompatible) => Incompatible
       case _ => Undecidable
     }
 
+  // Semigroup for "OR" on Compatibility
+  def combineOr(c1: Compatibility, c2: Compatibility): Compatibility =
+    (c1, c2) match {
+      case (Compatible, _) | (_, Compatible) => Compatible
+      case (Incompatible, Incompatible) => Incompatible
+      case _ => Undecidable
+    }
+
   // Emulates a NonEmptyList without relying on cats. Required because Compatibility cannot form a Monoid since
   // an "empty" element doesn't exist
-  def combineAll(c1: Compatibility, c2: Compatibility*): Compatibility =
-    (c1 +: c2.toList).reduce[Compatibility](combine)
+  def combineAll(op: (Compatibility, Compatibility) => Compatibility)(c1: Compatibility, c2: Compatibility*): Compatibility =
+    (c1 +: c2.toList).reduce[Compatibility](op)
 
 }
