@@ -58,7 +58,9 @@ object SelfSyntaxChecker {
       |      "vendor": {"type":"string"},
       |      "name": {"type":"string"},
       |      "format": {"type":"string"},
-      |      "version": {"type":"string"}
+      |      "version": {"type":"string"},
+      |      "supersededBy": {"type":"string"},
+      |      "supersedes": {"type": "array","items": {"type":"string"}}
       |    },
       |    "additionalProperties": false
       |  },
@@ -125,6 +127,17 @@ object SelfSyntaxChecker {
       |       "version": {
       |         "type":"string",
       |         "pattern": "$versionRegex"
+      |       },
+      |       "supersededBy": {
+      |         "type":"string",
+      |         "pattern": "$versionRegex"
+      |       },
+      |       "supersedes":  {
+      |         "type": "array",
+      |         "items": {
+      |           "type":"string",
+      |           "pattern": "$versionRegex"
+      |         }
       |       }
       |     }
       |   }
