@@ -212,5 +212,69 @@ class SelfSyntaxCheckerSpec extends Specification {
 
       }.reduce(_ and _)
     }
+
+    "recognize invalid 'supersededBy' type" in {
+      val jsonSchema =
+        json"""{
+        "$$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+        "$$supersededBy": "1-0",
+        "description": "Schema for an example event",
+        "self": {
+            "vendor": "com.snowplowanalytics",
+            "name": "example_event",
+            "format": "jsonschema",
+            "version": "1-0-0"
+        },
+        "type": "object",
+        "properties": { }
+      }"""
+
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+        case NonEmptyList(Message(_, msg, Error), Nil) =>
+          msg must contain("does not match the regex pattern")
+      }
+    }
+
+    "recognize invalid 'supersedes' type" in {
+      val jsonSchema =
+        json"""{
+        "$$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+        "$$supersedes": ["1-0-1", "1-0"],
+        "description": "Schema for an example event",
+        "self": {
+            "vendor": "com.snowplowanalytics",
+            "name": "example_event",
+            "format": "jsonschema",
+            "version": "1-0-0"
+        },
+        "type": "object",
+        "properties": { }
+      }"""
+
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+        case NonEmptyList(Message(_, msg, Error), Nil) =>
+          msg must contain("does not match the regex pattern")
+      }
+    }
+
+    "allow valid 'supersedes' and 'supersededBy' fields" in {
+      val jsonSchema =
+        json"""{
+        "$$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+        "$$supersededBy": "1-0-4",
+        "$$supersedes": ["1-0-1", "1-0-2"],
+        "description": "Schema for an example event",
+        "self": {
+            "vendor": "com.snowplowanalytics",
+            "name": "example_event",
+            "format": "jsonschema",
+            "version": "1-0-0"
+        },
+        "type": "object",
+        "properties": { }
+      }"""
+
+      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beRight
+    }
   }
 }

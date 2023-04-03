@@ -64,6 +64,8 @@ object SelfSyntaxChecker {
       |  },
       |  "id":{"type":"string"},
       |  "$schema":{"type":"string"},
+      |  "$supersededBy": {"type":"string"},
+      |  "$supersedes": {"type": "array","items": {"type":"string"}},
       |  "title":{"type":"string"},
       |  "description":{"type":"string"},
       |  "default":{},
@@ -106,6 +108,17 @@ object SelfSyntaxChecker {
       |   "$$schema":{
       |     "type":"string",
       |     "enum": ["$MetaSchemaUri"]
+      |   },
+      |   "$$supersededBy": {
+      |     "type":"string",
+      |     "pattern": "$versionRegex"
+      |   },
+      |   "$$supersedes":  {
+      |     "type": "array",
+      |     "items": {
+      |       "type":"string",
+      |       "pattern": "$versionRegex"
+      |     }
       |   },
       |   "self":{
       |     "required": ["vendor", "name", "format", "version"],
