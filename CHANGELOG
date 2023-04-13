@@ -1,3 +1,7 @@
+Version 0.18.0 (2023-04-13)
+---------------------------
+Allow supersededBy and supersedes properties in a schema (#155)
+
 Version 0.17.1 (2023-03-08)
 ---------------------------
 Parquet : Changing non-null to nullable (and vice versa) should yield nullable (#151) 
