@@ -13,9 +13,10 @@
 package com.snowplowanalytics.iglu.schemaddl.bigquery
 
 import io.circe._
-
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{CommonProperties, StringProperty}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.decimals
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{CommonProperties, StringProperty, NumberProperty}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.numericType.NullableWrapper
 
 object Suggestion {
 
@@ -24,7 +25,7 @@ object Suggestion {
       case Some(CommonProperties.Type.String) =>
         Some(name => Field(name, Type.String, Mode.required(required)))
       case Some(types) if types.nullable(CommonProperties.Type.String) =>
-        Some(name => Field(name, Type.String, Mode.Nullable) )
+        Some(name => Field(name, Type.String, Mode.Nullable))
       case _ => None
     }
 
@@ -40,11 +41,47 @@ object Suggestion {
   val integerSuggestion: Suggestion = (schema, required) =>
     schema.`type` match {
       case Some(CommonProperties.Type.Integer) =>
-        Some(name => Field(name, Type.Integer, Mode.required(required)))
+        Some(name => Field(name, Type.fromGenericType(decimals.integerType(schema)), Mode.required(required)))
       case Some(CommonProperties.Type.Union(types)) if withNull(types, CommonProperties.Type.Integer) =>
-        Some(name => Field(name, Type.Integer, Mode.Nullable))
+        Some(name => Field(name, Type.fromGenericType(decimals.integerType(schema)), Mode.Nullable))
       case _ => None
     }
+
+  val numericSuggestion: Suggestion = (schema, required) => schema.`type` match {
+    case Some(CommonProperties.Type.Number) =>
+      schema.multipleOf match {
+        case Some(NumberProperty.MultipleOf.IntegerMultipleOf(_)) =>
+          Some(name => Field(name, Type.fromGenericType(decimals.integerType(schema)), Mode.required(required)))
+        case Some(mult: NumberProperty.MultipleOf.NumberMultipleOf) =>
+          Some(name => Field(name, numericWithMultiple(mult, schema.maximum, schema.minimum), Mode.required(required)))
+        case None => None
+      }
+    case Some(CommonProperties.Type.Union(types)) if withNull(types, CommonProperties.Type.Number) =>
+      schema.multipleOf match {
+        case Some(NumberProperty.MultipleOf.IntegerMultipleOf(_)) =>
+          Some(name => Field(name, Type.fromGenericType(decimals.integerType(schema)), Mode.Nullable))
+        case Some(mult: NumberProperty.MultipleOf.NumberMultipleOf) =>
+          Some(name => Field(name, numericWithMultiple(mult, schema.maximum, schema.minimum), Mode.Nullable))
+        case None => None
+      }
+    case Some(CommonProperties.Type.Union(types)) if onlyNumeric(types, true) =>
+      schema.multipleOf match {
+        case Some(NumberProperty.MultipleOf.IntegerMultipleOf(_)) =>
+          Some(name => Field(name, Type.fromGenericType(decimals.integerType(schema)), Mode.Nullable))
+        case Some(mult: NumberProperty.MultipleOf.NumberMultipleOf) =>
+          Some(name => Field(name, numericWithMultiple(mult, schema.maximum, schema.minimum), Mode.Nullable))
+        case None => None
+      }
+    case Some(CommonProperties.Type.Union(types)) if onlyNumeric(types, false) =>
+      schema.multipleOf match {
+        case Some(NumberProperty.MultipleOf.IntegerMultipleOf(_)) =>
+          Some(name => Field(name, Type.fromGenericType(decimals.integerType(schema)), Mode.required(required)))
+        case Some(mult: NumberProperty.MultipleOf.NumberMultipleOf) =>
+          Some(name => Field(name, numericWithMultiple(mult, schema.maximum, schema.minimum), Mode.required(required)))
+        case None => None
+      }
+    case _ => None
+  }
 
   val floatSuggestion: Suggestion = (schema, required) =>
     schema.`type` match {
@@ -52,7 +89,7 @@ object Suggestion {
         Some(name => Field(name, Type.Float, Mode.required(required)))
       case Some(CommonProperties.Type.Union(types)) if onlyNumeric(types, true) =>
         Some(name => Field(name, Type.Float, Mode.Nullable))
-      case Some(CommonProperties.Type.Union(types)) if onlyNumeric(types, false)  =>
+      case Some(CommonProperties.Type.Union(types)) if onlyNumeric(types, false) =>
         Some(name => Field(name, Type.Float, Mode.required(required)))
       case Some(CommonProperties.Type.Union(types)) if withNull(types, CommonProperties.Type.Number) =>
         Some(name => Field(name, Type.Float, Mode.Nullable))
@@ -65,6 +102,15 @@ object Suggestion {
         Some(fromEnum(values, required))
       case _ => None
     }
+
+  private def numericWithMultiple(mult: NumberProperty.MultipleOf.NumberMultipleOf,
+                                  maximum: Option[NumberProperty.Maximum],
+                                  minimum: Option[NumberProperty.Minimum]): Type =
+    Type.fromGenericType(decimals.numericWithMultiple(mult, maximum, minimum))
+
+
+  //  (Field.JsonNullability.fromNullableWrapper)
+
 
   // `date-time` format usually means zoned format, which corresponds to BQ Timestamp
   val timestampSuggestion: Suggestion = (schema, required) =>
@@ -95,14 +141,18 @@ object Suggestion {
     booleanSuggestion,
     stringSuggestion,
     integerSuggestion,
+    numericSuggestion,
     floatSuggestion,
     complexEnumSuggestion
   )
 
   private[iglu] def fromEnum(enums: List[Json], required: Boolean): String => Field = {
     def isString(json: Json) = json.isString || json.isNull
+
     def isInteger(json: Json) = json.asNumber.exists(_.toBigInt.isDefined) || json.isNull
+
     def isNumeric(json: Json) = json.isNumber || json.isNull
+
     val noNull: Boolean = !enums.contains(Json.Null)
 
     if (enums.forall(isString)) {
@@ -110,7 +160,15 @@ object Suggestion {
     } else if (enums.forall(isInteger)) {
       name => Field(name, Type.Integer, Mode.required(required && noNull))
     } else if (enums.forall(isNumeric)) {
-      name => Field(name, Type.Float, Mode.required(required && noNull))
+      name =>
+        decimals.numericEnum(enums).map {
+          case NullableWrapper.NullableValue(t) => Field(name, Type.fromGenericType(t), Mode.required(required && noNull))
+          case NullableWrapper.NotNullValue(t) => Field(name, Type.fromGenericType(t), Mode.required(required && noNull))
+        } match {
+          case Some(value) => value
+          // Unreachable as `None` here would mean that some `enums.forall(isNumeric)` did not work.
+          case None => Field(name, Type.Float, Mode.required(required && noNull)) 
+        }
     } else {
       name => Field(name, Type.String, Mode.required(required && noNull))
     }

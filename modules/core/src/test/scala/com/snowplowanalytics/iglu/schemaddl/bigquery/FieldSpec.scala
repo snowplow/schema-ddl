@@ -26,6 +26,8 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   build generates nullable field for oneOf types $e10
   build generates nullable field for nullable object without nested keys $e11
   build generates nullable field for nullable array without items $e12
+  build generates numeric/decimal for enums $e13
+  build generates numeric/decimal for multipleof $e14
   """
 
   def e1 = {
@@ -61,7 +63,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
           )),
           Mode.Nullable
         ),
-        Field("stringKey", Type.String,Mode.Nullable))),
+        Field("stringKey", Type.String, Mode.Nullable))),
       Mode.Nullable
     )
 
@@ -94,7 +96,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
     )
 
     Field.build("foo", input, false) must beEqualTo(expected)
-  }
+  } 
 
   def e3 = {
     val input = SpecHelpers.parseSchema(
@@ -159,9 +161,9 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         |}
       """.stripMargin)
 
-    val expected = Field("foo",Type.Record(List(
-      Field("union",Type.String,Mode.Nullable)
-    )),Mode.Nullable)
+    val expected = Field("foo", Type.Record(List(
+      Field("union", Type.String, Mode.Nullable)
+    )), Mode.Nullable)
 
     Field.build("foo", input, false) must beEqualTo(expected)
   }
@@ -178,9 +180,9 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         |}
       """.stripMargin)
 
-    val expected = Field("foo",Type.Record(List(
-      Field("union",Type.String,Mode.Nullable)
-    )),Mode.Nullable)
+    val expected = Field("foo", Type.Record(List(
+      Field("union", Type.String, Mode.Nullable)
+    )), Mode.Nullable)
 
     Field.build("foo", input, false) must beEqualTo(expected)
   }
@@ -199,7 +201,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         |  }
       """.stripMargin)
 
-    val expected = Field("arrayTest",Type.Record(List(Field("imp",Type.String,Mode.Repeated))),Mode.Required)
+    val expected = Field("arrayTest", Type.Record(List(Field("imp", Type.String, Mode.Repeated))), Mode.Required)
     Field.build("arrayTest", input, true) must beEqualTo(expected)
   }
 
@@ -217,7 +219,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         |  }
       """.stripMargin)
 
-    val expected = Field("arrayTest",Type.Record(List(Field("imp",Type.String,Mode.Repeated))),Mode.Required)
+    val expected = Field("arrayTest", Type.Record(List(Field("imp", Type.String, Mode.Repeated))), Mode.Required)
     Field.build("arrayTest", input, true) must beEqualTo(expected)
   }
 
@@ -313,5 +315,57 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
     Field.build("foo", input, false) must beEqualTo(expected)
   }
 
+  def e13 = {
+    val input = SpecHelpers.parseSchema(
+      """
+        |  {
+        |    "type": "object",
+        |    "required": ["xyz"],
+        |    "properties": {
+        |      "xyz": {
+        |        "enum": [10, 1.12, 1e9]
+        |      }
+        |    }
+        |  }
+      """.stripMargin)
+
+    val expected = Field(
+      "foo",
+      Type.Record(List(
+        Field("xyz", Type.Numeric(12,2), Mode.Required)
+      )),
+      Mode.Nullable
+    )
+
+    Field.build("foo", input, false) must beEqualTo(expected)
+  }
+
+  def e14 = {
+    val input = SpecHelpers.parseSchema(
+      """
+        |  {
+        |    "type": "object",
+        |    "required": ["xyz"],
+        |    "properties": {
+        |      "xyz": {
+        |        "type": ["number", "null"],
+        |        "multipleOf": 0.001,
+        |        "maximum": 2,
+        |        "minimum": 1
+        |      }
+        |    }
+        |  }
+      """.stripMargin)
+
+    val expected = Field(
+      "foo",
+      Type.Record(List(
+        Field("xyz", Type.Numeric(4,3), Mode.Nullable)
+      )),
+      Mode.Nullable
+    )
+
+    Field.build("foo", input, false) must beEqualTo(expected)
+  }
   private def fieldNormalName(name: String) = Field(name, Type.String, Mode.Nullable).normalName
 }
