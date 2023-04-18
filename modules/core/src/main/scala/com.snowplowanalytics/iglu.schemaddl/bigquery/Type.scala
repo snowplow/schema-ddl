@@ -12,18 +12,34 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.bigquery
 
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.baseTypes._
 /** BigQuery field type; "array" and "null" are expressed via `Mode` */
 sealed trait Type extends Product with Serializable
 
 object Type {
   case object String extends Type
+
   case object Boolean extends Type
+
   case object Integer extends Type
+
   case object Float extends Type
-  case object Numeric extends Type
+
+  case class Numeric(precision: Int, scale: Int) extends Type
+
   case object Date extends Type
+
   case object DateTime extends Type
+
   case object Timestamp extends Type
+
   case class Record(fields: List[Field]) extends Type
+
+  def fromGenericType(`type`: BaseType) = `type` match {
+    case BaseType.Double => Float
+    case BaseType.Int32 => Integer
+    case BaseType.Int64 => Integer
+    case BaseType.Decimal(precision, scale) => Numeric(precision, scale)
+  }
 }
 

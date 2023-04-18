@@ -12,13 +12,15 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
+import Type._
 import com.snowplowanalytics.iglu.schemaddl.StringUtils
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{ArrayProperty, CommonProperties}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.mutate.Mutate
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.baseTypes.NullableWrapper
 
-case class Field(name: String, 
-                 fieldType: Type, 
+case class Field(name: String,
+                 fieldType: Type,
                  nullability: Type.Nullability)
 
 object Field {
@@ -67,7 +69,19 @@ object Field {
 
   private[parquet] object JsonNullability {
     case object ExplicitlyNullable extends JsonNullability
+
     case object NoExplicitNull extends JsonNullability
+
+    def fromNullableWrapper(wrapper: NullableWrapper): NullableType = wrapper match {
+      case NullableWrapper.NullableValue(t) => NullableType(
+        value = fromGenericType(t),
+        nullability = JsonNullability.ExplicitlyNullable
+      )
+      case NullableWrapper.NotNullValue(t) => NullableType(
+        value = fromGenericType(t),
+        nullability = JsonNullability.NoExplicitNull
+      )
+    }
 
     def extractFrom(`type`: CommonProperties.Type): JsonNullability = {
       if (`type`.nullable) {
@@ -81,13 +95,13 @@ object Field {
     topSchema.`type` match {
       case Some(types) if types.possiblyWithNull(CommonProperties.Type.Object) =>
         NullableType(
-          value = buildObjectType(topSchema), 
+          value = buildObjectType(topSchema),
           nullability = JsonNullability.extractFrom(types)
         )
 
       case Some(types) if types.possiblyWithNull(CommonProperties.Type.Array) =>
-        NullableType( 
-          value = buildArrayType(topSchema), 
+        NullableType(
+          value = buildArrayType(topSchema),
           nullability = JsonNullability.extractFrom(types)
         )
 

@@ -12,8 +12,8 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
-import cats.implicits._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.decimals
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{CommonProperties, NumberProperty, StringProperty}
 import io.circe._
 
@@ -80,55 +80,9 @@ private[parquet] object Suggestion {
   private def numericWithMultiple(mult: NumberProperty.MultipleOf.NumberMultipleOf,
                                   maximum: Option[NumberProperty.Maximum],
                                   minimum: Option[NumberProperty.Minimum]): Type =
-    (maximum, minimum) match {
-      case (Some(max), Some(min)) =>
-        val topPrecision = max match {
-          case NumberProperty.Maximum.IntegerMaximum(max) =>
-            BigDecimal(max).precision + mult.value.scale
-          case NumberProperty.Maximum.NumberMaximum(max) =>
-            max.precision - max.scale + mult.value.scale
-        }
-        val bottomPrecision = min match {
-          case NumberProperty.Minimum.IntegerMinimum(min) =>
-            BigDecimal(min).precision + mult.value.scale
-          case NumberProperty.Minimum.NumberMinimum(min) =>
-            min.precision - min.scale + mult.value.scale
-        }
-        Type.DecimalPrecision.of(topPrecision.max(bottomPrecision)) match {
-          case Some(precision) =>
-            Type.Decimal(precision, mult.value.scale)
-          case None =>
-            Type.Double
-        }
-      case _ =>
-        Type.Double
-    }
+    Type.fromGenericType(decimals.numericWithMultiple(mult, maximum, minimum))
 
-
-  private def numericEnum(enums: List[Json]): Option[Field.NullableType] = {
-    def go(scale: Int, max: BigDecimal, nullable: Field.JsonNullability, enums: List[Json]): Option[Field.NullableType] =
-      enums match {
-        case Nil =>
-          val t = if (scale === 0 && max <= Int.MaxValue) Type.Integer
-            else if (scale === 0 && max <= Long.MaxValue) Type.Long
-            else {
-            val precision = (max.precision - max.scale) + scale
-            Type.DecimalPrecision.of(precision).fold[Type](Type.Double)(Type.Decimal(_, scale))
-          }
-          Some(Field.NullableType(t, nullable))
-        case Json.Null :: tail => go(scale, max, Field.JsonNullability.ExplicitlyNullable, tail)
-        case h :: tail =>
-          h.asNumber.flatMap(_.toBigDecimal) match {
-            case Some(bigDecimal) =>
-              val nextScale = scale.max(bigDecimal.scale)
-              val nextMax = (if (bigDecimal > 0) bigDecimal else -bigDecimal).max(max)
-              go(nextScale, nextMax, nullable, tail)
-            case None => None
-          }
-      }
-
-    go(0, 0, Field.JsonNullability.NoExplicitNull, enums)
-  }
+  private def numericEnum(enums: List[Json]): Option[Field.NullableType] = decimals.numericEnum(enums).map(Field.JsonNullability.fromNullableWrapper)
 
   private def stringEnum(enums: List[Json]): Option[Field.NullableType] = {
     def go(nullable: Field.JsonNullability, enums: List[Json]): Option[Field.NullableType] =
@@ -138,6 +92,7 @@ private[parquet] object Suggestion {
         case h :: tail if h.isString => go(nullable, tail)
         case _ => None
       }
+
     go(Field.JsonNullability.NoExplicitNull, enums)
   }
 
@@ -146,19 +101,8 @@ private[parquet] object Suggestion {
     Field.NullableType(Type.Json, nullable)
   }
 
-  private def integerType(schema: Schema): Type =
-    (schema.minimum, schema.maximum) match {
-      case (Some(min), Some(max)) =>
-        val minDecimal = min.getAsDecimal
-        val maxDecimal = max.getAsDecimal
-        if (maxDecimal <= Int.MaxValue && minDecimal >= Int.MinValue) Type.Integer
-        else if (maxDecimal <= Long.MaxValue && minDecimal >= Long.MinValue) Type.Long
-        else Type.DecimalPrecision
-          .of((maxDecimal.precision - maxDecimal.scale).max(minDecimal.precision - minDecimal.scale))
-          .fold[Type](Type.Double)(Type.Decimal(_, 0))
-      case _ => Type.Long
-    }
-
+  private def integerType(schema: Schema): Type = Type.fromGenericType(decimals.integerType(schema))
+    
   private def onlyNumeric(types: CommonProperties.Type): Boolean =
     types match {
       case CommonProperties.Type.Number => true
