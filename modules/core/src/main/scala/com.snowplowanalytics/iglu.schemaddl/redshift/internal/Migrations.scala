@@ -33,6 +33,33 @@ private[redshift] case class Migrations(private[Migrations] val migrations: List
       .flatMap { case (_, a) => a }
       .collect { case a: Migrations.VarcharExtension => a }
 
+  def inTransactionToSql(tableName: String, dbSchema: String, maybeExclLowerBound: Option[SchemaKey] = None, maybeIncUpperBound: Option[SchemaKey] = None): String =
+    inTransaction(maybeExclLowerBound, maybeIncUpperBound).map { case Migrations.ColumnAddition(column) =>
+      s"""  ALTER TABLE $dbSchema.$tableName
+         |    ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
+         |""".stripMargin
+    } match {
+      case Nil => s"""|
+                      |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
+                      |
+                      |COMMENT ON TABLE $dbSchema.$tableName IS '${maybeIncUpperBound.getOrElse(migrations.last._1).toSchemaUri}';
+                      |""".stripMargin
+      case h :: t => s"""|
+                        |BEGIN TRANSACTION;
+                         |
+                         |${(h :: t).mkString}
+                         |  COMMENT ON TABLE $dbSchema.$tableName IS '${maybeIncUpperBound.getOrElse(migrations.last._1).toSchemaUri}';
+                         |
+                         |END TRANSACTION;""".stripMargin
+    }
+
+  def outTransactionToSql(tableName: String, dbSchema: String, maybeExclLowerBound: Option[SchemaKey] = None, maybeIncUpperBound: Option[SchemaKey] = None): String =
+    outTransaction(maybeExclLowerBound, maybeIncUpperBound).map { case Migrations.VarcharExtension(old, newEntry) =>
+      s"""  ALTER TABLE $dbSchema.$tableName
+         |    ALTER COLUMN "${old.columnName}" TYPE ${newEntry.columnType.show};
+         |""".stripMargin
+    }.mkString
+
   def toSql(tableName: String, dbSchema: String, maybeExclLowerBound: Option[SchemaKey] = None, maybeIncUpperBound: Option[SchemaKey] = None): String =
     s"""|-- WARNING: only apply this file to your database if the following SQL returns the expected:
         |--
@@ -43,29 +70,8 @@ private[redshift] case class Migrations(private[Migrations] val migrations: List
         |--  (1 row)
         |
         |""".stripMargin +
-      outTransaction(maybeExclLowerBound, maybeIncUpperBound).map { case Migrations.VarcharExtension(old, newEntry) =>
-        s"""  ALTER TABLE $dbSchema.$tableName
-           |    ALTER COLUMN "${old.columnName}" TYPE ${newEntry.columnType.show};
-           |""".stripMargin
-      }.mkString +
-      (inTransaction(maybeExclLowerBound, maybeIncUpperBound).map { case Migrations.ColumnAddition(column) =>
-        s"""  ALTER TABLE $dbSchema.$tableName
-           |    ADD COLUMN "${column.columnName}" ${column.columnType.show} ${column.compressionEncoding.show};
-           |""".stripMargin
-      } match {
-        case Nil => s"""|
-                        |-- NO ADDED COLUMNS CAN BE EXPRESSED IN SQL MIGRATION
-                        |
-                        |COMMENT ON TABLE $dbSchema.$tableName IS '${maybeIncUpperBound.getOrElse(migrations.last._1).toSchemaUri}';
-                        |""".stripMargin
-        case h :: t => s"""|
-                          |BEGIN TRANSACTION;
-                           |
-                           |${(h :: t).mkString}
-                           |  COMMENT ON TABLE $dbSchema.$tableName IS '${maybeIncUpperBound.getOrElse(migrations.last._1).toSchemaUri}';
-                           |
-                           |END TRANSACTION;""".stripMargin
-      })
+      outTransactionToSql(tableName, dbSchema, maybeExclLowerBound, maybeIncUpperBound) +
+      inTransactionToSql(tableName, dbSchema, maybeExclLowerBound, maybeIncUpperBound)
 
   def ++(that: Migrations): Migrations = Migrations(migrations ++ that.migrations)
 }
