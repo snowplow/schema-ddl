@@ -12,7 +12,7 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.bigquery
 
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.baseTypes._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.numericType._
 /** BigQuery field type; "array" and "null" are expressed via `Mode` */
 sealed trait Type extends Product with Serializable
 
@@ -35,11 +35,11 @@ object Type {
 
   case class Record(fields: List[Field]) extends Type
 
-  def fromGenericType(`type`: BaseType) = `type` match {
-    case BaseType.Double => Float
-    case BaseType.Int32 => Integer
-    case BaseType.Int64 => Integer
-    case BaseType.Decimal(precision, scale) => Numeric(precision, scale)
+  def fromGenericType(`type`: NumericType) = `type` match {
+    case NumericType.Double => Float
+    case NumericType.Int32 => Integer
+    case NumericType.Int64 => Integer
+    case NumericType.Decimal(precision, scale) => Numeric(precision, scale)
   }
 }
 

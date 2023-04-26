@@ -16,7 +16,7 @@ import io.circe._
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.decimals
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{CommonProperties, StringProperty, NumberProperty}
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.baseTypes.NullableWrapper
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.numericType.NullableWrapper
 
 object Suggestion {
 

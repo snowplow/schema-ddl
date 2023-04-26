@@ -63,7 +63,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
           )),
           Mode.Nullable
         ),
-        Field("stringKey", Type.String,Mode.Nullable))),
+        Field("stringKey", Type.String, Mode.Nullable))),
       Mode.Nullable
     )
 
@@ -161,9 +161,9 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         |}
       """.stripMargin)
 
-    val expected = Field("foo",Type.Record(List(
-      Field("union",Type.String,Mode.Nullable)
-    )),Mode.Nullable)
+    val expected = Field("foo", Type.Record(List(
+      Field("union", Type.String, Mode.Nullable)
+    )), Mode.Nullable)
 
     Field.build("foo", input, false) must beEqualTo(expected)
   }
@@ -180,9 +180,9 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         |}
       """.stripMargin)
 
-    val expected = Field("foo",Type.Record(List(
-      Field("union",Type.String,Mode.Nullable)
-    )),Mode.Nullable)
+    val expected = Field("foo", Type.Record(List(
+      Field("union", Type.String, Mode.Nullable)
+    )), Mode.Nullable)
 
     Field.build("foo", input, false) must beEqualTo(expected)
   }
@@ -201,7 +201,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         |  }
       """.stripMargin)
 
-    val expected = Field("arrayTest",Type.Record(List(Field("imp",Type.String,Mode.Repeated))),Mode.Required)
+    val expected = Field("arrayTest", Type.Record(List(Field("imp", Type.String, Mode.Repeated))), Mode.Required)
     Field.build("arrayTest", input, true) must beEqualTo(expected)
   }
 
@@ -219,7 +219,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         |  }
       """.stripMargin)
 
-    val expected = Field("arrayTest",Type.Record(List(Field("imp",Type.String,Mode.Repeated))),Mode.Required)
+    val expected = Field("arrayTest", Type.Record(List(Field("imp", Type.String, Mode.Repeated))), Mode.Required)
     Field.build("arrayTest", input, true) must beEqualTo(expected)
   }
 

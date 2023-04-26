@@ -13,7 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import cats.Eq
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.baseTypes._
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.numericType._
 
 sealed trait Type extends Product with Serializable
 
@@ -87,11 +87,11 @@ object Type {
     }
   }
 
-  def fromGenericType(`type`: BaseType) = `type` match {
-    case BaseType.Double => Double
-    case BaseType.Int32 => Integer
-    case BaseType.Int64 => Long
-    case BaseType.Decimal(precision, scale) => DecimalPrecision.of(precision) match {
+  def fromGenericType(`type`: NumericType) = `type` match {
+    case NumericType.Double => Double
+    case NumericType.Int32 => Integer
+    case NumericType.Int64 => Long
+    case NumericType.Decimal(precision, scale) => DecimalPrecision.of(precision) match {
       case Some(value) => Decimal(value, scale)
       case None => Double
     }

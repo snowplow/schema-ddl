@@ -17,7 +17,7 @@ import com.snowplowanalytics.iglu.schemaddl.StringUtils
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{ArrayProperty, CommonProperties}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.mutate.Mutate
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.baseTypes.NullableWrapper
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion.numericType.NullableWrapper
 
 case class Field(name: String,
                  fieldType: Type,

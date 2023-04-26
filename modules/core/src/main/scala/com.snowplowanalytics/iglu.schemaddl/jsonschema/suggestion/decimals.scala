@@ -1,28 +1,28 @@
 package com.snowplowanalytics.iglu.schemaddl.jsonschema.suggestion
 
-import baseTypes._
+import numericType._
 import io.circe.Json
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.NumberProperty
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 
-object decimals {
+private[schemaddl] object decimals {
 
-  def integerType(schema: Schema): BaseType =
+  def integerType(schema: Schema): NumericType =
     (schema.minimum, schema.maximum) match {
       case (Some(min), Some(max)) =>
         val minDecimal = min.getAsDecimal
         val maxDecimal = max.getAsDecimal
-        if (maxDecimal <= Int.MaxValue && minDecimal >= Int.MinValue) BaseType.Int32
-        else if (maxDecimal <= Long.MaxValue && minDecimal >= Long.MinValue) BaseType.Int64
-        else BaseType.Decimal(
+        if (maxDecimal <= Int.MaxValue && minDecimal >= Int.MinValue) NumericType.Int32
+        else if (maxDecimal <= Long.MaxValue && minDecimal >= Long.MinValue) NumericType.Int64
+        else NumericType.Decimal(
           (maxDecimal.precision - maxDecimal.scale).max(minDecimal.precision - minDecimal.scale), 0
         )
-      case _ => BaseType.Int64
+      case _ => NumericType.Int64
     }
 
   def numericWithMultiple(mult: NumberProperty.MultipleOf.NumberMultipleOf,
                           maximum: Option[NumberProperty.Maximum],
-                          minimum: Option[NumberProperty.Minimum]): BaseType =
+                          minimum: Option[NumberProperty.Minimum]): NumericType =
     (maximum, minimum) match {
       case (Some(max), Some(min)) =>
         val topPrecision = max match {
@@ -38,10 +38,10 @@ object decimals {
             min.precision - min.scale + mult.value.scale
         }
 
-        BaseType.Decimal(topPrecision.max(bottomPrecision), mult.value.scale)
+        NumericType.Decimal(topPrecision.max(bottomPrecision), mult.value.scale)
 
       case _ =>
-        BaseType.Double
+        NumericType.Double
     }
 
 
@@ -49,11 +49,13 @@ object decimals {
     def go(scale: Int, max: BigDecimal, nullable: Boolean, enums: List[Json]): Option[NullableWrapper] =
       enums match {
         case Nil =>
-          val t = if ((scale == 0) && (max <= Int.MaxValue)) BaseType.Int32
-          else if ((scale == 0) && (max <= Long.MaxValue)) BaseType.Int64
-          else BaseType.Decimal(max.precision - max.scale + scale, scale)
+          val t = if ((scale == 0) && (max <= Int.MaxValue)) NumericType.Int32
+          else if ((scale == 0) && (max <= Long.MaxValue)) NumericType.Int64
+          else NumericType.Decimal(max.precision - max.scale + scale, scale)
 
-          Some(NullableWrapper.fromBool(t, nullable))
+          Some(if (nullable) NullableWrapper.NullableValue(t)
+          else NullableWrapper.NotNullValue(t))
+
         case Json.Null :: tail => go(scale, max, true, tail)
         case h :: tail =>
           h.asNumber.flatMap(_.toBigDecimal) match {
