@@ -42,21 +42,21 @@ object Field {
       case Some(types) if types.possiblyWithNull(CommonProperties.Type.Object) =>
         val subfields = topSchema.properties.map(_.value).getOrElse(Map.empty)
         if (subfields.isEmpty) {
-          Suggestion.finalSuggestion(topSchema, required || types.nullable)(name)
+          Suggestion.finalSuggestion(topSchema, required )(name)
         } else {
           val requiredKeys = topSchema.required.toList.flatMap(_.value)
           val fields = subfields.map { case (key, schema) =>
             build(key, schema, requiredKeys.contains(key))
           }
           val subFields = fields.toList.sortBy(field => (Mode.sort(field.mode), field.name))
-          Field(name, Type.Record(subFields), Mode.required(required || types.nullable))
+          Field(name, Type.Record(subFields), Mode.required(required  ))
         }
       case Some(types) if types.possiblyWithNull(CommonProperties.Type.Array) =>
         topSchema.items match {
           case Some(ArrayProperty.Items.ListItems(schema)) =>
             build(name, schema, false).copy(mode = Mode.Repeated)
           case _ =>
-            Suggestion.finalSuggestion(topSchema, required || types.nullable)(name)
+            Suggestion.finalSuggestion(topSchema, required )(name)
         }
       case _ =>
         Suggestion.suggestions
