@@ -56,15 +56,7 @@ object Suggestion {
           Some(name => Field(name, numericWithMultiple(mult, schema.maximum, schema.minimum), Mode.required(required)))
         case None => None
       }
-    case Some(CommonProperties.Type.Union(types)) if withNull(types, CommonProperties.Type.Number) =>
-      schema.multipleOf match {
-        case Some(NumberProperty.MultipleOf.IntegerMultipleOf(_)) =>
-          Some(name => Field(name, Type.fromGenericType(decimals.integerType(schema)), Mode.Nullable))
-        case Some(mult: NumberProperty.MultipleOf.NumberMultipleOf) =>
-          Some(name => Field(name, numericWithMultiple(mult, schema.maximum, schema.minimum), Mode.Nullable))
-        case None => None
-      }
-    case Some(CommonProperties.Type.Union(types)) if onlyNumeric(types, true) =>
+    case Some(CommonProperties.Type.Union(types)) if withNull(types, CommonProperties.Type.Number) | onlyNumeric(types, true) =>
       schema.multipleOf match {
         case Some(NumberProperty.MultipleOf.IntegerMultipleOf(_)) =>
           Some(name => Field(name, Type.fromGenericType(decimals.integerType(schema)), Mode.Nullable))
