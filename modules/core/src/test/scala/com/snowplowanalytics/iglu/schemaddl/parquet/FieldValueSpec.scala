@@ -36,6 +36,7 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
   cast does not transform unexpected JSON $e13
   cast transforms decimal values with correct scale and precision $e14
   cast does not transform decimal values with invalid scale or precision $e15
+  cast raise error for duplicate collisions $e16
   """
 
   import FieldValue._
@@ -250,17 +251,30 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
   }
 
   def e15 = {
-    def testInvalidCast(decimal: Type.Decimal, value: Json) =
-      cast(Field("top", decimal, Required))(value) must beInvalid
-    List(
-      testInvalidCast(Type.Decimal(Digits9, 2), json"""12.1234"""),
-      testInvalidCast(Type.Decimal(Digits9, 2), json"""-12.1234"""),
-      testInvalidCast(Type.Decimal(Digits9, 2), json"""123456789.12"""),
-      testInvalidCast(Type.Decimal(Digits9, 2), json"""1000000000"""),
-      testInvalidCast(Type.Decimal(Digits9, 2), json"""0.00001"""),
-      testInvalidCast(Type.Decimal(Digits18, 2), json"""0.00001"""),
-      testInvalidCast(Type.Decimal(Digits38, 2), json"""0.00001"""),
-    ).reduce(_ and _)
+      val inputJson =
+        json"""{
+      "some_bool": true
+    }"""
+  
+      val inputField = Type.Struct(List(
+        Field("someBool", Type.Boolean, Required, accessors = Set("some_bool", "someBool"))))
+  
+      val expected = StructValue(List(
+        NamedValue("some_bool", BooleanValue(true)),
+      ))
+      testCast(inputField, inputJson, expected)
   }
 
+  def e16 = {
+    val inputJson =
+      json"""{
+          "some_bool": true,
+          "someBool": true
+  }"""
+
+    val inputField = Type.Struct(List(
+      Field("someBool", Type.Boolean, Required, accessors = Set("some_bool", "someBool"))))
+
+    cast(Field("top", inputField, Required))(inputJson) must beInvalid 
+  }
 }

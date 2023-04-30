@@ -19,7 +19,12 @@ sealed trait CastError extends Product with Serializable
 object CastError {
   /** Value doesn't match expected type */
   final case class WrongType(value: Json, expected: Type) extends CastError
+
   /** Value is required by Schema, but missing in JSON object */
   final case class MissingInValue(key: String, value: Json) extends CastError
+
+  /** After normalization snake_casing, etc. names might collide. In a single schema that is not allowed. For families
+   * it should not happen. */
+  final case class DuplicateNameAfterNormalization(accessors: List[String], values: List[Json]) extends CastError
 }
 

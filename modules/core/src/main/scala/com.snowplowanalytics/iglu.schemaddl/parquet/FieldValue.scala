@@ -25,28 +25,39 @@ sealed trait FieldValue extends Product with Serializable
 
 object FieldValue {
   case object NullValue extends FieldValue
+
   case class JsonValue(value: Json) extends FieldValue
+
   case class StringValue(value: String) extends FieldValue
+
   case class BooleanValue(value: Boolean) extends FieldValue
+
   case class IntValue(value: Int) extends FieldValue
+
   case class LongValue(value: Long) extends FieldValue
+
   case class DoubleValue(value: Double) extends FieldValue
+
   case class DecimalValue(value: BigDecimal, precision: Type.DecimalPrecision) extends FieldValue
+
   case class TimestampValue(value: java.sql.Timestamp) extends FieldValue
+
   case class DateValue(value: java.sql.Date) extends FieldValue
+
   case class StructValue(values: List[NamedValue]) extends FieldValue
+
   case class ArrayValue(values: List[FieldValue]) extends FieldValue
 
   /* Part of [[StructValue]] */
   case class NamedValue(name: String, value: FieldValue)
 
   /**
-    * Turn JSON  value into Parquet-compatible row, matching schema defined in `field`
-    * Top-level function, called only one columns
-    * Performs following operations in order to prevent runtime insert failure:
-    * * removes unexpected additional properties
-    * * turns all unexpected types into string
-    */
+   * Turn JSON  value into Parquet-compatible row, matching schema defined in `field`
+   * Top-level function, called only one columns
+   * Performs following operations in order to prevent runtime insert failure:
+   * * removes unexpected additional properties
+   * * turns all unexpected types into string
+   */
   def cast(field: Field)(value: Json): CastResult =
     value match {
       case Json.Null =>
@@ -58,8 +69,8 @@ object FieldValue {
     }
 
   /**
-    * Turn primitive JSON or JSON object into Parquet row
-    */
+   * Turn primitive JSON or JSON object into Parquet row
+   */
   private def castNonNull(fieldType: Type): Json => CastResult =
     fieldType match {
       case Type.Json => castJson
@@ -144,13 +155,20 @@ object FieldValue {
     }
 
   /** Part of `castStruct`, mapping sub-fields of a JSON object into `FieldValue`s */
-  private def castStructField(field: Field, jsonObject: Map[String, Json]): ValidatedNel[CastError, NamedValue] =
-    jsonObject.get(field.name) match {
-      case Some(json) => cast(field)(json).map(NamedValue(Field.normalizeName(field), _))
-      case None =>
-        field.nullability match {
-          case Type.Nullability.Nullable => NamedValue(Field.normalizeName(field), NullValue).validNel
-          case Type.Nullability.Required => MissingInValue(field.name, Json.fromFields(jsonObject)).invalidNel
-        }
+  private def castStructField(field: Field, jsonObject: Map[String, Json]): ValidatedNel[CastError, NamedValue] = {
+    val values = field.accessors.toList.map(jsonObject.get).flatMap(_.toList)
+
+    if (values.size > 1) {
+      DuplicateNameAfterNormalization(field.accessors.toList, values).invalidNel
+    } else {
+      values.headOption match {
+        case Some(json) => cast(field)(json).map(NamedValue(Field.normalizeName(field), _))
+        case None =>
+          field.nullability match {
+            case Type.Nullability.Nullable => NamedValue(Field.normalizeName(field), NullValue).validNel
+            case Type.Nullability.Required => MissingInValue(field.name, Json.fromFields(jsonObject)).invalidNel
+          }
+      }
     }
+  }
 }
