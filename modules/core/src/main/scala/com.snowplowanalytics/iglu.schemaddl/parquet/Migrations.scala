@@ -160,7 +160,7 @@ object Migrations {
 
         val mergedType = MigrationTypePair(path, sourceField.fieldType, targetField.fieldType).migrations
 
-        MergedField(mergedType.migrations ++ migrations, mergedType.result.map(Field(sourceField.name, _, mergedNullability)))
+        MergedField(mergedType.migrations ++ migrations, mergedType.result.map(Field(sourceField.name, _, mergedNullability, sourceField.accessors ++ targetField.accessors)))
     }
   }
 

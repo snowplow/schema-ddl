@@ -19,9 +19,14 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.mutate.Mutate
 
 case class Field(name: String, 
                  fieldType: Type, 
-                 nullability: Type.Nullability)
+                 nullability: Type.Nullability,
+                 accessors: Set[String])
 
 object Field {
+  
+  def apply(name: String,
+            fieldType: Type,
+            nullability: Type.Nullability): Field = Field(name, fieldType, nullability, Set(name))
 
   def build(name: String, topSchema: Schema, enforceValuePresence: Boolean): Field = {
     val constructedType = buildType(Mutate.forStorage(topSchema))
