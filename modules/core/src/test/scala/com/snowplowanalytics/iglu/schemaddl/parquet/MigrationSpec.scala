@@ -3,6 +3,7 @@ package com.snowplowanalytics.iglu.schemaddl.parquet
 import cats.syntax.either._
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers
 import com.snowplowanalytics.iglu.schemaddl.parquet.Migrations._
+import com.snowplowanalytics.iglu.schemaddl.parquet.Type.Struct
 
 class MigrationSpec extends org.specs2.Specification {
 
@@ -24,6 +25,7 @@ class MigrationSpec extends org.specs2.Specification {
         Produce migration for nullables arrays $e12
         Preserve ordering in nested arrays and structs $e13
         Suggest version change correctly $e14
+        Collapse field name collisions $e15
   """
 
   def e1 = {
@@ -514,6 +516,32 @@ class MigrationSpec extends org.specs2.Specification {
 
     isSchemaMigrationBreakingFromMigrations(major) shouldEqual true
     isSchemaMigrationBreakingFromMigrations(patch) shouldEqual false
+  }
+  
+  def e15 = {
+    val input1 = SpecHelpers.parseSchema(
+      """
+        |{"type": "object",
+        |"properties": {
+        |  "collidingKey": { "type": "string" }
+        |}
+        |}
+      """.stripMargin)
+    val schema1 = Field.normalize(Field.build("top", input1, enforceValuePresence = false))
+
+    val input2 = SpecHelpers.parseSchema(
+      """
+        |{"type": "object",
+        |"properties": {
+        |  "colliding_key": { "type": "string" }
+        |}
+        |}
+          """.stripMargin)
+    val schema2 =  Field.normalize(Field.build("top", input2, enforceValuePresence = false))
+
+    Migrations.mergeSchemas(schema1, schema2).map(
+      f => f.fieldType.asInstanceOf[Struct].fields.head.accessors.mkString(",")
+    ) should beRight("colliding_key,collidingKey")
   }
 }
 
