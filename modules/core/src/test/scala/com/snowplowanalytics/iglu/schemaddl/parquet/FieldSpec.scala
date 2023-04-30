@@ -29,6 +29,8 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   build generates repeated string for empty schema in items $e8
   build generates repeated record for nullable array $e9
   normalName handles camel case and disallowed characters $e10
+  normalize would collapse colliding names $e11
+  normalize would collapse colliding names with deterministic type selection $e12
   """
 
   // a helper
@@ -295,6 +297,82 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       (fieldNormalName("_.test1,test2.test3;test4") must beEqualTo("__test1_test2_test3_test4")) and
       (fieldNormalName(",.;:") must beEqualTo("____")) and
       (fieldNormalName("1test1,Test2Test3Test4.test5;test6") must beEqualTo("1test1_test2_test3_test4_test5_test6")) 
+  }
+
+  def e11 = {
+    Field.normalize(Field(
+      name = "top",
+      fieldType = Type.Struct(
+        fields = List(
+          Field(
+            name = "_ga",
+            fieldType = Type.Integer,
+            nullability = Nullable
+          ),
+          Field(
+            name = "__b",
+            fieldType = Type.Integer,
+            nullability = Nullable
+          ),
+          Field(
+            name = "_Ga",
+            fieldType = Type.Integer,
+            nullability = Nullable
+          )
+        )
+      ),
+      nullability = Nullable)) must equalTo(Field(
+      name = "top",
+      fieldType = Type.Struct(
+        fields = List(
+          Field(
+            name = "_ga",
+            fieldType = Type.Integer,
+            nullability = Nullable,
+            accessors = Set("_ga", "_Ga")
+          ),
+          Field(
+            name = "__b",
+            fieldType = Type.Integer,
+            nullability = Nullable
+          ),
+        )
+      ),
+      nullability = Nullable))
+  }
+
+  def e12 = {
+    val fields = List(
+      Field(
+        name = "xyz",
+        fieldType = Type.Integer,
+        nullability = Nullable
+      ),
+      Field(
+        name = "XYZ",
+        fieldType = Type.String,
+        nullability = Nullable
+      )
+    )
+
+    val input1 = Field.normalize(Field(name = "top", fieldType = Type.Struct( fields = fields), nullability = Nullable))
+    val input2 = Field.normalize(Field(name = "top", fieldType = Type.Struct( fields = fields.reverse), nullability = Nullable))
+
+    val expected = Field(
+      name = "top",
+      fieldType = Type.Struct(
+        fields = List(
+          Field(
+            name = "xyz",
+            fieldType = Type.String,
+            nullability = Nullable,
+            accessors = Set("xyz", "XYZ")
+          ),
+        )
+      ),
+      nullability = Nullable)
+
+    (input1 must_== expected) and (input2 must_== expected)
   }
 
   private def fieldNormalName(name: String) = Field.normalizeName(Field(name, Type.String, nullability = Nullable))
