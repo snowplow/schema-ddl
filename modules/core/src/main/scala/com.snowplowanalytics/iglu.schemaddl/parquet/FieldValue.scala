@@ -36,7 +36,6 @@ object FieldValue {
   case class DateValue(value: java.sql.Date) extends FieldValue
   case class StructValue(values: List[NamedValue]) extends FieldValue
   case class ArrayValue(values: List[FieldValue]) extends FieldValue
-
   /* Part of [[StructValue]] */
   case class NamedValue(name: String, value: FieldValue)
 
@@ -145,7 +144,7 @@ object FieldValue {
 
   /** Part of `castStruct`, mapping sub-fields of a JSON object into `FieldValue`s */
   private def castStructField(field: Field, jsonObject: Map[String, Json]): ValidatedNel[CastError, NamedValue] =
-    jsonObject.get(field.name) match {
+    field.accessors.map(jsonObject.get).collectFirst { case Some(value) => value } match {
       case Some(json) => cast(field)(json).map(NamedValue(Field.normalizeName(field), _))
       case None =>
         field.nullability match {
