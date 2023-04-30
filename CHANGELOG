@@ -1,3 +1,7 @@
+Version 0.16.1 (2023-04-30)
+---------------------------
+Avoid field name collisions after snakeCase and other normalizations in parquet (#164)
+
 Version 0.16.0 (2022-08-12)
 ---------------------------
 Detect schema version drift in parquet schemas (#133)
