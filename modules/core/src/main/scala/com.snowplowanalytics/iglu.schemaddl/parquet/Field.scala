@@ -17,11 +17,16 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{ArrayProperty, CommonProperties}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.mutate.Mutate
 
-case class Field(name: String, 
-                 fieldType: Type, 
-                 nullability: Type.Nullability)
+case class Field(name: String,
+                 fieldType: Type,
+                 nullability: Type.Nullability,
+                 accessors: Set[String])
 
 object Field {
+
+  def apply(name: String,
+            fieldType: Type,
+            nullability: Type.Nullability): Field = Field(name, fieldType, nullability, Set(name))
 
   def build(name: String, topSchema: Schema, enforceValuePresence: Boolean): Field = {
     val constructedType = buildType(Mutate.forStorage(topSchema))
@@ -39,11 +44,28 @@ object Field {
 
   def normalize(field: Field): Field = {
     val fieldType = field.fieldType match {
-      case Type.Struct(fields) => Type.Struct(fields.map(normalize))
-      case Type.Array(Type.Struct(fields), nullability) => Type.Array(Type.Struct(fields.map(normalize)), nullability)
+      case Type.Struct(fields) => Type.Struct(collapseDuplicateFields(fields.map(normalize)))
+      case Type.Array(Type.Struct(fields), nullability) => Type.Array(
+        Type.Struct(collapseDuplicateFields(fields.map(normalize)))
+        , nullability)
       case other => other
     }
     field.copy(name = normalizeName(field), fieldType = fieldType)
+  }
+
+  private def collapseDuplicateFields(fields: List[Field]): List[Field] = {
+    val normFields = fields.map(normalize)
+    val endMap = normFields
+      .groupBy(_.name)
+      .map {
+        case (key, value) => (key, value.reduce((f1, f2) => f1.copy(accessors = f1.accessors ++ f2.accessors)))
+      }
+    normFields
+      .map(_.name)
+      .distinct
+      .foldRight(List.empty[Field])(
+        (name, acc) => acc :+ endMap(name)
+      )
   }
 
   private[parquet] def normalizeName(field: Field): String =
