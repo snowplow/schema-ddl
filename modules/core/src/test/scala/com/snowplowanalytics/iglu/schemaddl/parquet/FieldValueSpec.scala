@@ -36,6 +36,7 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
   cast does not transform unexpected JSON $e13
   cast transforms decimal values with correct scale and precision $e14
   cast does not transform decimal values with invalid scale or precision $e15
+  cast select any valid match when there are multiple accessors $e16
   """
 
   import FieldValue._
@@ -261,6 +262,24 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
       testInvalidCast(Type.Decimal(Digits18, 2), json"""0.00001"""),
       testInvalidCast(Type.Decimal(Digits38, 2), json"""0.00001"""),
     ).reduce(_ and _)
+  }
+
+  def e16 = {
+    val inputField = Type.Struct(List(
+      Field("xyz", Type.Integer, Nullable, Set("xyz", "XYZ"))))
+
+    List(
+      json"""{"xyz": 42, "XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", IntValue(42)))),
+      json"""{"XYZ": 42, "xyz": "invalid"}""" -> StructValue(List(NamedValue("xyz", IntValue(42)))),
+      json"""{"xyz": null, "XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
+      json"""{"XYZ": null, "xyz": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
+      json"""{"XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
+    )
+    .map { case (json, expected) =>
+      testCast(inputField, json, expected)
+    }
+    .reduce(_ and _)
+
   }
 
 }

@@ -14,7 +14,7 @@ package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import io.circe._
 import cats.implicits._
-import cats.data.ValidatedNel
+import cats.data.{ValidatedNel, Validated}
 
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -144,12 +144,27 @@ object FieldValue {
 
   /** Part of `castStruct`, mapping sub-fields of a JSON object into `FieldValue`s */
   private def castStructField(field: Field, jsonObject: Map[String, Json]): ValidatedNel[CastError, NamedValue] =
-    field.accessors.map(jsonObject.get).collectFirst { case Some(value) => value } match {
-      case Some(json) => cast(field)(json).map(NamedValue(Field.normalizeName(field), _))
-      case None =>
-        field.nullability match {
-          case Type.Nullability.Nullable => NamedValue(Field.normalizeName(field), NullValue).validNel
-          case Type.Nullability.Required => MissingInValue(field.name, Json.fromFields(jsonObject)).invalidNel
+    field.accessors
+      .toList
+      .map { name =>
+        jsonObject.get(name) match {
+          case Some(json) => cast(field)(json).map(NamedValue(Field.normalizeName(field), _))
+          case None =>
+            field.nullability match {
+              case Type.Nullability.Nullable => NamedValue(Field.normalizeName(field), NullValue).validNel
+              case Type.Nullability.Required => MissingInValue(field.name, Json.fromFields(jsonObject)).invalidNel
+            }
         }
-    }
+      }
+      .reduce[ValidatedNel[CastError, NamedValue]] {
+        case (Validated.Valid(f), Validated.Invalid(_)) => Validated.Valid(f)
+        case (Validated.Invalid(_), Validated.Valid(f)) => Validated.Valid(f)
+        case (Validated.Valid(f), Validated.Valid(NamedValue(_, NullValue))) => Validated.Valid(f)
+        case (Validated.Valid(NamedValue(_, NullValue)), Validated.Valid(f)) => Validated.Valid(f)
+        case (Validated.Valid(f), Validated.Valid(_)) =>
+          // We must non-deterministically pick on or the other
+          Validated.Valid(f)
+        case (Validated.Invalid(f), Validated.Invalid(_)) =>
+          Validated.Invalid(f)
+      }
 }

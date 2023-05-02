@@ -30,6 +30,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   build generates repeated record for nullable array $e9
   normalName handles camel case and disallowed characters $e10
   normalize would collapse colliding names $e11
+  normalize would collapse colliding names with deterministic type selection $e12
   """
 
   // a helper
@@ -338,6 +339,40 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
         )
       ),
       nullability = Nullable))
+  }
+
+  def e12 = {
+    val fields = List(
+      Field(
+        name = "xyz",
+        fieldType = Type.Integer,
+        nullability = Nullable
+      ),
+      Field(
+        name = "XYZ",
+        fieldType = Type.String,
+        nullability = Nullable
+      )
+    )
+
+    val input1 = Field.normalize(Field(name = "top", fieldType = Type.Struct( fields = fields), nullability = Nullable))
+    val input2 = Field.normalize(Field(name = "top", fieldType = Type.Struct( fields = fields.reverse), nullability = Nullable))
+
+    val expected = Field(
+      name = "top",
+      fieldType = Type.Struct(
+        fields = List(
+          Field(
+            name = "xyz",
+            fieldType = Type.String,
+            nullability = Nullable,
+            accessors = Set("xyz", "XYZ")
+          ),
+        )
+      ),
+      nullability = Nullable)
+
+    (input1 must_== expected) and (input2 must_== expected)
   }
 
   private def fieldNormalName(name: String) = Field.normalizeName(Field(name, Type.String, nullability = Nullable))

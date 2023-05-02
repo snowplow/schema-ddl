@@ -56,8 +56,10 @@ object Field {
   private def collapseDuplicateFields(normFields: List[Field]): List[Field] = {
     val endMap = normFields
       .groupBy(_.name)
-      .map {
-        case (key, value) => (key, value.reduce((f1, f2) => f1.copy(accessors = f1.accessors ++ f2.accessors)))
+      .map { case (key, fs) =>
+        // Use `min` to deterministically pick the same accessor each time when choosing the type
+        val lowest = fs.minBy(f => f.accessors.min)
+        (key, lowest.copy(accessors = fs.flatMap(_.accessors).toSet))
       }
     normFields
       .map(_.name)
