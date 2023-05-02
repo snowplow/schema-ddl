@@ -1,3 +1,8 @@
+Version 0.18.1 (2023-05-03)
+---------------------------
+Avoid field name collisions after snakeCase and other normalizations in parquet (#164)
+Drop not null constraint in parquet migrations, when required field is removed from new version (close #168)
+
 Version 0.18.0 (2023-04-13)
 ---------------------------
 Allow supersededBy and supersedes properties in a schema (#155)
