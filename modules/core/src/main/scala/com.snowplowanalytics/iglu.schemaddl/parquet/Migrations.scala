@@ -88,7 +88,7 @@ object Migrations {
             migrations ++= forwardMigration.flatMap(_.migrations)
 
             migrations ++= reverseMigration.flatMap(_.migrations.flatMap {
-              case KeyRemoval(path, value) => List(KeyAddition(path, value)) 
+              case KeyRemoval(path, value) => List(KeyAddition(path, value))
               case _ => Nil // discard the modifications as they would have been detected in forward migration
             })
 
@@ -104,7 +104,10 @@ object Migrations {
                 case _ => t
               }
             }
-            val srcFields = allSrcFields.filter(srcField => !tgtFieldNames.contains(srcField.name))
+            val srcFields = allSrcFields.filter(srcField => !tgtFieldNames.contains(srcField.name)).map(
+              // drop not null constrains from removed fields.
+              _.copy(nullability = Type.Nullability.Nullable)
+            )
 
             // failed migration would produce no fields in source
             if (allSrcFields.isEmpty) None else Type.Struct(reorderedTgtFields ++ srcFields).some
