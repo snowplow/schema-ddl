@@ -1,3 +1,7 @@
+Version 0.18.2 (2023-05-05)
+---------------------------
+Drop not null constraint in parquet migrations, when required field is added from new version (#170)
+
 Version 0.18.1 (2023-05-03)
 ---------------------------
 Avoid field name collisions after snakeCase and other normalizations in parquet (#164)
