@@ -27,6 +27,7 @@ class MigrationSpec extends org.specs2.Specification {
         Suggest version change correctly $e14
         Collapse field name collisions $e15
         Drop not null constraint when field is removed in next generation $e16
+        Drop not null constraint when field is added in next generation $e17
   """
 
   def e1 = {
@@ -251,8 +252,7 @@ class MigrationSpec extends org.specs2.Specification {
         |         "properties": {
         |           "nestedKey1": { "type": "string" },
         |           "nestedKey2": { "type": ["integer", "null"] }
-        |         },
-        |         "required": ["nestedKey3"]
+        |         }
         |       }
         |    }
         |}
@@ -272,8 +272,7 @@ class MigrationSpec extends org.specs2.Specification {
         |           "nestedKey1": { "type": "string" },
         |           "nestedKey2": { "type": ["integer", "null"] },
         |           "nestedKey3": { "type": "boolean" }
-        |         },
-        |         "required": ["nestedKey3"]
+        |         }
         |       }
         |    }
         |}
@@ -300,8 +299,7 @@ class MigrationSpec extends org.specs2.Specification {
         |         "properties": {
         |           "nestedKey1": { "type": "string" },
         |           "nestedKey2": { "type": ["integer", "null"] }
-        |         },
-        |         "required": ["nestedKey3"]
+        |         }
         |       }
         |    }
         |}
@@ -564,6 +562,34 @@ class MigrationSpec extends org.specs2.Specification {
       f => f.fieldType.asInstanceOf[Struct].fields.last.nullability.nullable
     ) should beRight(true)
     
+  }
+
+  def e17 = {
+    val input1 = SpecHelpers.parseSchema(
+      """
+        |{"type": "object",
+        |"properties": {
+        |  "k1": { "type": "string" } 
+        |}
+        |}
+    """.stripMargin)
+    val schema1 = Field.normalize(Field.build("top", input1, enforceValuePresence = false))
+
+    val input2 = SpecHelpers.parseSchema(
+      """
+        |{"type": "object",
+        |"properties": {
+        |  "k2": { "type": "string" }
+        |},
+        |  "required" : ["k2"]
+        |}
+        """.stripMargin)
+    val schema2 = Field.normalize(Field.build("top", input2, enforceValuePresence = false))
+
+    Migrations.mergeSchemas(schema1, schema2).map(
+      f => f.fieldType.asInstanceOf[Struct].fields.forall(_.nullability.nullable)
+    ) should beRight(true)
+
   }
 }
 

@@ -143,7 +143,7 @@ object Migrations {
 
   private case class MigrationFieldPair(path: ParquetSchemaPath, sourceField: Field, maybeTargetField: Option[Field]) {
     def migrations: MergedField = maybeTargetField match {
-      case None => MergedField(Set(KeyRemoval(path, sourceField.fieldType)), sourceField.some) // target schema does not have this field
+      case None => MergedField(Set(KeyRemoval(path, sourceField.fieldType)), sourceField.copy(nullability = Type.Nullability.Nullable).some) // target schema does not have this field
       case Some(targetField) =>
         var migrations: ParquetSchemaMigrations = Set.empty[ParquetMigration]
         if (sourceField == targetField) {
@@ -162,6 +162,7 @@ object Migrations {
         }
 
         val mergedType = MigrationTypePair(path, sourceField.fieldType, targetField.fieldType).migrations
+
 
         MergedField(mergedType.migrations ++ migrations, mergedType.result.map(Field(sourceField.name, _, mergedNullability, sourceField.accessors ++ targetField.accessors)))
     }
