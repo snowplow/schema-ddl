@@ -19,8 +19,9 @@ import org.specs2.matcher.MatchResult
 
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.Nullability.{Nullable, Required}
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.DecimalPrecision.{Digits9, Digits18, Digits38}
+import com.snowplowanalytics.iglu.schemaddl.parquet.Caster.NamedValue
 
-class FieldValueSpec extends org.specs2.Specification { def is = s2"""
+class CasterSpec extends org.specs2.Specification { def is = s2"""
   cast transforms any primitive value $e1
   cast transforms a UTC timestamp value $e2
   cast transforms a non-UTC timestamp value $e3
@@ -39,15 +40,15 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
   cast select any valid match when there are multiple accessors $e16
   """
 
-  import FieldValue._
+  import ExampleFieldValue._
 
   // a helper
-  def testCast(fieldType: Type, value: Json, expected: FieldValue): MatchResult[CastResult] =
+  def testCast(fieldType: Type, value: Json, expected: ExampleFieldValue): MatchResult[Caster.Result[ExampleFieldValue]] =
     List(
-      cast(Field("top", fieldType, Required))(value) must beValid(expected),
-      cast(Field("top", fieldType, Nullable))(value) must beValid(expected),
-      cast(Field("top", fieldType, Nullable))(Json.Null) must beValid[FieldValue](NullValue),
-      cast(Field("top", fieldType, Required))(Json.Null) must beInvalid
+      Caster.cast(caster, Field("top", fieldType, Required), value) must beValid(expected),
+      Caster.cast(caster, Field("top", fieldType, Nullable), value) must beValid(expected),
+      Caster.cast(caster, Field("top", fieldType, Nullable), Json.Null) must beValid[ExampleFieldValue](NullValue),
+      Caster.cast(caster, Field("top", fieldType, Required), Json.Null) must beInvalid
     ).reduce(_ and _)
 
   def e1 = {
@@ -210,7 +211,7 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
 
   def e13 = {
     def testInvalidCast(fieldType: Type, value: Json) =
-      cast(Field("top", fieldType, Required))(value) must beInvalid
+      Caster.cast(caster, Field("top", fieldType, Required), value) must beInvalid
     List(
       testInvalidCast(Type.String, json"""42"""),
       testInvalidCast(Type.String, json"""true"""),
@@ -227,7 +228,7 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
 
   def e14 = {
     def testDecimal(decimal: Type.Decimal, value: Json, expectedLong: Long, expectedScale: Int) =
-      cast(Field("top", decimal, Required))(value) must beValid.like {
+      Caster.cast(caster, Field("top", decimal, Required), value) must beValid.like {
         case DecimalValue(bd, digits) =>
           (digits must_== decimal.precision) and
           (bd.underlying.unscaledValue.longValue must_== expectedLong) and
@@ -252,7 +253,7 @@ class FieldValueSpec extends org.specs2.Specification { def is = s2"""
 
   def e15 = {
     def testInvalidCast(decimal: Type.Decimal, value: Json) =
-      cast(Field("top", decimal, Required))(value) must beInvalid
+      Caster.cast(caster, Field("top", decimal, Required), value) must beInvalid
     List(
       testInvalidCast(Type.Decimal(Digits9, 2), json"""12.1234"""),
       testInvalidCast(Type.Decimal(Digits9, 2), json"""-12.1234"""),

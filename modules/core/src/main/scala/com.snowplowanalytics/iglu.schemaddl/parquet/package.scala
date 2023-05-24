@@ -20,5 +20,6 @@ package object parquet {
   private[parquet] type Suggestion = Schema => Option[Field.NullableType]
 
   /** Result of (Schema, JSON) -> Row transformation */
+  @deprecated("Use `Cast.Result` instead", "0.20.0")
   type CastResult = ValidatedNel[CastError, FieldValue]
 }
