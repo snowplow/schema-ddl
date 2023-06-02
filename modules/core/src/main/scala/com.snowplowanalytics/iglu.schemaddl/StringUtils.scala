@@ -12,72 +12,19 @@
  */
 package com.snowplowanalytics.iglu.schemaddl
 
-// IgluCore
-import com.snowplowanalytics.iglu.core.SchemaMap
 
 /**
  * Utilities for manipulating Strings
  */
 object StringUtils {
   /**
-   * Create a Redshift Table name from a schema
-   *
-   * "iglu:com.acme/PascalCase/jsonschema/13-0-0" -> "com_acme_pascal_case_13"
-   *
-   * @param schemaMap full Schema description
-   * @return the Redshift Table name
-   */
-  def getTableName(schemaMap: SchemaMap): String = {
-    // Split the vendor's reversed domain name using underscores rather than dots
-    val snakeCaseOrganization = schemaMap
-      .schemaKey
-      .vendor
-      .replaceAll( """\.""", "_")
-      .replaceAll("-", "_")
-      .toLowerCase
-
-    // Change the name from PascalCase to snake_case if necessary
-    val snakeCaseName = snakeCase(schemaMap.schemaKey.name)
-
-    s"${snakeCaseOrganization}_${snakeCaseName}_${schemaMap.schemaKey.version.model}"
-  }
-
-  /**
    * Transforms CamelCase string into snake_case
    * Also replaces all hyphens with underscores
    */
   val snakeCase: String => String = str =>
     str.replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2")
-       .replaceAll("([a-z\\d])([A-Z])", "$1_$2")
-       .replaceAll("-", "_")
-       .toLowerCase
-
-  /**
-   * Checks if comma-delimited string contains only integers (including negative)
-   *
-   * @param string string with items delimited by comma
-   * @return true if string contains only integers
-   */
-  def isIntegerList(string: String): Boolean = {
-    val elems = string.split(",").toList
-    if (elems.isEmpty) { false }
-    else {
-      elems.forall { s =>
-        s.headOption match {
-          case Some('-') if s.length > 1 => s.tail.forall(_.isDigit)
-          case _                         => s.forall(_.isDigit) }
-      }
-    }
-  }
-
-  /**
-   * Utility object to match convertible strings
-   */
-  object IntegerAsString {
-    def unapply(s : String) : Option[Int] = try {
-      Some(s.toInt)
-    } catch {
-      case _: java.lang.NumberFormatException => None
-    }
-  }
+      .replaceAll("([a-z\\d])([A-Z])", "$1_$2")
+      .replaceAll("-", "_")
+      .toLowerCase
+  
 }
