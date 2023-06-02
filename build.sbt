@@ -39,20 +39,3 @@ lazy val core = project.in(file("modules/core"))
     Dependencies.Libraries.specs2Scalacheck,
     Dependencies.Libraries.specs2Cats
   ))
-
-lazy val json4s = project.in(file("modules/json4s"))
-  .settings(
-    name               := "schema-ddl-json4s",
-    description        := "Json4s-compatible entities for Schema DDL",
-  )
-  .settings(BuildSettings.basicSettigns)
-  .settings(BuildSettings.commonSettings)
-  .settings(BuildSettings.publishSettings)
-  .settings(libraryDependencies ++= Seq(
-    Dependencies.Libraries.igluCoreJson4s,
-    Dependencies.Libraries.specs2,
-    Dependencies.Libraries.scalaCheck,
-    Dependencies.Libraries.specs2Scalacheck,
-    Dependencies.Libraries.specs2Cats
-  ))
-  .dependsOn(core)
