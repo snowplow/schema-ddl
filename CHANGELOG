@@ -1,3 +1,7 @@
+Version 0.19.0 (2023-06-02)
+---------------------------
+Refactor Redshift migrations (#173)
+
 Version 0.18.2 (2023-05-05)
 ---------------------------
 Drop not null constraint in parquet migrations, when required field is added from new version (#170)
