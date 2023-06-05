@@ -247,7 +247,7 @@ class ShredModelSpec extends Specification {
           |
           |COMMENT ON TABLE s.com_acme_example_1_1_0_recovered_194359593 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
-          |Incompatible encoding in column foo old type RedshiftVarchar(20)/ZstdEncoding new type RedshiftDouble/RawEncoding""".stripMargin
+          |Incompatible types in column foo old RedshiftVarchar(20) new RedshiftDouble""".stripMargin
       )
     }
 
@@ -612,7 +612,7 @@ class ShredModelSpec extends Specification {
           |
           |COMMENT ON TABLE s.com_acme_example_1_1_0_recovered_194359593 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
-          |Incompatible encoding in column foo old type RedshiftVarchar(20)/ZstdEncoding new type RedshiftDouble/RawEncoding""".stripMargin
+          |Incompatible types in column foo old RedshiftVarchar(20) new RedshiftDouble""".stripMargin
       )
     }
 
