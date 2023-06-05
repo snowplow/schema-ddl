@@ -130,12 +130,10 @@ object ShredModel {
           .filter(col => thisLookup.contains(col.columnName))
           .parTraverse(newCol => {
             val oldCol = thisLookup(newCol.columnName)
-            val (newType, newNullability, newEncoding) = (newCol.columnType, newCol.isNullable, newCol.compressionEncoding)
-            val (oldType, oldNullability, oldEncoding) = (oldCol.columnType, oldCol.isNullable, oldCol.compressionEncoding)
+            val (newType, newNullability) = (newCol.columnType, newCol.isNullable)
+            val (oldType, oldNullability) = (oldCol.columnType, oldCol.isNullable)
             if (!oldNullability & newNullability)
               NullableRequired(oldCol).asLeft.toEitherNel
-            else if (newEncoding != oldEncoding)
-              IncompatibleEncoding(oldCol, newCol).asLeft.toEitherNel
             else newType match {
               case ColumnType.RedshiftVarchar(newSize) => oldType match {
                 case ColumnType.RedshiftVarchar(oldSize) if newSize > oldSize => VarcharExtension(oldCol, newCol).asRight

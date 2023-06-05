@@ -91,15 +91,11 @@ object Migrations {
     def report: String = this match {
       case IncompatibleTypes(old, changed) =>
         s"Incompatible types in column ${old.columnName} old ${old.columnType} new ${changed.columnType}"
-      case IncompatibleEncoding(old, changed) =>
-        s"Incompatible encoding in column ${old.columnName} old type ${old.columnType}/${old.compressionEncoding} new type ${changed.columnType}/${changed.compressionEncoding}"
       case NullableRequired(old) => s"Making required column nullable ${old.columnName}"
     }
   }
 
   case class IncompatibleTypes(old: ShredModelEntry, changed: ShredModelEntry) extends Breaking
-
-  case class IncompatibleEncoding(old: ShredModelEntry, changed: ShredModelEntry) extends Breaking
 
   case class NullableRequired(old: ShredModelEntry) extends Breaking
 }
