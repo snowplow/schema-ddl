@@ -140,6 +140,34 @@ object ShredModel {
                 case ColumnType.RedshiftVarchar(oldSize) if newSize <= oldSize => NoChanges.asRight
                 case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
               }
+              case ColumnType.RedshiftSmallInt => oldType match {
+                case ColumnType.RedshiftSmallInt => NoChanges.asRight
+                case ColumnType.RedshiftInteger => NoChanges.asRight
+                case ColumnType.RedshiftBigInt => NoChanges.asRight
+                case ColumnType.RedshiftDouble => NoChanges.asRight
+                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(0) - scale.getOrElse(0) > 5 => NoChanges.asRight
+                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
+              }
+              case ColumnType.RedshiftInteger => oldType match {
+                case ColumnType.RedshiftInteger => NoChanges.asRight
+                case ColumnType.RedshiftBigInt => NoChanges.asRight
+                case ColumnType.RedshiftDouble => NoChanges.asRight
+                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(0) - scale.getOrElse(0) > 10 => NoChanges.asRight
+                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
+              }
+              case ColumnType.RedshiftBigInt => oldType match {
+                case ColumnType.RedshiftBigInt => NoChanges.asRight
+                case ColumnType.RedshiftDouble => NoChanges.asRight
+                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(0) - scale.getOrElse(0) > 19 => NoChanges.asRight
+                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
+              }
+              case ColumnType.RedshiftDecimal(new_precision, new_scale) => oldType match {
+                case ColumnType.RedshiftDouble => NoChanges.asRight
+                case ColumnType.RedshiftDecimal(old_precision, old_scale)
+                  if old_precision.getOrElse(0) >= new_precision.getOrElse(0) &
+                    old_scale.getOrElse(0) >= new_scale.getOrElse(0) => NoChanges.asRight
+                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
+              }
               case _ if newType == oldType => NoChanges.asRight
               case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
             }
