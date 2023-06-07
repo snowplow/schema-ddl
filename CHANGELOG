@@ -1,3 +1,7 @@
+Version 0.19.2 (2023-06-07)
+---------------------------
+Allow numeric type narrowing in redshift (#179)
+
 Version 0.19.1 (2023-06-06)
 ---------------------------
 Ignore encoding changes during redshift migrations (#175)
