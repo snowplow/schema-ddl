@@ -21,6 +21,7 @@ import cats.syntax.eq._
 import cats.syntax.foldable._
 import cats.syntax.traverse._
 import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelEntry.VARCHAR_SIZE
 import io.circe.Json
 
 import scala.annotation.tailrec
@@ -60,9 +61,9 @@ private[redshift] object ColumnTypeSuggestions {
       case Some(t: Type.Union) if t.isUnion =>
         val typeSet = t.value - Type.Null
         if (typeSet == Set(Type.Boolean, Type.Integer))
-          Some(ProductType( Some(Int.MaxValue.toString.length)))
+          Some(RedshiftVarchar( Int.MaxValue.toString.length))
         else
-          Some(ProductType(None))
+          Some(RedshiftVarchar(VARCHAR_SIZE))
       case _ => None
     }
 
