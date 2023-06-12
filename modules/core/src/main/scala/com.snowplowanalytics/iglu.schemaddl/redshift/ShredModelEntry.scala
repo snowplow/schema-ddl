@@ -136,7 +136,6 @@ object ShredModelEntry {
       case RedshiftBoolean => "BOOLEAN"
       case RedshiftVarchar(size) => s"VARCHAR($size)"
       case RedshiftChar(size) => s"CHAR($size)"
-      case ProductType(size) => s"VARCHAR(${size.getOrElse(VARCHAR_SIZE)})"
     }
 
     case object RedshiftTimestamp extends ColumnType
@@ -158,13 +157,6 @@ object ShredModelEntry {
     case class RedshiftVarchar(size: Int) extends ColumnType
 
     case class RedshiftChar(size: Int) extends ColumnType
-
-    /**
-     * These predefined data types assembles into usual Redshift data types, but
-     * can store additional information such as warnings.
-     * Using to prevent output on DDL-generation step.
-     */
-    case class ProductType(size: Option[Int]) extends ColumnType
   }
 
 
