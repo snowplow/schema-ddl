@@ -204,7 +204,7 @@ class ShredModelSpec extends Specification {
               "$$schema": "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#"
             }""".schema)
 
-      isRedshiftMigrationBreaking(List(s1), s2) must beTrue
+      isRedshiftMigrationBreaking(List(s2), s1) must beTrue
     }
     
     "should make a recovery model when incompatible encodings are merged" in {
