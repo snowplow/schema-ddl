@@ -189,10 +189,6 @@ object ShredModel {
                 case ColumnType.RedshiftVarchar(oldSize) if oldSize >= 5 => NoChanges.asRight
                 case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
               }
-              case ColumnType.RedshiftChar(newSize) => oldType match {
-                case ColumnType.RedshiftVarchar(oldSize) if oldSize >= newSize => NoChanges.asRight
-                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
-              }
               case _ if newType == oldType => NoChanges.asRight
               case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
             }
