@@ -225,7 +225,7 @@ object ShredModel {
                            errors: NonEmptyList[Breaking]) extends ShredModel {
     def errorAsStrings: NonEmptyList[String] = errors.map(_.report)
 
-    val tableName = s"${baseTableName}_${schemaKey.version.addition}_${schemaKey.version.revision}_recovered_${abs(entries.show.hashCode())}"
+    val tableName = s"${baseTableName}_${schemaKey.version.revision}_${schemaKey.version.addition}_recovered_${abs(entries.show.hashCode())}"
   }
 
   def good(s: IgluSchema): GoodModel = good(s.self.schemaKey, s.schema)
