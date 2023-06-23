@@ -228,7 +228,7 @@ class ShredModelSpec extends Specification {
               }""".schema)
 
       s1.merge(s2).toTestString must beLeft(
-        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_194359593 (
+        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_0_1_recovered_194359593 (
           |  "schema_vendor"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
           |  "schema_name"    VARCHAR(128)     ENCODE ZSTD NOT NULL,
           |  "schema_format"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
@@ -245,7 +245,7 @@ class ShredModelSpec extends Specification {
           |DISTKEY (root_id)
           |SORTKEY (root_tstamp);
           |
-          |COMMENT ON TABLE s.com_acme_example_1_1_0_recovered_194359593 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+          |COMMENT ON TABLE s.com_acme_example_1_0_1_recovered_194359593 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
           |Incompatible types in column foo old RedshiftVarchar(20) new RedshiftDouble""".stripMargin
       )
@@ -272,7 +272,7 @@ class ShredModelSpec extends Specification {
               }""".schema)
 
       s1.merge(s2).toTestString must beLeft(
-        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_1202144068 (
+        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_0_1_recovered_1202144068 (
           |  "schema_vendor"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
           |  "schema_name"    VARCHAR(128)     ENCODE ZSTD NOT NULL,
           |  "schema_format"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
@@ -289,7 +289,7 @@ class ShredModelSpec extends Specification {
           |DISTKEY (root_id)
           |SORTKEY (root_tstamp);
           |
-          |COMMENT ON TABLE s.com_acme_example_1_1_0_recovered_1202144068 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+          |COMMENT ON TABLE s.com_acme_example_1_0_1_recovered_1202144068 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
           |Making required column nullable foo""".stripMargin
       )
@@ -593,7 +593,7 @@ class ShredModelSpec extends Specification {
 
       foldMapRedshiftSchemas(NonEmptyList.of(s1, s2, s3))(dummyKey1).asInstanceOf[RecoveryModel]
         .asLeft[GoodModel].toTestString must beLeft(
-        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_1_0_recovered_194359593 (
+        """CREATE TABLE IF NOT EXISTS s.com_acme_example_1_0_1_recovered_194359593 (
           |  "schema_vendor"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
           |  "schema_name"    VARCHAR(128)     ENCODE ZSTD NOT NULL,
           |  "schema_format"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
@@ -610,7 +610,7 @@ class ShredModelSpec extends Specification {
           |DISTKEY (root_id)
           |SORTKEY (root_tstamp);
           |
-          |COMMENT ON TABLE s.com_acme_example_1_1_0_recovered_194359593 IS 'iglu:com.acme/example/jsonschema/1-0-1';
+          |COMMENT ON TABLE s.com_acme_example_1_0_1_recovered_194359593 IS 'iglu:com.acme/example/jsonschema/1-0-1';
           |
           |Incompatible types in column foo old RedshiftVarchar(20) new RedshiftDouble""".stripMargin
       )
