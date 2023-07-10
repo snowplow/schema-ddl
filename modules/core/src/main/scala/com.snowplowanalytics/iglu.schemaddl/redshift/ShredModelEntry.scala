@@ -88,35 +88,38 @@ object ShredModelEntry {
     if (s == NullCharacter) "\\\\N"
     else s.replace('\t', ' ').replace('\n', ' ')
 
+  private val extraCols = List(
+    ("schema_vendor", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+    ("schema_name", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+    ("schema_format", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+    ("schema_version", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+    ("root_id", "CHAR(36)", "ENCODE RAW", "NOT NULL"),
+    ("root_tstamp", "TIMESTAMP", "ENCODE ZSTD", "NOT NULL"),
+    ("ref_root", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL"),
+    ("ref_tree", "VARCHAR(1500)", "ENCODE ZSTD", "NOT NULL"),
+    ("ref_parent", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL")
+  )
+
+  /** List of column names common across all shredded tables */
+  val commonColumnNames: List[String] = extraCols.map(_._1)
 
   sealed trait ColumnType
 
   implicit val showProps: Show[List[ShredModelEntry]] = Show.show(props => {
     val colsAsString = props.map(prop =>
-      (s""""${prop.columnName}"""", prop.columnType.show, prop.compressionEncoding.show, if (prop.isNullable) "" else "NOT NULL")
-    )
-    val extraCols = List(
-      (""""schema_vendor"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_name"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_format"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_version"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""root_id"""", "CHAR(36)", "ENCODE RAW", "NOT NULL"),
-      (""""root_tstamp"""", "TIMESTAMP", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_root"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_tree"""", "VARCHAR(1500)", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_parent"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL")
+      (prop.columnName, prop.columnType.show, prop.compressionEncoding.show, if (prop.isNullable) "" else "NOT NULL")
     )
     val allCols = extraCols ++ colsAsString
-    val (mName, mType, mComp) = allCols.foldLeft((0, 0, 0))(
+    val (mName, mType, mComp) = allCols.foldLeft((2, 0, 0))(
       (acc, col) => (
-        math.max(col._1.length, acc._1),
+        math.max(col._1.length + 2, acc._1),
         math.max(col._2.length, acc._2),
         math.max(col._3.length, acc._3),
       ))
-    val fmtStr = s"  %-${mName}s %${-mType}s %-${mComp}s %s"
+    val fmtStr = s"""  %-${mName}s %${-mType}s %-${mComp}s %s"""
 
     allCols
-      .map(cols => fmtStr.format(cols._1, cols._2, cols._3, cols._4).replaceAll("""\s+$""", ""))
+      .map(cols => fmtStr.format(s""""${cols._1}"""", cols._2, cols._3, cols._4).replaceAll("""\s+$""", ""))
       .mkString(",\n")
   })
 

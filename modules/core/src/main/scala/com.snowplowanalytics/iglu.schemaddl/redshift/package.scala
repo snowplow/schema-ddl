@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 import cats.syntax.option._
 import cats.syntax.either._
 import com.snowplowanalytics.iglu.core.SchemaKey
-import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModel.GoodModel
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModel.{GoodModel, RecoveryModel}
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations
 
 import scala.collection.mutable
@@ -24,7 +24,7 @@ package object redshift {
                              ): Either[NonEmptyList[Migrations.Breaking], List[Migrations.NonBreaking]] =
     src match {
       case Nil => Nil.asRight
-      case ::(head, tl) => getFinalMergedModel(NonEmptyList(head, tl))
+      case ::(head, tl) => foldMapMergeRedshiftSchemas(NonEmptyList(head, tl)).goodModel
         .merge(ShredModel.good(tgt))
         .leftMap(_.errors)
         .map(_.getMigrationsFor(tgt.self.schemaKey))
@@ -36,11 +36,6 @@ package object redshift {
 
   def isRedshiftMigrationBreaking(src: IgluSchema, tgt: IgluSchema): Boolean =
     assessRedshiftMigration(src, tgt).isLeft
-
-  def getFinalMergedModel(schemas: NonEmptyList[IgluSchema]): GoodModel =
-    foldMapMergeRedshiftSchemas(schemas).values.collectFirst {
-      case model: GoodModel => model
-    }.get // first schema always would be there due to Nel, so `get` is safe
 
   /**
    * Build a map between schema key and their models.
@@ -69,7 +64,6 @@ package object redshift {
     acc
   }
 
-
   /**
    * Build a map between schema key and a merged or recovered model. For example if schemas X and Y and mergable, both 
    * would link to schema XY (product).
@@ -77,28 +71,20 @@ package object redshift {
    * @param schemas - ordered list of schemas for the same family
    * @return
    */
-  def foldMapMergeRedshiftSchemas(schemas: NonEmptyList[IgluSchema]): collection.Map[SchemaKey, ShredModel] = {
+  def foldMapMergeRedshiftSchemas(schemas: NonEmptyList[IgluSchema]): MergeRedshiftSchemasResult = {
     val models = schemas.map(ShredModel.good)
     var lastGoodModel = models.head
-    val acc: mutable.Map[SchemaKey, ShredModel] = mutable.Map(models.head.schemaKey -> models.head)
+    val recoveryModels = mutable.Map.empty[SchemaKey, RecoveryModel]
 
-    // first pass to build the mapping between key and accumulated model
     models.tail.foreach { model =>
       lastGoodModel.merge(model) match {
         case Left(badModel) =>
-          acc.update(model.schemaKey, badModel)
+          recoveryModels.update(model.schemaKey, badModel)
         case Right(mergedModel) =>
-          acc.update(mergedModel.schemaKey, mergedModel)
           lastGoodModel = mergedModel
       }
     }
 
-    // seconds pass to backfill the last model version for initial keys.
-    acc.map {
-      case (k, model) => (k, if (model.isInstanceOf[GoodModel])
-        lastGoodModel
-      else
-        model)
-    }.toMap
+    MergeRedshiftSchemasResult(lastGoodModel,recoveryModels.toMap)
   }
 }
