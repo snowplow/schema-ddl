@@ -451,7 +451,7 @@ class ShredModelSpec extends Specification {
            }}
         }""".schema)
 
-      getFinalMergedModel(NonEmptyList.of(s1, s2, s3))
+      foldMapMergeRedshiftSchemas(NonEmptyList.of(s1, s2, s3)).goodModel
         .asRight[RecoveryModel].toTestString must beRight(
         """CREATE TABLE IF NOT EXISTS s.com_acme_example_1 (
           |  "schema_vendor"  VARCHAR(128)     ENCODE ZSTD NOT NULL,
@@ -524,7 +524,7 @@ class ShredModelSpec extends Specification {
            }}
         }""".schema)
 
-      getFinalMergedModel(NonEmptyList.of(s1, s2, s3)).asInstanceOf[GoodModel]
+      foldMapMergeRedshiftSchemas(NonEmptyList.of(s1, s2, s3)).goodModel
         .asRight[RecoveryModel].toTestString must beRight(
         """CREATE TABLE IF NOT EXISTS s.com_acme_example_1 (
           |  "schema_vendor"  VARCHAR(128)  ENCODE ZSTD NOT NULL,
