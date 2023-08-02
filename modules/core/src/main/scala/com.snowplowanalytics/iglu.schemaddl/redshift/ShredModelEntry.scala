@@ -88,23 +88,23 @@ object ShredModelEntry {
     if (s == NullCharacter) "\\\\N"
     else s.replace('\t', ' ').replace('\n', ' ')
 
+  val extraCols = List(
+    (""""schema_vendor"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+    (""""schema_name"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+    (""""schema_format"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+    (""""schema_version"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
+    (""""root_id"""", "CHAR(36)", "ENCODE RAW", "NOT NULL"),
+    (""""root_tstamp"""", "TIMESTAMP", "ENCODE ZSTD", "NOT NULL"),
+    (""""ref_root"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL"),
+    (""""ref_tree"""", "VARCHAR(1500)", "ENCODE ZSTD", "NOT NULL"),
+    (""""ref_parent"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL")
+  )
 
   sealed trait ColumnType
 
   implicit val showProps: Show[List[ShredModelEntry]] = Show.show(props => {
     val colsAsString = props.map(prop =>
       (s""""${prop.columnName}"""", prop.columnType.show, prop.compressionEncoding.show, if (prop.isNullable) "" else "NOT NULL")
-    )
-    val extraCols = List(
-      (""""schema_vendor"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_name"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_format"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""schema_version"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
-      (""""root_id"""", "CHAR(36)", "ENCODE RAW", "NOT NULL"),
-      (""""root_tstamp"""", "TIMESTAMP", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_root"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_tree"""", "VARCHAR(1500)", "ENCODE ZSTD", "NOT NULL"),
-      (""""ref_parent"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL")
     )
     val allCols = extraCols ++ colsAsString
     val (mName, mType, mComp) = allCols.foldLeft((0, 0, 0))(
