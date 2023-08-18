@@ -88,7 +88,7 @@ object ShredModelEntry {
     if (s == NullCharacter) "\\\\N"
     else s.replace('\t', ' ').replace('\n', ' ')
 
-  val extraCols = List(
+  private val extraCols = List(
     (""""schema_vendor"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
     (""""schema_name"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
     (""""schema_format"""", "VARCHAR(128)", "ENCODE ZSTD", "NOT NULL"),
@@ -99,6 +99,9 @@ object ShredModelEntry {
     (""""ref_tree"""", "VARCHAR(1500)", "ENCODE ZSTD", "NOT NULL"),
     (""""ref_parent"""", "VARCHAR(255)", "ENCODE ZSTD", "NOT NULL")
   )
+
+  /** List of column names common across all shredded tables */
+  val commonColumnNames: List[String] = extraCols.map(_._1.replaceAll(""""""", ""))
 
   sealed trait ColumnType
 
