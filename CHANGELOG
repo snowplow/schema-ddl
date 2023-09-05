@@ -1,3 +1,7 @@
+Version 0.20.0 (2023-09-05)
+---------------------------
+Improve foldMapMergeRedshiftSchemas signature (#192)
+
 Version 0.19.4 (2023-07-06)
 ---------------------------
 Fix recovery table name of shred model (#189)
