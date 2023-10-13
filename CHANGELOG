@@ -1,3 +1,7 @@
+Version 0.21.0 (2023-10-13)
+---------------------------
+Cast to parquet without FieldValue intermediate
+
 Version 0.20.0 (2023-09-05)
 ---------------------------
 Improve foldMapMergeRedshiftSchemas signature (#192)
