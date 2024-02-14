@@ -109,6 +109,118 @@ class ShredModelSpec extends Specification {
   }
 
   "model migrations" should {
+    "should merge with no type change (date-time)" in {
+      val s1 = ShredModel.good(dummyKey,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "string",
+           "format": "date-time"
+         }}
+      }""".schema)
+      val s2 = ShredModel.good(dummyKey1,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "string",
+           "format": "date-time"
+         }}
+      }""".schema)
+      s1.merge(s2).toTestString must beRight
+    }
+
+    "should merge with no type change (date)" in {
+      val s1 = ShredModel.good(dummyKey,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "string",
+           "format": "date"
+         }}
+      }""".schema)
+      val s2 = ShredModel.good(dummyKey1,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "string",
+           "format": "date"
+         }}
+      }""".schema)
+      s1.merge(s2).toTestString must beRight
+    }
+
+    "should merge with no type change (boolean)" in {
+      val s1 = ShredModel.good(dummyKey,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "boolean"
+         }}
+      }""".schema)
+      val s2 = ShredModel.good(dummyKey1,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "boolean"
+         }}
+      }""".schema)
+      s1.merge(s2).toTestString must beRight
+    }
+
+    "should merge with no type change (char to smaller size)" in {
+      val s1 = ShredModel.good(dummyKey,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "string",
+           "minLength": "12",
+           "maxLength": "12"
+         }}
+      }""".schema)
+      val s2 = ShredModel.good(dummyKey1,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "string",
+           "minLength": "10",
+           "maxLength": "10"
+         }}
+      }""".schema)
+      s1.merge(s2).toTestString must beRight
+    }
+
+    "should not merge with no type change (char to larger size)" in {
+      val s1 = ShredModel.good(dummyKey,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "string",
+           "minLength": "12",
+           "maxLength": "12"
+         }}
+      }""".schema)
+      val s2 = ShredModel.good(dummyKey1,
+        json"""{
+       "type": "object",
+       "properties": {
+         "foo": {
+           "type": "string",
+           "minLength": "15",
+           "maxLength": "15"
+         }}
+      }""".schema)
+      s1.merge(s2).toTestString must beLeft
+    }
+
     "should merge with varchar widening" in {
       val s1 = ShredModel.good(dummyKey,
         json"""{
@@ -294,7 +406,6 @@ class ShredModelSpec extends Specification {
           |Making required column nullable foo""".stripMargin
       )
     }
-
     
     "should make a ignore varchar narrowing" in {
       val s1 = ShredModel.good(dummyKey,
@@ -615,7 +726,6 @@ class ShredModelSpec extends Specification {
           |Incompatible types in column foo old RedshiftVarchar(20) new RedshiftDouble""".stripMargin
       )
     }
-
   }
 }
 

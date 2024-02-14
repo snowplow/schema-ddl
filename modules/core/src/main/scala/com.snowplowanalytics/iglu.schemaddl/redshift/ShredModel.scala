@@ -140,30 +140,6 @@ object ShredModel {
                 case ColumnType.RedshiftVarchar(oldSize) if newSize <= oldSize => NoChanges.asRight
                 case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
               }
-              case ColumnType.RedshiftSmallInt => oldType match {
-                case ColumnType.RedshiftSmallInt => NoChanges.asRight
-                case ColumnType.RedshiftInteger => NoChanges.asRight
-                case ColumnType.RedshiftBigInt => NoChanges.asRight
-                case ColumnType.RedshiftDouble => NoChanges.asRight
-                case ColumnType.RedshiftVarchar(oldSize) if oldSize >= 5 => NoChanges.asRight
-                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(18) - scale.getOrElse(0) >= 5 => NoChanges.asRight
-                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
-              }
-              case ColumnType.RedshiftInteger => oldType match {
-                case ColumnType.RedshiftInteger => NoChanges.asRight
-                case ColumnType.RedshiftBigInt => NoChanges.asRight
-                case ColumnType.RedshiftDouble => NoChanges.asRight
-                case ColumnType.RedshiftVarchar(oldSize) if oldSize >= 10 => NoChanges.asRight
-                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(18) - scale.getOrElse(0) >= 10 => NoChanges.asRight
-                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
-              }
-              case ColumnType.RedshiftBigInt => oldType match {
-                case ColumnType.RedshiftBigInt => NoChanges.asRight
-                case ColumnType.RedshiftDouble => NoChanges.asRight
-                case ColumnType.RedshiftVarchar(oldSize) if oldSize >= 19 => NoChanges.asRight
-                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(18) - scale.getOrElse(0) >= 19 => NoChanges.asRight
-                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
-              }
               case ColumnType.RedshiftDecimal(new_precision, new_scale) => oldType match {
                 case ColumnType.RedshiftDouble => NoChanges.asRight
                 case ColumnType.RedshiftVarchar(oldSize) if oldSize >= new_precision.getOrElse(18) => NoChanges.asRight
@@ -174,6 +150,31 @@ object ShredModel {
               }
               case ColumnType.RedshiftChar(newSize) => oldType match {
                 case ColumnType.RedshiftVarchar(oldSize) if oldSize >= newSize => NoChanges.asRight
+                case ColumnType.RedshiftChar(oldSize) if oldSize >= newSize => NoChanges.asRight
+                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
+              }
+              // above are cases where newType == oldType does not always result in NoChanges
+              case _ if newType == oldType => NoChanges.asRight
+              // below are cases where newType == oldType always result in NoChanges
+              case ColumnType.RedshiftSmallInt => oldType match {
+                case ColumnType.RedshiftInteger => NoChanges.asRight
+                case ColumnType.RedshiftBigInt => NoChanges.asRight
+                case ColumnType.RedshiftDouble => NoChanges.asRight
+                case ColumnType.RedshiftVarchar(oldSize) if oldSize >= 5 => NoChanges.asRight
+                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(18) - scale.getOrElse(0) >= 5 => NoChanges.asRight
+                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
+              }
+              case ColumnType.RedshiftInteger => oldType match {
+                case ColumnType.RedshiftBigInt => NoChanges.asRight
+                case ColumnType.RedshiftDouble => NoChanges.asRight
+                case ColumnType.RedshiftVarchar(oldSize) if oldSize >= 10 => NoChanges.asRight
+                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(18) - scale.getOrElse(0) >= 10 => NoChanges.asRight
+                case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
+              }
+              case ColumnType.RedshiftBigInt => oldType match {
+                case ColumnType.RedshiftDouble => NoChanges.asRight
+                case ColumnType.RedshiftVarchar(oldSize) if oldSize >= 19 => NoChanges.asRight
+                case ColumnType.RedshiftDecimal(precision, scale) if precision.getOrElse(18) - scale.getOrElse(0) >= 19 => NoChanges.asRight
                 case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
               }
               case ColumnType.RedshiftDate => oldType match {
@@ -189,7 +190,6 @@ object ShredModel {
                 case ColumnType.RedshiftVarchar(oldSize) if oldSize >= 5 => NoChanges.asRight
                 case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
               }
-              case _ if newType == oldType => NoChanges.asRight
               case _ => IncompatibleTypes(oldCol, newCol).asLeft.toEitherNel
             }
           })
