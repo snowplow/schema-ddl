@@ -1,3 +1,7 @@
+Version 0.22.1 (2024-02-16)
+---------------------------
+Fix casting required null field in struct (#200)
+
 Version 0.22.0 (2024-02-14)
 ---------------------------
 Fix treating no type change as incompatible (#197)
