@@ -185,6 +185,8 @@ object Caster {
         NamedValue(Field.normalizeName(field), caster.nullValue).validNel
       case CastAccumulate(None, true) if field.nullability.nullable =>
         NamedValue(Field.normalizeName(field), caster.nullValue).validNel
+      case CastAccumulate(None, true)  =>
+        WrongType(Json.Null, field.fieldType).invalidNel
       case CastAccumulate(None, _)  =>
         MissingInValue(field.name, Json.fromFields(jsonObject)).invalidNel
       case CastAccumulate(Some(Validated.Invalid(f)), _) =>
