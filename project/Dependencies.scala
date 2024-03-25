@@ -17,17 +17,17 @@ import Keys._
 object Dependencies {
   object V {
     // Scala
-    val igluCore         = "1.1.2"
-    val circe            = "0.14.3"
+    val igluCore         = "1.1.3"
+    val circe            = "0.14.6"
     val circeJackson     = "0.14.0"
     val jsonValidator    = "1.0.76"
-    val catsParse        = "0.3.9"
+    val catsParse        = "1.0.0"
     val libCompat        = "2.9.0"
     val jacksonDatabind  = "2.14.1"
 
     // Scala (test only)
-    val specs2           = "4.15.0"
-    val scalaCheck       = "1.16.0"
+    val specs2           = "4.20.0"
+    val scalaCheck       = "1.17.0"
   }
 
   object Libraries {
