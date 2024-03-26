@@ -174,16 +174,18 @@ object Caster {
       .map { name =>
         jsonObject.get(name) match {
           case Some(Json.Null) => CastAccumulate[A](None, true)
-          case None => CastAccumulate[A](None, true)
+          case None => CastAccumulate[A](None, false)
           case Some(json) => CastAccumulate(cast(caster, field, json).some, false)
         }
       }
       .reduce(_ |+| _)
 
     ca match {
-      case CastAccumulate(Some(Validated.Invalid(_)), true) if field.nullability.nullable =>
+      case CastAccumulate(Some(Validated.Invalid(_)), _) if field.nullability.nullable => 
+        // Shouldn't be an error? Regardless if any null/missing value observed, 
+        // there is no valid value and there are some accessors providing invalid value
         NamedValue(Field.normalizeName(field), caster.nullValue).validNel
-      case CastAccumulate(None, true) if field.nullability.nullable =>
+      case CastAccumulate(None, _) if field.nullability.nullable =>
         NamedValue(Field.normalizeName(field), caster.nullValue).validNel
       case CastAccumulate(None, true)  =>
         WrongType(Json.Null, field.fieldType).invalidNel

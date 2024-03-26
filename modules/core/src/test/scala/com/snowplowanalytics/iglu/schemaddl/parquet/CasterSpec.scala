@@ -17,11 +17,12 @@ import io.circe.literal._
 import cats.data.NonEmptyList
 import org.specs2.matcher.ValidatedMatchers._
 import org.specs2.matcher.MatchResult
-
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.Nullability.{Nullable, Required}
-import com.snowplowanalytics.iglu.schemaddl.parquet.Type.DecimalPrecision.{Digits9, Digits18, Digits38}
+import com.snowplowanalytics.iglu.schemaddl.parquet.Type.DecimalPrecision.{Digits18, Digits38, Digits9}
 import com.snowplowanalytics.iglu.schemaddl.parquet.Caster.NamedValue
 import com.snowplowanalytics.iglu.schemaddl.parquet.CastError._
+
+import java.time.Instant
 
 class CasterSpec extends org.specs2.Specification { def is = s2"""
   cast transforms any primitive value $e1
@@ -30,6 +31,7 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
   cast transforms a date value $e4
   cast transforms object with matching primitive fields $e5
   cast transforms object with missing nullable field $e6
+  cast transforms object with missing required field $e18
   cast transforms array values $e7
   cast transforms nullable array values $e8
   cast strips away undefined properties $e9
@@ -69,13 +71,13 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
 
   def e2 = {
     val input = json""""2022-02-02T01:02:03.123z""""
-    val expected = TimestampValue(java.sql.Timestamp.valueOf("2022-02-02 01:02:03.123"))
+    val expected = TimestampValue(Instant.parse("2022-02-02T01:02:03.123Z"))
     testCast(Type.Timestamp, input, expected)
   }
 
   def e3 = {
     val input = json""""2022-02-02T12:02:03.123+03:00""""
-    val expected = TimestampValue(java.sql.Timestamp.valueOf("2022-02-02 09:02:03.123"))
+    val expected = TimestampValue(Instant.parse("2022-02-02T09:02:03.123Z"))
     testCast(Type.Timestamp, input, expected)
   }
 
@@ -277,7 +279,8 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
       json"""{"XYZ": 42, "xyz": "invalid"}""" -> StructValue(List(NamedValue("xyz", IntValue(42)))),
       json"""{"xyz": null, "XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
       json"""{"XYZ": null, "xyz": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
-      json"""{"XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
+      json"""{"XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))), //Should be error? 
+      json"""{"xyz": "invalid", "XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))), // This one is null now! Should be error?
     )
     .map { case (json, expected) =>
       testCast(inputField, json, expected)
@@ -293,4 +296,15 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
     val expected = NonEmptyList.one(WrongType(Json.Null, Type.String))
     Caster.cast(caster, Field("top", fieldType, Nullable), inputJson) must beInvalid(expected)
   }
+
+  def e18 = {
+    val inputJson = json"""{"bar": true}"""
+    val inputField = Type.Struct(List(
+      Field("foo", Type.Integer, Required),
+      Field("bar", Type.Boolean, Required)))
+
+    val expected = NonEmptyList.one(MissingInValue("foo", json"""{"bar": true}"""))
+    Caster.cast(caster, Field("top", inputField, Nullable), inputJson) must beInvalid(expected)
+  }
+
 }
