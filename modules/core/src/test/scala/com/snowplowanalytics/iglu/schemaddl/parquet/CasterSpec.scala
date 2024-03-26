@@ -40,7 +40,8 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
   cast transforms decimal values with correct scale and precision $e14
   cast does not transform decimal values with invalid scale or precision $e15
   cast select any valid match when there are multiple accessors $e16
-  cast transforms required array values $e17
+  cast transforms required array values - null $e17
+  cast transforms required array values - no value $e18
   """
 
   import ExampleFieldValue._
@@ -288,6 +289,14 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
 
   def e17 = {
     val inputJson = json"""[{"id":  null}]"""
+    val fieldType = Type.Array(Type.Struct(List(Field("id", Type.String, Required, Set("id")))), Required)
+
+    val expected = NonEmptyList.one(WrongType(Json.Null, Type.String))
+    Caster.cast(caster, Field("top", fieldType, Nullable), inputJson) must beInvalid(expected)
+  }
+  
+  def e18 = {
+    val inputJson = json"""[{}]"""
     val fieldType = Type.Array(Type.Struct(List(Field("id", Type.String, Required, Set("id")))), Required)
 
     val expected = NonEmptyList.one(WrongType(Json.Null, Type.String))
