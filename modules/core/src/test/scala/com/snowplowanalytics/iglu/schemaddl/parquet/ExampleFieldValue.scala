@@ -28,7 +28,7 @@ object ExampleFieldValue {
   case class LongValue(value: Long) extends ExampleFieldValue
   case class DoubleValue(value: Double) extends ExampleFieldValue
   case class DecimalValue(value: BigDecimal, precision: Type.DecimalPrecision) extends ExampleFieldValue
-  case class TimestampValue(value: java.sql.Timestamp) extends ExampleFieldValue
+  case class TimestampValue(value: Instant) extends ExampleFieldValue
   case class DateValue(value: java.sql.Date) extends ExampleFieldValue
   case class StructValue(values: List[Caster.NamedValue[ExampleFieldValue]]) extends ExampleFieldValue
   case class ArrayValue(values: List[ExampleFieldValue]) extends ExampleFieldValue
@@ -44,7 +44,7 @@ object ExampleFieldValue {
     def decimalValue(unscaled: BigInt, details: Type.Decimal): ExampleFieldValue =
       DecimalValue(BigDecimal(unscaled, details.scale), details.precision)
     def dateValue(v: LocalDate): ExampleFieldValue = DateValue(java.sql.Date.valueOf(v))
-    def timestampValue(v: Instant): ExampleFieldValue = TimestampValue(java.sql.Timestamp.from(v))
+    def timestampValue(v: Instant): ExampleFieldValue = TimestampValue(v)
     def structValue(vs: List[Caster.NamedValue[ExampleFieldValue]]): ExampleFieldValue = StructValue(vs)
     def arrayValue(vs: List[ExampleFieldValue]): ExampleFieldValue = ArrayValue(vs)
   }
