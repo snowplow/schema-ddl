@@ -14,7 +14,7 @@ package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import io.circe._
 import cats.implicits._
-import cats.data.{ValidatedNel, Validated}
+import cats.data.{NonEmptyList, ValidatedNel, Validated}
 import cats.Semigroup
 
 import java.time.{Instant, LocalDate}
@@ -33,7 +33,7 @@ trait Caster[A] {
   def decimalValue(unscaled: BigInt, details: Type.Decimal): A
   def dateValue(v: LocalDate): A
   def timestampValue(v: Instant): A
-  def structValue(vs: List[Caster.NamedValue[A]]): A
+  def structValue(vs: NonEmptyList[Caster.NamedValue[A]]): A
   def arrayValue(vs: List[A]): A
 }
 

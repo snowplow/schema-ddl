@@ -268,8 +268,11 @@ private[schemaddl] object Mutate {
 
     val additionalProperties = schema.`type`.map(_.asUnion.value) match {
       case Some(set) if set.contains(CommonProperties.Type.Object) =>
-        Some(ObjectProperty.AdditionalProperties.AdditionalPropertiesAllowed(false))
-      case _ => None
+        if (hasDefinedProperties(schema))
+          Some(ObjectProperty.AdditionalProperties.AdditionalPropertiesAllowed(false))
+        else
+          schema.additionalProperties
+      case _ => schema.additionalProperties
     }
 
     schema.copy(
@@ -282,5 +285,13 @@ private[schemaddl] object Mutate {
       anyOf = schema.anyOf.map(anyOf => CommonProperties.AnyOf(anyOf.value.map(noAdditionalProperties)))
     )
   }
+
+  private def hasDefinedProperties(schema: Schema): Boolean =
+    schema.properties match {
+      case Some(p) if p.value.nonEmpty =>
+        true
+      case _ =>
+        (schema.oneOf.iterator.flatMap(_.value) ++ schema.anyOf.iterator.flatMap(_.value)).exists(hasDefinedProperties)
+    }
 
 }

@@ -12,9 +12,12 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
+import cats.data.NonEmptyList
+import cats.implicits._
+
 import com.snowplowanalytics.iglu.schemaddl.StringUtils
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
-import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{ArrayProperty, CommonProperties}
+import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{ArrayProperty, CommonProperties, ObjectProperty}
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.mutate.Mutate
 
 case class Field(name: String,
@@ -28,19 +31,17 @@ object Field {
             fieldType: Type,
             nullability: Type.Nullability): Field = Field(name, fieldType, nullability, Set(name))
 
-  def build(name: String, topSchema: Schema, enforceValuePresence: Boolean): Field = {
-    val constructedType = buildType(Mutate.forStorage(topSchema))
-    val nullability = isFieldNullable(constructedType.nullability, enforceValuePresence)
+  def build(name: String, topSchema: Schema, enforceValuePresence: Boolean): Option[Field] =
+    buildType(Mutate.forStorage(topSchema)).map { constructedType =>
+      val nullability = isFieldNullable(constructedType.nullability, enforceValuePresence)
+      Field(name, constructedType.value, nullability)
+    }
 
-    Field(name, constructedType.value, nullability)
-  }
-
-  def buildRepeated(name: String, itemSchema: Schema, enforceItemPresence: Boolean, nullability: Type.Nullability): Field = {
-    val constructedType = buildType(Mutate.forStorage(itemSchema))
-    val itemNullability = isFieldNullable(constructedType.nullability, enforceItemPresence)
-
-    Field(name, Type.Array(constructedType.value, itemNullability), nullability)
-  }
+  def buildRepeated(name: String, itemSchema: Schema, enforceItemPresence: Boolean, nullability: Type.Nullability): Option[Field] =
+    buildType(Mutate.forStorage(itemSchema)).map { constructedType =>
+      val itemNullability = isFieldNullable(constructedType.nullability, enforceItemPresence)
+      Field(name, Type.Array(constructedType.value, itemNullability), nullability)
+    }
 
   def normalize(field: Field): Field = {
     val fieldType = field.fieldType match {
@@ -53,20 +54,18 @@ object Field {
     field.copy(name = normalizeName(field), fieldType = fieldType)
   }
 
-  private def collapseDuplicateFields(normFields: List[Field]): List[Field] = {
+  private def collapseDuplicateFields(normFields: NonEmptyList[Field]): NonEmptyList[Field] = {
     val endMap = normFields
       .groupBy(_.name)
       .map { case (key, fs) =>
         // Use `min` to deterministically pick the same accessor each time when choosing the type
-        val lowest = fs.minBy(f => f.accessors.min)
-        (key, lowest.copy(accessors = fs.flatMap(_.accessors).toSet))
+        val lowest = fs.minimumBy(f => f.accessors.min)
+        (key, lowest.copy(accessors = fs.iterator.flatMap(_.accessors).toSet))
       }
     normFields
       .map(_.name)
       .distinct
-      .foldLeft(List.empty[Field])(
-        (acc, name) => acc :+ endMap(name)
-      )
+      .map(endMap(_))
   }
 
   private[parquet] def normalizeName(field: Field): String =
@@ -100,55 +99,69 @@ object Field {
     }
   }
 
-  private def buildType(topSchema: Schema): NullableType = {
+  private def buildType(topSchema: Schema): Option[NullableType] = {
     topSchema.`type` match {
       case Some(types) if types.possiblyWithNull(CommonProperties.Type.Object) =>
-        NullableType(
-          value = buildObjectType(topSchema), 
-          nullability = JsonNullability.extractFrom(types)
-        )
+        buildObjectType(topSchema).map { objectType =>
+          NullableType(
+            value = objectType,
+            nullability = JsonNullability.extractFrom(types)
+          )
+        }
 
       case Some(types) if types.possiblyWithNull(CommonProperties.Type.Array) =>
-        NullableType( 
-          value = buildArrayType(topSchema), 
-          nullability = JsonNullability.extractFrom(types)
-        )
+        buildArrayType(topSchema).map { arrayType =>
+          NullableType( 
+            value = arrayType,
+            nullability = JsonNullability.extractFrom(types)
+          )
+        }
 
       case _ =>
         provideSuggestions(topSchema) match {
-          case Some(matchingSuggestion) => matchingSuggestion
-          case None => jsonType(topSchema)
+          case Some(matchingSuggestion) => Some(matchingSuggestion)
+          case None => Some(jsonType(topSchema))
         }
     }
   }
 
-  private def buildObjectType(topSchema: Schema): Type = {
-    val subfields = topSchema.properties.map(_.value).getOrElse(Map.empty)
-    if (subfields.nonEmpty) {
-      val requiredKeys = topSchema.required.toList.flatMap(_.value)
-      val structFields = subfields
-        .toList
-        .map { case (key, schema) =>
-          val isSubfieldRequired = requiredKeys.contains(key)
-          val constructedType = buildType(schema)
-          val nullability = isFieldNullable(constructedType.nullability, isSubfieldRequired)
-          Field(key, constructedType.value, nullability)
+  private def buildObjectType(topSchema: Schema): Option[Type] = {
+    val requiredKeys = topSchema.required.toList.flatMap(_.value)
+    val subfields = topSchema.properties
+      .iterator
+      .flatMap(_.value.toList)
+      .flatMap { case (key, schema) =>
+        buildType(schema).map(key -> _)
+      }.map { case (key, constructedType) =>
+        val isSubfieldRequired = requiredKeys.contains(key)
+        val nullability = isFieldNullable(constructedType.nullability, isSubfieldRequired)
+        Field(key, constructedType.value, nullability)
+      }
+      .toList
+      .sortBy(_.name)
+
+    NonEmptyList.fromList(subfields) match {
+      case Some(nel) =>
+        Some(Type.Struct(nel))
+      case None =>
+        topSchema.additionalProperties match {
+          case Some(ObjectProperty.AdditionalProperties.AdditionalPropertiesAllowed(false)) =>
+            None
+          case _ =>
+            Some(Type.Json)
         }
-        .sortBy(_.name)
-      Type.Struct(structFields)
-    } else {
-      Type.Json
     }
   }
 
-  private def buildArrayType(topSchema: Schema): Type.Array = {
+  private def buildArrayType(topSchema: Schema): Option[Type.Array] = {
     topSchema.items match {
       case Some(ArrayProperty.Items.ListItems(schema)) =>
-        val typeOfArrayItem = buildType(schema)
-        val nullability = isFieldNullable(typeOfArrayItem.nullability, true)
-        Type.Array(typeOfArrayItem.value, nullability)
+        buildType(schema).map { typeOfArrayItem =>
+          val nullability = isFieldNullable(typeOfArrayItem.nullability, true)
+          Type.Array(typeOfArrayItem.value, nullability)
+        }
       case _ =>
-        Type.Array(Type.Json, Type.Nullability.Nullable)
+        Some(Type.Array(Type.Json, Type.Nullability.Nullable))
     }
   }
 
