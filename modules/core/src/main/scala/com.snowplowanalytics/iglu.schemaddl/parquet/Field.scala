@@ -12,7 +12,7 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
-import cats.data.NonEmptyList
+import cats.data.NonEmptyVector
 import cats.implicits._
 
 import com.snowplowanalytics.iglu.schemaddl.StringUtils
@@ -54,7 +54,7 @@ object Field {
     field.copy(name = normalizeName(field), fieldType = fieldType)
   }
 
-  private def collapseDuplicateFields(normFields: NonEmptyList[Field]): NonEmptyList[Field] = {
+  private def collapseDuplicateFields(normFields: NonEmptyVector[Field]): NonEmptyVector[Field] = {
     val endMap = normFields
       .groupBy(_.name)
       .map { case (key, fs) =>
@@ -137,10 +137,10 @@ object Field {
         val nullability = isFieldNullable(constructedType.nullability, isSubfieldRequired)
         Field(key, constructedType.value, nullability)
       }
-      .toList
+      .toVector
       .sortBy(_.name)
 
-    NonEmptyList.fromList(subfields) match {
+    NonEmptyVector.fromVector(subfields) match {
       case Some(nel) =>
         Some(Type.Struct(nel))
       case None =>

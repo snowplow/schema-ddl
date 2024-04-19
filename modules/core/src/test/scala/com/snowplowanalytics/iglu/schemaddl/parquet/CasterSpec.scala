@@ -14,7 +14,7 @@ package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import io.circe._
 import io.circe.literal._
-import cats.data.NonEmptyList
+import cats.data.{NonEmptyVector, NonEmptyList}
 import org.specs2.matcher.ValidatedMatchers._
 import org.specs2.matcher.MatchResult
 
@@ -87,11 +87,11 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
 
   def e5 = {
     val inputJson = json"""{"foo": 42, "bar": true}"""
-    val inputField = Type.Struct(NonEmptyList.of(
+    val inputField = Type.Struct(NonEmptyVector.of(
       Field("foo", Type.Integer, Nullable),
       Field("bar", Type.Boolean, Required)))
     
-    val expected = StructValue(List(
+    val expected = StructValue(Vector(
       NamedValue("foo", IntValue(42)),
       NamedValue("bar", BooleanValue(true))
     ))
@@ -100,11 +100,11 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
 
   def e6 = {
     val inputJson = json"""{"bar": true}"""
-    val inputField = Type.Struct(NonEmptyList.of(
+    val inputField = Type.Struct(NonEmptyVector.of(
       Field("foo", Type.Integer, Nullable),
       Field("bar", Type.Boolean, Required)))
     
-    val expected = StructValue(List(
+    val expected = StructValue(Vector(
       NamedValue("foo", NullValue),
       NamedValue("bar", BooleanValue(true))
     ))
@@ -115,7 +115,7 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
     val inputJson = json"""["x", "y", "z"]"""
     val inputField = Type.Array(Type.String, Type.Nullability.Required)
     
-    val expected = ArrayValue(List(StringValue("x"), StringValue("y"), StringValue("z")))
+    val expected = ArrayValue(Vector(StringValue("x"), StringValue("y"), StringValue("z")))
     testCast(inputField, inputJson, expected)
   }
 
@@ -123,7 +123,7 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
     val inputJson = json"""["x", "y", null]"""
     val inputField = Type.Array(Type.String, Type.Nullability.Nullable)
     
-    val expected = ArrayValue(List(StringValue("x"), StringValue("y"), NullValue))
+    val expected = ArrayValue(Vector(StringValue("x"), StringValue("y"), NullValue))
     testCast(inputField, inputJson, expected)
   }
 
@@ -135,13 +135,13 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
         "undefined": 42
       }"""
 
-    val inputField = Type.Struct(NonEmptyList.of(
+    val inputField = Type.Struct(NonEmptyVector.of(
       Field("someBool", Type.Boolean, Required),
       Field("repeatedInt", Type.Array(Type.Integer, Required), Required)))
 
-    val expected = StructValue(List(
+    val expected = StructValue(Vector(
       NamedValue("some_bool", BooleanValue(true)),
-      NamedValue("repeated_int", ArrayValue(List(IntValue(1), IntValue(5), IntValue(2))))
+      NamedValue("repeated_int", ArrayValue(Vector(IntValue(1), IntValue(5), IntValue(2))))
     ))
     testCast(inputField, inputJson, expected)
   }
@@ -158,25 +158,25 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
         }
       }"""
 
-    val inputField = Type.Struct(NonEmptyList.of(
+    val inputField = Type.Struct(NonEmptyVector.of(
       Field("someBool", Type.Boolean, Required),
-      Field("nested", Type.Struct(NonEmptyList.of(
+      Field("nested", Type.Struct(NonEmptyVector.of(
         Field("str", Type.String, Required),
         Field("int", Type.Integer, Nullable),
-        Field("deep", Type.Struct(NonEmptyList.of(Field("str", Type.String, Nullable))), Required),
-        Field("arr", Type.Array(Type.Struct(NonEmptyList.of(Field("a", Type.String, Required))), Required), Required)
+        Field("deep", Type.Struct(NonEmptyVector.of(Field("str", Type.String, Nullable))), Required),
+        Field("arr", Type.Array(Type.Struct(NonEmptyVector.of(Field("a", Type.String, Required))), Required), Required)
       )), Nullable)
     ))
 
-    val expected = StructValue(List(
+    val expected = StructValue(Vector(
       NamedValue("some_bool", BooleanValue(true)),
-      NamedValue("nested", StructValue(List(
+      NamedValue("nested", StructValue(Vector(
         NamedValue("str", StringValue("foo bar")),
         NamedValue("int", IntValue(3)),
-        NamedValue("deep", StructValue(List(NamedValue("str", StringValue("foo"))))),
-        NamedValue("arr", ArrayValue(List(
-          StructValue(List(NamedValue("a", StringValue("b")))),
-          StructValue(List(NamedValue("a", StringValue("d"))))
+        NamedValue("deep", StructValue(Vector(NamedValue("str", StringValue("foo"))))),
+        NamedValue("arr", ArrayValue(Vector(
+          StructValue(Vector(NamedValue("a", StringValue("b")))),
+          StructValue(Vector(NamedValue("a", StringValue("d"))))
         )))
       )))
     ))
@@ -190,9 +190,9 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
         "optional": null
       }"""
 
-    val inputField = Type.Struct(NonEmptyList.of(Field("optional", Type.String, Nullable)))
+    val inputField = Type.Struct(NonEmptyVector.of(Field("optional", Type.String, Nullable)))
 
-    val expected = StructValue(List(
+    val expected = StructValue(Vector(
       NamedValue("optional", NullValue)
     ))
     testCast(inputField, inputJson, expected)
@@ -204,9 +204,9 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
         "unionType": ["this", "is", "fallback", "strategy"]
       }"""
 
-    val inputField = Type.Struct(NonEmptyList.of(Field("unionType", Type.Json, Nullable)))
+    val inputField = Type.Struct(NonEmptyVector.of(Field("unionType", Type.Json, Nullable)))
 
-    val expected = StructValue(List(
+    val expected = StructValue(Vector(
       NamedValue("union_type", JsonValue(json"""["this","is","fallback","strategy"]"""))
     ))
     testCast(inputField, inputJson, expected)
@@ -215,7 +215,7 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
   def e13 = {
     def testInvalidCast(fieldType: Type, value: Json) =
       Caster.cast(caster, Field("top", fieldType, Required), value) must beInvalid
-    List(
+    Vector(
       testInvalidCast(Type.String, json"""42"""),
       testInvalidCast(Type.String, json"""true"""),
       testInvalidCast(Type.Boolean, json""""hello""""),
@@ -237,7 +237,7 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
           (bd.underlying.unscaledValue.longValue must_== expectedLong) and
           (bd.scale must_== expectedScale)
       }
-    List(
+    Vector(
       testDecimal(Type.Decimal(Digits9, 2), json"87.98", 8798, 2),
       testDecimal(Type.Decimal(Digits9, 2), json"-87.98", -8798, 2),
       testDecimal(Type.Decimal(Digits9, 2), json"87.98000", 8798, 2),
@@ -257,7 +257,7 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
   def e15 = {
     def testInvalidCast(decimal: Type.Decimal, value: Json) =
       Caster.cast(caster, Field("top", decimal, Required), value) must beInvalid
-    List(
+    Vector(
       testInvalidCast(Type.Decimal(Digits9, 2), json"""12.1234"""),
       testInvalidCast(Type.Decimal(Digits9, 2), json"""-12.1234"""),
       testInvalidCast(Type.Decimal(Digits9, 2), json"""123456789.12"""),
@@ -269,15 +269,15 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
   }
 
   def e16 = {
-    val inputField = Type.Struct(NonEmptyList.of(
+    val inputField = Type.Struct(NonEmptyVector.of(
       Field("xyz", Type.Integer, Nullable, Set("xyz", "XYZ"))))
 
-    List(
-      json"""{"xyz": 42, "XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", IntValue(42)))),
-      json"""{"XYZ": 42, "xyz": "invalid"}""" -> StructValue(List(NamedValue("xyz", IntValue(42)))),
-      json"""{"xyz": null, "XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
-      json"""{"XYZ": null, "xyz": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
-      json"""{"XYZ": "invalid"}""" -> StructValue(List(NamedValue("xyz", NullValue))),
+    Vector(
+      json"""{"xyz": 42, "XYZ": "invalid"}""" -> StructValue(Vector(NamedValue("xyz", IntValue(42)))),
+      json"""{"XYZ": 42, "xyz": "invalid"}""" -> StructValue(Vector(NamedValue("xyz", IntValue(42)))),
+      json"""{"xyz": null, "XYZ": "invalid"}""" -> StructValue(Vector(NamedValue("xyz", NullValue))),
+      json"""{"XYZ": null, "xyz": "invalid"}""" -> StructValue(Vector(NamedValue("xyz", NullValue))),
+      json"""{"XYZ": "invalid"}""" -> StructValue(Vector(NamedValue("xyz", NullValue))),
     )
     .map { case (json, expected) =>
       testCast(inputField, json, expected)
@@ -288,7 +288,7 @@ class CasterSpec extends org.specs2.Specification { def is = s2"""
 
   def e17 = {
     val inputJson = json"""[{"id":  null}]"""
-    val fieldType = Type.Array(Type.Struct(NonEmptyList.of(Field("id", Type.String, Required, Set("id")))), Required)
+    val fieldType = Type.Array(Type.Struct(NonEmptyVector.of(Field("id", Type.String, Required, Set("id")))), Required)
 
     val expected = NonEmptyList.one(WrongType(Json.Null, Type.String))
     Caster.cast(caster, Field("top", fieldType, Nullable), inputJson) must beInvalid(expected)

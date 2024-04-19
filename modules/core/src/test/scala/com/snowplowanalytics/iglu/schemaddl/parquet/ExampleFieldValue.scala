@@ -13,7 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import io.circe.Json
-import cats.data.NonEmptyList
+import cats.data.NonEmptyVector
 
 import java.time.{LocalDate, Instant}
 
@@ -31,8 +31,8 @@ object ExampleFieldValue {
   case class DecimalValue(value: BigDecimal, precision: Type.DecimalPrecision) extends ExampleFieldValue
   case class TimestampValue(value: java.sql.Timestamp) extends ExampleFieldValue
   case class DateValue(value: java.sql.Date) extends ExampleFieldValue
-  case class StructValue(values: List[Caster.NamedValue[ExampleFieldValue]]) extends ExampleFieldValue
-  case class ArrayValue(values: List[ExampleFieldValue]) extends ExampleFieldValue
+  case class StructValue(values: Vector[Caster.NamedValue[ExampleFieldValue]]) extends ExampleFieldValue
+  case class ArrayValue(values: Vector[ExampleFieldValue]) extends ExampleFieldValue
 
   val caster: Caster[ExampleFieldValue] = new Caster[ExampleFieldValue] {
     def nullValue: ExampleFieldValue = NullValue
@@ -46,7 +46,7 @@ object ExampleFieldValue {
       DecimalValue(BigDecimal(unscaled, details.scale), details.precision)
     def dateValue(v: LocalDate): ExampleFieldValue = DateValue(java.sql.Date.valueOf(v))
     def timestampValue(v: Instant): ExampleFieldValue = TimestampValue(java.sql.Timestamp.from(v))
-    def structValue(vs: NonEmptyList[Caster.NamedValue[ExampleFieldValue]]): ExampleFieldValue = StructValue(vs.toList)
-    def arrayValue(vs: List[ExampleFieldValue]): ExampleFieldValue = ArrayValue(vs)
+    def structValue(vs: NonEmptyVector[Caster.NamedValue[ExampleFieldValue]]): ExampleFieldValue = StructValue(vs.toVector)
+    def arrayValue(vs: Vector[ExampleFieldValue]): ExampleFieldValue = ArrayValue(vs)
   }
 }

@@ -14,7 +14,7 @@ package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import io.circe._
 import cats.implicits._
-import cats.data.{NonEmptyList, ValidatedNel, Validated}
+import cats.data.{NonEmptyVector, ValidatedNel, Validated}
 import cats.Semigroup
 
 import java.time.{Instant, LocalDate}
@@ -33,8 +33,8 @@ trait Caster[A] {
   def decimalValue(unscaled: BigInt, details: Type.Decimal): A
   def dateValue(v: LocalDate): A
   def timestampValue(v: Instant): A
-  def structValue(vs: NonEmptyList[Caster.NamedValue[A]]): A
-  def arrayValue(vs: List[A]): A
+  def structValue(vs: NonEmptyVector[Caster.NamedValue[A]]): A
+  def arrayValue(vs: Vector[A]): A
 }
 
 object Caster {
@@ -120,7 +120,6 @@ object Caster {
   private def castArray[A](caster: Caster[A], array: Type.Array, value: Json): Result[A] =
     value.asArray match {
       case Some(values) => values
-        .toList
         .map {
           case Json.Null =>
             if (array.nullability.nullable) caster.nullValue.validNel
@@ -170,7 +169,7 @@ object Caster {
   /** Part of `castStruct`, mapping sub-fields of a JSON object into `FieldValue`s */
   private def castStructField[A](caster: Caster[A], field: Field, jsonObject: Map[String, Json]): ValidatedNel[CastError, NamedValue[A]] = {
     val ca = field.accessors
-      .toList
+      .iterator
       .map { name =>
         jsonObject.get(name) match {
           case Some(Json.Null) => CastAccumulate[A](None, true)

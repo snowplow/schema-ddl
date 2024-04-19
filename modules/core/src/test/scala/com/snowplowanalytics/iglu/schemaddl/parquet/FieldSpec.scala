@@ -12,7 +12,7 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
-import cats.data.NonEmptyList
+import cats.data.NonEmptyVector
 
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
@@ -72,12 +72,12 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       """.stripMargin)
 
     val expected =
-      Type.Struct(NonEmptyList.of(
+      Type.Struct(NonEmptyVector.of(
         Field(
           name = "objectKey",
           nullability = Nullable,
           fieldType = Type.Struct(
-            NonEmptyList.of(
+            NonEmptyVector.of(
               Field("nestedKey1", Type.String,  nullability = Nullable),
               Field("nestedKey2", Type.Long,    nullability = Nullable),
               Field("nestedKey3", Type.Boolean, nullability = Required),
@@ -107,7 +107,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
 
     val expected =
       Type.Struct(
-        NonEmptyList.of(
+        NonEmptyVector.of(
           Field("numeric1", Type.Double, nullability = Nullable),
           Field("numeric2", Type.Long,   nullability = Required),
           Field("numeric3", Type.Double, nullability = Nullable),
@@ -134,7 +134,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
 
     val expected =
       Type.Array(
-        element = Type.Struct(NonEmptyList.of(
+        element = Type.Struct(NonEmptyVector.of(
           Field("bar", Type.Long,   nullability = Nullable),
           Field("foo", Type.String, nullability = Nullable)
         )),
@@ -160,7 +160,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
 
     val expected =
       Type.Array(
-        element = Type.Struct(NonEmptyList.of(
+        element = Type.Struct(NonEmptyVector.of(
           Field("bar", Type.Long,   nullability = Nullable),
           Field("foo", Type.String, nullability = Nullable)
         )),
@@ -183,7 +183,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
 
     val expected =
       Type.Struct(
-        fields = NonEmptyList.of(
+        fields = NonEmptyVector.of(
           Field(
             name = "union",
             fieldType = Type.Json,
@@ -224,7 +224,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
 
     val expected =
       Type.Struct(
-        fields = NonEmptyList.of(
+        fields = NonEmptyVector.of(
           Field(
             name = "union",
             fieldType = Type.Json,
@@ -252,7 +252,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
 
     val expected =
       Type.Struct(
-        fields = NonEmptyList.of(
+        fields = NonEmptyVector.of(
           Field(
             name = "imp",
             fieldType = Type.Array(Type.Json, Nullable),
@@ -280,7 +280,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
 
     val expected =
       Type.Struct(
-        fields = NonEmptyList.of(
+        fields = NonEmptyVector.of(
           Field(
             name = "imp",
             fieldType = Type.Array(Type.Boolean, Required),
@@ -330,12 +330,12 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       """.stripMargin)
 
     val expected =
-      Type.Struct(NonEmptyList.of(
+      Type.Struct(NonEmptyVector.of(
         Field(
           name = "objectKey",
           nullability = Nullable,
           fieldType = Type.Struct(
-            NonEmptyList.of(
+            NonEmptyVector.of(
               Field("nestedKey1", Type.String,  nullability = Nullable)
             )
           )
@@ -386,7 +386,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
     Field.normalize(Field(
       name = "top",
       fieldType = Type.Struct(
-        fields = NonEmptyList.of(
+        fields = NonEmptyVector.of(
           Field(
             name = "_ga",
             fieldType = Type.Integer,
@@ -407,7 +407,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       nullability = Nullable)) must equalTo(Field(
       name = "top",
       fieldType = Type.Struct(
-        fields = NonEmptyList.of(
+        fields = NonEmptyVector.of(
           Field(
             name = "_ga",
             fieldType = Type.Integer,
@@ -425,7 +425,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   }
 
   def e15 = {
-    val fields = NonEmptyList.of(
+    val fields = NonEmptyVector.of(
       Field(
         name = "xyz",
         fieldType = Type.Integer,
@@ -444,7 +444,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
     val expected = Field(
       name = "top",
       fieldType = Type.Struct(
-        fields = NonEmptyList.of(
+        fields = NonEmptyVector.of(
           Field(
             name = "xyz",
             fieldType = Type.String,

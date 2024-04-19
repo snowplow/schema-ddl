@@ -1,7 +1,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import cats.Show
-import cats.data.NonEmptyList
+import cats.data.NonEmptyVector
 import cats.syntax.all._
 import com.snowplowanalytics.iglu.schemaddl.parquet.Type.{Array, Struct}
 
@@ -93,9 +93,9 @@ object Migrations {
               case _ => Nil // discard the modifications as they would have been detected in forward migration
             })
 
-            val tgtFields = reverseMigration.toList.traverse(_.result).toList.flatten
+            val tgtFields = reverseMigration.toVector.traverse(_.result).toVector.flatten
             val tgtFieldNames = tgtFields.map(_.name)
-            val allSrcFields = forwardMigration.toList.traverse(_.result).toList.flatten
+            val allSrcFields = forwardMigration.toVector.traverse(_.result).toVector.flatten
             val allSrcFieldMap = allSrcFields.map(f => f.name -> f).toMap
             // swap fields in src and target as they would be rearranged in nested structs or arrays
             val reorderedTgtFields = tgtFields.map { t =>
@@ -105,13 +105,13 @@ object Migrations {
                 case _ => t
               }
             }
-            val srcFields: List[Field] = allSrcFields.filter(srcField => !tgtFieldNames.contains(srcField.name)).map(
+            val srcFields: Vector[Field] = allSrcFields.filter(srcField => !tgtFieldNames.contains(srcField.name)).map(
               // drop not null constrains from removed fields.
               _.copy(nullability = Type.Nullability.Nullable)
             )
 
             // failed migration would produce no fields in source
-            NonEmptyList.fromList(reorderedTgtFields ::: srcFields).map { nonEmpty =>
+            NonEmptyVector.fromVector(reorderedTgtFields ++ srcFields).map { nonEmpty =>
               Type.Struct(nonEmpty)
             }
 
