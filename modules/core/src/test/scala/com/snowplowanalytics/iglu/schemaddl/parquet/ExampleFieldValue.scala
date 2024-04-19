@@ -13,6 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import io.circe.Json
+import cats.data.NonEmptyList
 
 import java.time.{LocalDate, Instant}
 
@@ -45,7 +46,7 @@ object ExampleFieldValue {
       DecimalValue(BigDecimal(unscaled, details.scale), details.precision)
     def dateValue(v: LocalDate): ExampleFieldValue = DateValue(java.sql.Date.valueOf(v))
     def timestampValue(v: Instant): ExampleFieldValue = TimestampValue(java.sql.Timestamp.from(v))
-    def structValue(vs: List[Caster.NamedValue[ExampleFieldValue]]): ExampleFieldValue = StructValue(vs)
+    def structValue(vs: NonEmptyList[Caster.NamedValue[ExampleFieldValue]]): ExampleFieldValue = StructValue(vs.toList)
     def arrayValue(vs: List[ExampleFieldValue]): ExampleFieldValue = ArrayValue(vs)
   }
 }

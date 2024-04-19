@@ -17,7 +17,7 @@ import com.snowplowanalytics.iglu.schemaddl.SpecHelpers
 class MutateSpec extends org.specs2.Specification {
 
   def is = s2"""
-    forStorage should not make any changes to a simpe schema $common1
+    forStorage should not make any changes to a simple schema $common1
     forStorage should merge oneOf string/number into a union type $common2
     forStorage should merge oneOf enums into an extended enum $common3
     forStorage should merge anyOf string/number into a union type $common4
@@ -386,8 +386,7 @@ class MutateSpec extends org.specs2.Specification {
     val expected = SpecHelpers.parseSchema(
       """
         |{
-        |"type": "object",
-        |"additionalProperties": false
+        |"type": "object"
         |}
       """.stripMargin)
     Mutate.forStorage(input) must_== expected

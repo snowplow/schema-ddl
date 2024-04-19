@@ -60,7 +60,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
     Migrations.mergeSchemas(leanBase, schema2) should beRight(schema2) and (
       Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Schema key addition at /objectKey/string2Key")
       )
@@ -87,7 +87,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
     Migrations.mergeSchemas(leanBase, schema2).leftMap(_.map(_.toString)) should beLeft(List("Incompatible type change String to Long at /objectKey/nestedKey1")) and (
       Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Incompatible type change String to Long at /objectKey/nestedKey1")
       )
@@ -113,8 +113,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
-    
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
 
     Migrations.mergeSchemas(leanBase, schema2) should beRight(leanBase) and (
       Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Key removal at /objectKey/nestedKey3"))
@@ -145,7 +144,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
     Migrations.mergeSchemas(leanBase, schema2) should beRight(schema2) and (
       Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Schema key addition at /string2Key")
       )
@@ -171,7 +170,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
     Migrations.mergeSchemas(leanBase, schema2).leftMap(_.toString) should beLeft(Set("Incompatible type change String to Long at /stringKey"))
     Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Incompatible type change String to Long at /stringKey")
   }
@@ -193,7 +192,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
     Migrations.mergeSchemas(leanBase, schema2) should beRight(leanBase) and (
       Migrations.assessSchemaMigration(leanBase, schema2).map(_.toString) shouldEqual Set("Key removal at /stringKey"))
   }
@@ -213,7 +212,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema1 = Field.build("top", input1, enforceValuePresence = false)
+    val schema1 = Field.build("top", input1, enforceValuePresence = false).get
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -228,7 +227,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
 
     Migrations.mergeSchemas(schema1, schema2).leftMap(_.map(_.toString)) should beLeft(List(
       "Incompatible type change Long to String at /arrayKey/[arrayDown]"
@@ -258,7 +257,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema1 = Field.build("top", input1, enforceValuePresence = false)
+    val schema1 = Field.build("top", input1, enforceValuePresence = false).get
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -278,7 +277,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
 
     Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2) and (
       Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual
@@ -305,7 +304,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema1 = Field.build("top", input1, enforceValuePresence = false)
+    val schema1 = Field.build("top", input1, enforceValuePresence = false).get
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -325,7 +324,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
 
     Migrations.mergeSchemas(schema2, schema1).leftMap(_.toString) should beRight(schema2) and (
       Migrations.assessSchemaMigration(schema2, schema1).map(_.toString) shouldEqual
@@ -352,7 +351,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema1 = Field.build("top", input1, enforceValuePresence = false)
+    val schema1 = Field.build("top", input1, enforceValuePresence = false).get
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -371,7 +370,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
 
     Migrations.mergeSchemas(schema1, schema2).leftMap(_.map(_.toString)) should beLeft(List(
       "Incompatible type change String to Long at /arrayKey/[arrayDown]/nestedKey1"
@@ -400,7 +399,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema1 = Field.build("top", input1, enforceValuePresence = false)
+    val schema1 = Field.build("top", input1, enforceValuePresence = false).get
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -420,7 +419,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
 
     Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema1) and (
       Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set(
@@ -460,7 +459,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema1 = Field.build("top", input1, enforceValuePresence = false)
+    val schema1 = Field.build("top", input1, enforceValuePresence = false).get
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -493,7 +492,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema2 = Field.build("top", input2, enforceValuePresence = false)
+    val schema2 = Field.build("top", input2, enforceValuePresence = false).get
 
     Migrations.mergeSchemas(schema1, schema2).leftMap(_.toString) should beRight(schema2) and (
       Migrations.assessSchemaMigration(schema1, schema2).map(_.toString) shouldEqual Set(
@@ -519,7 +518,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
       """.stripMargin)
-    val schema1 = Field.normalize(Field.build("top", input1, enforceValuePresence = false))
+    val schema1 = Field.normalize(Field.build("top", input1, enforceValuePresence = false).get)
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -529,7 +528,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
           """.stripMargin)
-    val schema2 =  Field.normalize(Field.build("top", input2, enforceValuePresence = false))
+    val schema2 =  Field.normalize(Field.build("top", input2, enforceValuePresence = false).get)
 
     Migrations.mergeSchemas(schema1, schema2).map(
       f => f.fieldType.asInstanceOf[Struct].fields.head.accessors.mkString(",")
@@ -546,7 +545,7 @@ class MigrationSpec extends org.specs2.Specification {
         |"required" : ["k1"]
         |}
     """.stripMargin)
-    val schema1 = Field.normalize(Field.build("top", input1, enforceValuePresence = false))
+    val schema1 = Field.normalize(Field.build("top", input1, enforceValuePresence = false).get)
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -556,7 +555,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
         """.stripMargin)
-    val schema2 = Field.normalize(Field.build("top", input2, enforceValuePresence = false))
+    val schema2 = Field.normalize(Field.build("top", input2, enforceValuePresence = false).get)
 
     Migrations.mergeSchemas(schema1, schema2).map(
       f => f.fieldType.asInstanceOf[Struct].fields.last.nullability.nullable
@@ -573,7 +572,7 @@ class MigrationSpec extends org.specs2.Specification {
         |}
         |}
     """.stripMargin)
-    val schema1 = Field.normalize(Field.build("top", input1, enforceValuePresence = false))
+    val schema1 = Field.normalize(Field.build("top", input1, enforceValuePresence = false).get)
 
     val input2 = SpecHelpers.parseSchema(
       """
@@ -584,7 +583,7 @@ class MigrationSpec extends org.specs2.Specification {
         |  "required" : ["k2"]
         |}
         """.stripMargin)
-    val schema2 = Field.normalize(Field.build("top", input2, enforceValuePresence = false))
+    val schema2 = Field.normalize(Field.build("top", input2, enforceValuePresence = false).get)
 
     Migrations.mergeSchemas(schema1, schema2).map(
       f => f.fieldType.asInstanceOf[Struct].fields.forall(_.nullability.nullable)
@@ -612,5 +611,5 @@ object MigrationSpec {
       |  }
       |}
       |}
-      """.stripMargin), enforceValuePresence = false)
+      """.stripMargin), enforceValuePresence = false).get
 }
