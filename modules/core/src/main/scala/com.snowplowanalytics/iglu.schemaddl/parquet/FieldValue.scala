@@ -13,7 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import io.circe._
-import cats.data.NonEmptyList
+import cats.data.NonEmptyVector
 
 import java.time.{Instant, LocalDate}
 
@@ -33,8 +33,8 @@ object FieldValue {
   case class DecimalValue(value: BigDecimal, precision: Type.DecimalPrecision) extends FieldValue
   case class TimestampValue(value: java.sql.Timestamp) extends FieldValue
   case class DateValue(value: java.sql.Date) extends FieldValue
-  case class StructValue(values: List[NamedValue]) extends FieldValue
-  case class ArrayValue(values: List[FieldValue]) extends FieldValue
+  case class StructValue(values: Vector[NamedValue]) extends FieldValue
+  case class ArrayValue(values: Vector[FieldValue]) extends FieldValue
   /* Part of [[StructValue]] */
   case class NamedValue(name: String, value: FieldValue)
 
@@ -50,13 +50,13 @@ object FieldValue {
       DecimalValue(BigDecimal(unscaled, details.scale), details.precision)
     def dateValue(v: LocalDate): FieldValue = DateValue(java.sql.Date.valueOf(v))
     def timestampValue(v: Instant): FieldValue = TimestampValue(java.sql.Timestamp.from(v))
-    def structValue(vs: NonEmptyList[Caster.NamedValue[FieldValue]]): FieldValue =
+    def structValue(vs: NonEmptyVector[Caster.NamedValue[FieldValue]]): FieldValue =
       StructValue {
-        vs.toList.map {
+        vs.toVector.map {
           case Caster.NamedValue(n, v) => NamedValue(n, v)
         }
       }
-    def arrayValue(vs: List[FieldValue]): FieldValue = ArrayValue(vs)
+    def arrayValue(vs: Vector[FieldValue]): FieldValue = ArrayValue(vs)
   }
 
   /**

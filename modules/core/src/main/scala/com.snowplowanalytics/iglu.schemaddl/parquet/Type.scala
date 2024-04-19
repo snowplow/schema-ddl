@@ -13,7 +13,7 @@
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
 import cats.Eq
-import cats.data.NonEmptyList
+import cats.data.NonEmptyVector
 
 sealed trait Type extends Product with Serializable
 
@@ -27,7 +27,7 @@ object Type {
   case class Decimal(precision: DecimalPrecision, scale: Int) extends Type 
   case object Date extends Type 
   case object Timestamp extends Type 
-  case class Struct(fields: NonEmptyList[Field]) extends Type 
+  case class Struct(fields: NonEmptyVector[Field]) extends Type 
   case class Array(element: Type, nullability: Nullability) extends Type
 
   /* Fallback type for when json schema does not map to a parquet primitive type (e.g. unions)
