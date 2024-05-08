@@ -1,3 +1,8 @@
+Version 0.23.0 (2024-05-08)
+---------------------------
+Vector instead of List for parquet types and values (#205)
+Omit parquet field for a schema with no nested fields (#205)
+
 Version 0.22.2 (2024-03-25)
 ---------------------------
 Upgrade dependencies
