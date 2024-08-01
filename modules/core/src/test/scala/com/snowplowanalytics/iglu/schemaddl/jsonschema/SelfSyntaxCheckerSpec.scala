@@ -23,6 +23,8 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Level.{Error, Warn
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Linter.Message
 
 class SelfSyntaxCheckerSpec extends Specification {
+  val DefaultMaxJsonDepth = 10
+
   "validateSchema" should {
     "recognize invalid schema property" in {
       val jsonSchema =
@@ -72,7 +74,7 @@ class SelfSyntaxCheckerSpec extends Specification {
         ]
       }"""
 
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+      SelfSyntaxChecker.validateSchema(jsonSchema, DefaultMaxJsonDepth).toEither must beLeft.like {
         case NonEmptyList
           (Message(
             pointer,
@@ -103,7 +105,7 @@ class SelfSyntaxCheckerSpec extends Specification {
         }
       }"""
 
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+      SelfSyntaxChecker.validateSchema(jsonSchema, DefaultMaxJsonDepth).toEither must beLeft.like {
         case NonEmptyList(
           Message(
             pointer,
@@ -129,7 +131,7 @@ class SelfSyntaxCheckerSpec extends Specification {
           "properties": { }
         }"""
 
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+      SelfSyntaxChecker.validateSchema(jsonSchema, DefaultMaxJsonDepth).toEither must beLeft.like {
         case NonEmptyList
           (Message(
             pointer,
@@ -171,7 +173,7 @@ class SelfSyntaxCheckerSpec extends Specification {
             "properties": { }
           }"""
 
-        SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+        SelfSyntaxChecker.validateSchema(jsonSchema, DefaultMaxJsonDepth).toEither must beLeft.like {
           case NonEmptyList(Message(_, msg, Error), Nil) =>
             msg must contain("does not match the regex pattern")
         }
@@ -205,7 +207,7 @@ class SelfSyntaxCheckerSpec extends Specification {
             "properties": { }
           }"""
 
-        SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+        SelfSyntaxChecker.validateSchema(jsonSchema, DefaultMaxJsonDepth).toEither must beLeft.like {
           case NonEmptyList(Message(_, msg, Error), Nil) =>
             msg must contain("does not match the regex pattern")
         }
@@ -229,7 +231,7 @@ class SelfSyntaxCheckerSpec extends Specification {
         "properties": { }
       }"""
 
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+      SelfSyntaxChecker.validateSchema(jsonSchema, DefaultMaxJsonDepth).toEither must beLeft.like {
         case NonEmptyList(Message(_, msg, Error), Nil) =>
           msg must contain("does not match the regex pattern")
       }
@@ -251,7 +253,7 @@ class SelfSyntaxCheckerSpec extends Specification {
         "properties": { }
       }"""
 
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beLeft.like {
+      SelfSyntaxChecker.validateSchema(jsonSchema, DefaultMaxJsonDepth).toEither must beLeft.like {
         case NonEmptyList(Message(_, msg, Error), Nil) =>
           msg must contain("does not match the regex pattern")
       }
@@ -274,7 +276,46 @@ class SelfSyntaxCheckerSpec extends Specification {
         "properties": { }
       }"""
 
-      SelfSyntaxChecker.validateSchema(jsonSchema).toEither must beRight
+      SelfSyntaxChecker.validateSchema(jsonSchema, DefaultMaxJsonDepth).toEither must beRight
+    }
+
+    "disallow schema that exceeds maximum allowed JSON depth" in {
+      val jsonSchema =
+        json"""{
+        "$$schema" : "http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#",
+        "description": "Schema for an example event",
+        "self": {
+            "vendor": "com.snowplowanalytics",
+            "name": "example_event",
+            "format": "jsonschema",
+            "version": "1-0-0"
+        },
+        "type": "object",
+        "properties": {
+            "example_field": {
+                "type": "array",
+                "description": "the example_field is a collection of user names",
+                "users": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "maxLength": 128
+                        }
+                    },
+                    "required": [
+                        "id"
+                    ],
+                    "additionalProperties": false
+                }
+            }
+        }
+      }"""
+
+      SelfSyntaxChecker.validateSchema(jsonSchema, 5).toEither must beLeft.like {
+        case NonEmptyList(Message(_, msg, Error), Nil) =>
+          msg must contain("Maximum allowed JSON depth exceeded")
+      }
     }
   }
 }

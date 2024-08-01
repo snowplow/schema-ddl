@@ -16,11 +16,12 @@ import scala.jdk.CollectionConverters._
 
 import cats.data.{Validated, ValidatedNel, NonEmptyList}
 import cats.syntax.validated._
+import cats.syntax.either._
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.networknt.schema.{SpecVersion, JsonSchema, JsonSchemaFactory, SchemaValidatorsConfig}
 
-import io.circe.jackson.circeToJackson
+import io.circe.jackson.snowplow.{circeToJackson, CirceToJsonError}
 
 import com.snowplowanalytics.iglu.core.SelfDescribingSchema.SelfDescribingUri
 import com.snowplowanalytics.iglu.core.circe.MetaSchemas
@@ -187,42 +188,53 @@ object SelfSyntaxChecker {
       .build()
       .getSchema(new ObjectMapper().readTree(SelfSchemaText))
 
-  def validateSchema(schema: Json): ValidatedNel[Message, Unit] = {
-    val jacksonJson = circeToJackson(schema)
-    val laxValidation = V4SchemaIgluCore
-      .validate(jacksonJson)
-      .asScala
-      .map(_ -> Linter.Level.Error) // It is an error to fail validation against v4 spec
-      .toMap
-    val selfValidation = V4SchemaSelfSyntax
-      .validate(jacksonJson)
-      .asScala
-      .map(_ -> Linter.Level.Error) // It is an error to fail validation of Iglu's `$schema` and `self` properties
-      .toMap
-    val strictValidation = V4SchemaStrict
-      .validate(jacksonJson)
-      .asScala
-      .map(_ -> Linter.Level.Warning) // It is a warning to fail the strict validation
-      .toMap
+  @deprecated("Use `validateSchema(schema, maxJsonDepth)`", "0.24.0")
+  def validateSchema(schema: Json): ValidatedNel[Message, Unit] =
+    validateSchema(schema, Int.MaxValue)
 
-    (strictValidation ++ laxValidation ++ selfValidation) // Order is important: Errors override Warnings for identical messages
-      .toList
-      .map { case (message, level) =>
-        val pointer = JsonPath.parse(message.getPath).map(JsonPath.toPointer) match {
-          case Right(Right(value)) => value
-          case Right(Left(inComplete)) => inComplete
-          case Left(_) => Pointer.Root
+  def validateSchema(schema: Json, maxJsonDepth: Int): ValidatedNel[Message, Unit] =
+    circeToJackson(schema, maxJsonDepth).toValidated
+      .leftMap {
+        case CirceToJsonError.MaxDepthExceeded =>
+          NonEmptyList.one(
+            Message(Pointer.Root, CirceToJsonError.MaxDepthExceeded.message, Linter.Level.Error)
+          )
+      }
+      .andThen { jacksonJson =>
+        val laxValidation = V4SchemaIgluCore
+          .validate(jacksonJson)
+          .asScala
+          .map(_ -> Linter.Level.Error) // It is an error to fail validation against v4 spec
+          .toMap
+        val selfValidation = V4SchemaSelfSyntax
+          .validate(jacksonJson)
+          .asScala
+          .map(_ -> Linter.Level.Error) // It is an error to fail validation of Iglu's `$schema` and `self` properties
+          .toMap
+        val strictValidation = V4SchemaStrict
+          .validate(jacksonJson)
+          .asScala
+          .map(_ -> Linter.Level.Warning) // It is a warning to fail the strict validation
+          .toMap
+
+        (strictValidation ++ laxValidation ++ selfValidation) // Order is important: Errors override Warnings for identical messages
+          .toList
+          .map { case (message, level) =>
+            val pointer = JsonPath.parse(message.getPath).map(JsonPath.toPointer) match {
+              case Right(Right(value)) => value
+              case Right(Left(inComplete)) => inComplete
+              case Left(_) => Pointer.Root
+            }
+            Message(pointer, message.getMessage, level)
+          }.valid.swap match {
+          case Validated.Invalid(Nil) =>
+            ().validNel
+          case Validated.Invalid(h :: t) =>
+            NonEmptyList(h, t).invalid
+          case Validated.Valid(_) =>
+            ().validNel
         }
-        Message(pointer, message.getMessage, level)
-      }.valid.swap match {
-      case Validated.Invalid(Nil) =>
-        ().validNel
-      case Validated.Invalid(h :: t) =>
-        NonEmptyList(h, t).invalid
-      case Validated.Valid(_) =>
-        ().validNel
-    }
-  }
+      }
 
   /**
    * Validates that a self-describing JSON contains the correct schema keyword.
