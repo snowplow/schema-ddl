@@ -1,3 +1,7 @@
+Version 0.24.0 (2024-08-02)
+---------------------------
+Limit JSON depth of the schema in the validateSchema (#207)
+
 Version 0.23.0 (2024-05-08)
 ---------------------------
 Vector instead of List for parquet types and values (#205)
