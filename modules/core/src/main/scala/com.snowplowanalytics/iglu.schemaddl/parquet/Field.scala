@@ -68,9 +68,13 @@ object Field {
       .map(endMap(_))
   }
 
-  private[parquet] def normalizeName(field: Field): String =
-    StringUtils.snakeCase
-      .andThen(replaceDisallowedCharacters)(field.name)
+  // Normalize field name and prepend underscore if name starts with a number
+  private[parquet] def normalizeName(field: Field): String = {
+    val normalized = StringUtils.snakeCase.andThen(replaceDisallowedCharacters)(field.name)
+    if (normalized.nonEmpty && normalized.charAt(0).isDigit) s"_$normalized"
+    else normalized
+  }
+
 
   /**
    * Replaces disallowed parquet column characters with underscore
