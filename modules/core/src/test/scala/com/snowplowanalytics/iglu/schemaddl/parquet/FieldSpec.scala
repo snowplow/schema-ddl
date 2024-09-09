@@ -375,11 +375,11 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       (fieldNormalName("test1Test2Test3") must beEqualTo("test1_test2_test3")) and
       (fieldNormalName("Test1Test2TEST3") must beEqualTo("test1_test2_test3")) and
       (fieldNormalName("test1,test2.test3;test4") must beEqualTo("test1_test2_test3_test4")) and
-      (fieldNormalName("1test1,test2.test3;test4") must beEqualTo("1test1_test2_test3_test4")) and
+      (fieldNormalName("1test1,test2.test3;test4") must beEqualTo("_1test1_test2_test3_test4")) and
       (fieldNormalName("_50test1,test2.test3;test4") must beEqualTo("_50test1_test2_test3_test4")) and
       (fieldNormalName("_.test1,test2.test3;test4") must beEqualTo("__test1_test2_test3_test4")) and
       (fieldNormalName(",.;:") must beEqualTo("____")) and
-      (fieldNormalName("1test1,Test2Test3Test4.test5;test6") must beEqualTo("1test1_test2_test3_test4_test5_test6"))
+      (fieldNormalName("1test1,Test2Test3Test4.test5;test6") must beEqualTo("_1test1_test2_test3_test4_test5_test6"))
   }
 
   def e14 = {
