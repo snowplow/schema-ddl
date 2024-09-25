@@ -85,9 +85,9 @@ object Suggestion {
   def finalSuggestion(schema: Schema, required: Boolean): String => Field =
     schema.`type` match {
       case Some(jsonType) if jsonType.nullable =>
-        name => Field(name, Type.String, Mode.Nullable)
+        name => Field(name, Type.Json, Mode.Nullable)
       case _ =>
-        name => Field(name, Type.String, Mode.required(required))
+        name => Field(name, Type.Json, Mode.required(required))
     }
 
   val suggestions: List[Suggestion] = List(
