@@ -36,6 +36,8 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   normalName handles camel case and disallowed characters $e13
   normalize would collapse colliding names $e14
   normalize would collapse colliding names with deterministic type selection $e15
+  normalize would sort fields in order of name $e16
+  normalize would sort nested fields in order of name $e17
   """
 
   // a helper
@@ -409,15 +411,15 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       fieldType = Type.Struct(
         fields = NonEmptyVector.of(
           Field(
+            name = "__b",
+            fieldType = Type.Integer,
+            nullability = Nullable
+          ),
+          Field(
             name = "_ga",
             fieldType = Type.Integer,
             nullability = Nullable,
             accessors = Set("_ga", "_Ga")
-          ),
-          Field(
-            name = "__b",
-            fieldType = Type.Integer,
-            nullability = Nullable
           ),
         )
       ),
@@ -456,6 +458,66 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       nullability = Nullable)
 
     (input1 must_== expected) and (input2 must_== expected)
+  }
+
+  def e16 = {
+    val input = {
+      val struct = Type.Struct(
+        NonEmptyVector.of(
+          Field("Apple", Type.String, Nullable),
+          Field("cherry", Type.String, Nullable),
+          Field("banana", Type.String, Nullable),
+          Field("Damson", Type.String, Nullable)
+        )
+      )
+      Field("top", struct, Nullable)
+    }
+
+    val expected = {
+      val struct = Type.Struct(
+        NonEmptyVector.of(
+          Field("apple", Type.String, Nullable, Set("Apple")),
+          Field("banana", Type.String, Nullable, Set("banana")),
+          Field("cherry", Type.String, Nullable, Set("cherry")),
+          Field("damson", Type.String, Nullable, Set("Damson"))
+        )
+      )
+      Field("top", struct, Nullable)
+    }
+
+    Field.normalize(input) must beEqualTo(expected)
+  }
+
+  def e17 = {
+    val input = {
+      val nested = Type.Struct(
+        NonEmptyVector.of(
+          Field("Apple", Type.String, Nullable),
+          Field("cherry", Type.String, Nullable),
+          Field("banana", Type.String, Nullable),
+          Field("Damson", Type.String, Nullable)
+        )
+      )
+      val arr = Field("nested_arr", Type.Array(nested, Nullable), Nullable)
+      val struct = Field("nested_obj", nested, Nullable)
+      Field("top", Type.Struct(NonEmptyVector.of(arr, struct)), Nullable)
+    }
+
+    val expected = {
+      val nested = Type.Struct(
+        NonEmptyVector.of(
+          Field("apple", Type.String, Nullable, Set("Apple")),
+          Field("banana", Type.String, Nullable, Set("banana")),
+          Field("cherry", Type.String, Nullable, Set("cherry")),
+          Field("damson", Type.String, Nullable, Set("Damson"))
+        )
+      )
+      val arr = Field("nested_arr", Type.Array(nested, Nullable), Nullable)
+      val struct = Field("nested_obj", nested, Nullable)
+      Field("top", Type.Struct(NonEmptyVector.of(arr, struct)), Nullable)
+    }
+
+    Field.normalize(input) must beEqualTo(expected)
   }
 
   private def fieldNormalName(name: String) = Field.normalizeName(Field(name, Type.String, nullability = Nullable))
