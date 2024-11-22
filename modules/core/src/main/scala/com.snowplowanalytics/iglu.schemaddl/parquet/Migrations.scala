@@ -182,7 +182,7 @@ object Migrations {
     Generates list of all migration for the Schema pair. Top level of schema is always Struct.
    */
   def assessSchemaMigration(source: Field, target: Field): ParquetSchemaMigrations =
-    MigrationFieldPair(Nil, Field.normalize(source), Some(Field.normalize(target))).migrations.migrations
+    MigrationFieldPair(Nil, source, Some(target)).migrations.migrations
 
 
   // [parquet] to access this in tests
@@ -194,7 +194,7 @@ object Migrations {
       })
 
   def mergeSchemas(source: Field, target: Field): Either[List[Breaking], Field] = {
-    val merged = MigrationFieldPair(Nil, Field.normalize(source), Some(Field.normalize(target))).migrations
+    val merged = MigrationFieldPair(Nil, source, Some(target)).migrations
     merged.result match {
       case Some(field) => field.asRight
       case None => merged.migrations.foldLeft(List.empty[Breaking])((accErr, migration) => migration match {
@@ -205,5 +205,5 @@ object Migrations {
   }
 
   def isSchemaMigrationBreaking(source: Field, target: Field): Boolean =
-    isSchemaMigrationBreakingFromMigrations(MigrationFieldPair(Nil, Field.normalize(source), Some(Field.normalize(target))).migrations.migrations)
+    isSchemaMigrationBreakingFromMigrations(MigrationFieldPair(Nil, source, Some(target)).migrations.migrations)
 }
