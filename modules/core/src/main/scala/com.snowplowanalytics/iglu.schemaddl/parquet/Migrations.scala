@@ -87,7 +87,10 @@ object Migrations {
             }
 
             // Comparing struct target fields to the source. This will detect additions.
-            val reverseMigration = targetFields.map(tgtField => MigrationFieldPair(tgtField.name :: path, tgtField, sourceStruct.focus(tgtField.name)).migrations)
+            val reverseMigration = targetFields.map {
+              tgtField =>
+                MigrationFieldPair(tgtField.name :: path, tgtField, sourceStruct.focus(tgtField.name)).migrations
+            }
 
             migrations ++= forwardMigration.iterator.flatMap(_.migrations)
 

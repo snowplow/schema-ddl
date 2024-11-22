@@ -526,18 +526,18 @@ class MigrationSpec extends org.specs2.Specification {
   def e17 = {
     val struct1 = Type.Struct(
       NonEmptyVector.of(
-        Field("zzz", Type.String, Nullable),
-        Field("yyy", Type.String, Nullable),
+        Field("vvv", Type.String, Nullable),
         Field("xxx", Type.String, Nullable),
+        Field("zzz", Type.String, Nullable),
       )
     )
 
     val struct2 = Type.Struct(
       NonEmptyVector.of(
+        Field("vvv", Type.String, Required),
+        Field("www", Type.String, Required),
         Field("xxx", Type.String, Required),
-        Field("new1", Type.String, Required),
         Field("yyy", Type.String, Required),
-        Field("new2", Type.String, Required),
         Field("zzz", Type.String, Required),
       )
     )
@@ -545,12 +545,12 @@ class MigrationSpec extends org.specs2.Specification {
     val expectedStruct = Type.Struct(
       NonEmptyVector.of(
         // original fields
-        Field("zzz", Type.String, Nullable),
-        Field("yyy", Type.String, Nullable),
+        Field("vvv", Type.String, Nullable),
         Field("xxx", Type.String, Nullable),
+        Field("zzz", Type.String, Nullable),
         // added fields
-        Field("new1", Type.String, Nullable),
-        Field("new2", Type.String, Nullable),
+        Field("www", Type.String, Nullable),
+        Field("yyy", Type.String, Nullable),
       )
     )
 
