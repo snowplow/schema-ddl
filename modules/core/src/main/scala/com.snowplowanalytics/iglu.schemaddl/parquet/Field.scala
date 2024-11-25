@@ -43,16 +43,15 @@ object Field {
       Field(name, Type.Array(constructedType.value, itemNullability), nullability)
     }
 
-  def normalize(field: Field): Field = {
-    val fieldType = field.fieldType match {
-      case Type.Struct(fields) => Type.Struct(collapseDuplicateFields(fields.map(normalize)))
-      case Type.Array(Type.Struct(fields), nullability) => Type.Array(
-        Type.Struct(collapseDuplicateFields(fields.map(normalize)))
-        , nullability)
+  def normalize(field: Field): Field =
+    field.copy(name = normalizeName(field), fieldType = normalizeType(field.fieldType))
+
+  private def normalizeType(t: Type): Type =
+    t match {
+      case Type.Struct(fields) => Type.Struct(collapseDuplicateFields(fields.map(normalize)).sortBy(_.name))
+      case Type.Array(el, nullability) => Type.Array(normalizeType(el), nullability)
       case other => other
     }
-    field.copy(name = normalizeName(field), fieldType = fieldType)
-  }
 
   private def collapseDuplicateFields(normFields: NonEmptyVector[Field]): NonEmptyVector[Field] = {
     val endMap = normFields

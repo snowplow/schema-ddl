@@ -81,10 +81,16 @@ object Migrations {
       val mergedType: Option[Type] = sourceType match {
         case sourceStruct@Struct(sourceFields) => targetType match {
           case targetStruct@Type.Struct(targetFields) =>
-            val forwardMigration = sourceFields.map(srcField => MigrationFieldPair(srcField.name :: path, srcField, targetStruct.focus(srcField.name)).migrations)
+            val forwardMigration = sourceFields.map {
+              srcField =>
+                MigrationFieldPair(srcField.name :: path, srcField, targetStruct.focus(srcField.name)).migrations
+            }
 
             // Comparing struct target fields to the source. This will detect additions.
-            val reverseMigration = targetFields.map(tgtField => MigrationFieldPair(tgtField.name :: path, tgtField, sourceStruct.focus(tgtField.name)).migrations)
+            val reverseMigration = targetFields.map {
+              tgtField =>
+                MigrationFieldPair(tgtField.name :: path, tgtField, sourceStruct.focus(tgtField.name)).migrations
+            }
 
             migrations ++= forwardMigration.iterator.flatMap(_.migrations)
 
@@ -96,22 +102,23 @@ object Migrations {
             val tgtFields = reverseMigration.toVector.traverse(_.result).toVector.flatten
             val tgtFieldNames = tgtFields.map(_.name)
             val allSrcFields = forwardMigration.toVector.traverse(_.result).toVector.flatten
-            val allSrcFieldMap = allSrcFields.map(f => f.name -> f).toMap
-            // swap fields in src and target as they would be rearranged in nested structs or arrays
-            val reorderedTgtFields = tgtFields.map { t =>
-              allSrcFieldMap.get(t.name) match {
-                case Some(value) if value.fieldType.isInstanceOf[Struct] => value
-                case Some(value) if value.fieldType.isInstanceOf[Array] => value
-                case _ => t
-              }
+            val allSrcFieldNames = allSrcFields.map(_.name)
+
+            val srcFields: Vector[Field] = allSrcFields.map {
+              srcField =>
+                if (tgtFieldNames.contains(srcField.name))
+                  srcField
+                else
+                  // drop not null constraints from removed fields.
+                  srcField.copy(nullability = Type.Nullability.Nullable)
             }
-            val srcFields: Vector[Field] = allSrcFields.filter(srcField => !tgtFieldNames.contains(srcField.name)).map(
-              // drop not null constrains from removed fields.
-              _.copy(nullability = Type.Nullability.Nullable)
-            )
+            val newTgtFields = tgtFields.filter {
+              tgtField =>
+                !allSrcFieldNames.contains(tgtField.name)
+            }
 
             // failed migration would produce no fields in source
-            NonEmptyVector.fromVector(reorderedTgtFields ++ srcFields).map { nonEmpty =>
+            NonEmptyVector.fromVector(srcFields ++ newTgtFields).map { nonEmpty =>
               Type.Struct(nonEmpty)
             }
 
