@@ -1,3 +1,7 @@
+Version 0.26.0 (2024-11-25)
+---------------------------
+Preserve original field order when merging parquet Fields (#213)
+
 Version 0.25.0 (2024-10-01)
 ---------------------------
 Prepend underscore for parquet fields starting with number
