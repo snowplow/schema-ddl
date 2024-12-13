@@ -35,11 +35,9 @@ case class ShredModelEntry(
     .flatMap(_.apply(subSchema))
     .getOrElse(ShredModelEntry.ColumnType.RedshiftVarchar(ShredModelEntry.VARCHAR_SIZE))
 
-  lazy val compressionEncoding: ShredModelEntry.CompressionEncoding = (subSchema.`enum`, columnType) match {
-    case (Some(_), ShredModelEntry.ColumnType.RedshiftVarchar(size)) if size <= 255 =>
-      ShredModelEntry.CompressionEncoding.Text255Encoding
-    case (_, ShredModelEntry.ColumnType.RedshiftBoolean) => ShredModelEntry.CompressionEncoding.RunLengthEncoding
-    case (_, ShredModelEntry.ColumnType.RedshiftDouble) => ShredModelEntry.CompressionEncoding.RawEncoding
+  lazy val compressionEncoding: ShredModelEntry.CompressionEncoding = columnType match {
+    case ShredModelEntry.ColumnType.RedshiftBoolean => ShredModelEntry.CompressionEncoding.RunLengthEncoding
+    case ShredModelEntry.ColumnType.RedshiftDouble => ShredModelEntry.CompressionEncoding.RawEncoding
     case _ => ShredModelEntry.CompressionEncoding.ZstdEncoding
   }
 
@@ -169,7 +167,6 @@ object ShredModelEntry {
 
     implicit val compressionEncodingShow: Show[CompressionEncoding] = Show.show {
       case RawEncoding => s"ENCODE RAW"
-      case Text255Encoding => s"ENCODE TEXT255"
       case ZstdEncoding => s"ENCODE ZSTD"
       case RunLengthEncoding => "ENCODE RUNLENGTH"
     }
@@ -177,8 +174,6 @@ object ShredModelEntry {
     case object RawEncoding extends CompressionEncoding
 
     case object RunLengthEncoding extends CompressionEncoding
-
-    case object Text255Encoding extends CompressionEncoding
 
     case object ZstdEncoding extends CompressionEncoding
   }

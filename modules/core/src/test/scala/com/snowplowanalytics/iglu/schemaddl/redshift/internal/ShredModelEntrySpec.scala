@@ -85,9 +85,9 @@ class ShredModelEntrySpec extends Specification {
   }
 
   "suggest compression" should {
-    "suggest Text255Encoding for enums less then 255 in length" in {
+    "suggest zstd for enums less then 255 in length" in {
       val props = json"""{"type": "string", "enum": ["one", "two"], "maxLength": 42}""".schema
-      ShredModelEntry(dummyPtr, props).compressionEncoding must beEqualTo(Text255Encoding)
+      ShredModelEntry(dummyPtr, props).compressionEncoding must beEqualTo(ZstdEncoding)
     }
 
     "suggest RunLengthEncoding for booleans" in {
