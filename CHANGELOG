@@ -1,3 +1,7 @@
+Version 0.27.0 (2024-12-19)
+---------------------------
+Redshift: use zstd compression encoding instead text255 with the columns for enum fields (#215)
+
 Version 0.26.0 (2024-11-25)
 ---------------------------
 Preserve original field order when merging parquet Fields (#213)
