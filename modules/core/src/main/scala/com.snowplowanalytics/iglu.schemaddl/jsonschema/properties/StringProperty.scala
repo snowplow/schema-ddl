@@ -67,7 +67,7 @@ object StringProperty {
     def fromString(string: String): Format = string match {
       case "uri" => UriFormat
       case "ipv4" => Ipv4Format
-      case "ivp6" => Ipv6Format
+      case "ipv6" => Ipv6Format
       case "email" => EmailFormat
       case "date-time" => DateTimeFormat
       case "date" => DateFormat
