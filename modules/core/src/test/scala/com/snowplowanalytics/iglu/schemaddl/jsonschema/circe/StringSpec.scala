@@ -28,6 +28,7 @@ class StringSpec extends Specification { def is = s2"""
     parse correct minLength $e1
     parse maxLength with ipv4 format $e2
     parse unknown format $e3
+    parse ipv6 format $e4
   """
 
   def e1 = {
@@ -46,5 +47,11 @@ class StringSpec extends Specification { def is = s2"""
     val schema = json"""{"maxLength": 32, "format": "unknown"}"""
 
     Schema.parse(schema) must beSome(Schema(maxLength = Some(MaxLength(32)), format = Some(Format.CustomFormat("unknown"))))
+  }
+
+   def e4 = {
+    val schema = json"""{"maxLength": 39, "format": "ipv6"}"""
+
+    Schema.parse(schema) must beSome(Schema(maxLength = Some(MaxLength(39)), format = Some(Format.Ipv6Format)))
   }
 }
