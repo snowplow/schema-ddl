@@ -1,3 +1,9 @@
+Version 0.27.1 (2026-06-30)
+---------------------------
+Migrate publishing to Sonatype Central Portal and modernize build toolchain (#4)
+Memoize parquet Field normalized name (#3)
+Add sync workflow for schema-ddl (#1)
+
 Version 0.27.0 (2024-12-19)
 ---------------------------
 Redshift: use zstd compression encoding instead text255 with the columns for enum fields (#215)

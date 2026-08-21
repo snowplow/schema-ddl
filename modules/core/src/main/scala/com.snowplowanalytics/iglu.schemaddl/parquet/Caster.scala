@@ -181,9 +181,9 @@ object Caster {
 
     ca match {
       case CastAccumulate(Some(Validated.Invalid(_)), true) if field.nullability.nullable =>
-        NamedValue(Field.normalizeName(field), caster.nullValue).validNel
+        NamedValue(field.normalizedName, caster.nullValue).validNel
       case CastAccumulate(None, true) if field.nullability.nullable =>
-        NamedValue(Field.normalizeName(field), caster.nullValue).validNel
+        NamedValue(field.normalizedName, caster.nullValue).validNel
       case CastAccumulate(None, true)  =>
         WrongType(Json.Null, field.fieldType).invalidNel
       case CastAccumulate(None, _)  =>
@@ -191,7 +191,7 @@ object Caster {
       case CastAccumulate(Some(Validated.Invalid(f)), _) =>
         Validated.Invalid(f)
       case CastAccumulate(Some(Validated.Valid(f)), _) =>
-        Validated.Valid(NamedValue(Field.normalizeName(field), f))
+        Validated.Valid(NamedValue(field.normalizedName, f))
     }
   }
 }

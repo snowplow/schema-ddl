@@ -38,6 +38,7 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
   normalize would collapse colliding names with deterministic type selection $e15
   normalize would sort fields in order of name $e16
   normalize would sort nested fields in order of name $e17
+  normalizedName memoizes and matches normalizeName $e18
   """
 
   // a helper
@@ -382,6 +383,13 @@ class FieldSpec extends org.specs2.Specification { def is = s2"""
       (fieldNormalName("_.test1,test2.test3;test4") must beEqualTo("__test1_test2_test3_test4")) and
       (fieldNormalName(",.;:") must beEqualTo("____")) and
       (fieldNormalName("1test1,Test2Test3Test4.test5;test6") must beEqualTo("_1test1_test2_test3_test4_test5_test6"))
+  }
+
+  def e18 = {
+    List("", "test1", "Test1Test2TEST3", "1test1,test2.test3;test4").map { name =>
+      val field = Field(name, Type.String, nullability = Nullable)
+      field.normalizedName must beEqualTo(Field.normalizeName(field))
+    }.reduce(_ and _)
   }
 
   def e14 = {

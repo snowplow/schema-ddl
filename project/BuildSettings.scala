@@ -18,6 +18,9 @@ import sbtdynver.DynVerPlugin.autoImport._
 
 import scoverage.ScoverageKeys._
 
+import org.typelevel.scalacoptions.ScalacOptions
+import org.typelevel.sbt.tpolecat.TpolecatPlugin.autoImport._
+
 import com.typesafe.sbt.site.SitePlugin.autoImport._
 import com.typesafe.sbt.site.SiteScaladocPlugin.autoImport._
 import com.typesafe.sbt.site.preprocess.PreprocessPlugin.autoImport._
@@ -26,14 +29,17 @@ object BuildSettings {
 
   lazy val commonSettings = Seq(
     organization       := "com.snowplowanalytics",
-    scalaVersion       := "2.12.15",
-    crossScalaVersions := Seq("2.12.15", "2.13.6"),
+    scalaVersion       := "2.12.21",
+    crossScalaVersions := Seq("2.12.21", "2.13.18"),
+    scalacOptions      += "-release:8",
+    javacOptions       ++= Seq("--release", "8"),
+    tpolecatExcludeOptions ++= ScalacOptions.fatalWarningOptions,
     licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0"))
   )
 
   lazy val basicSettigns = Seq(
     shellPrompt := { _ => "schema-ddl> " },
-    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
+    addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.4" cross CrossVersion.full)
   )
 
   // Maven Central publishing settings

@@ -23,7 +23,16 @@ import com.snowplowanalytics.iglu.schemaddl.jsonschema.mutate.Mutate
 case class Field(name: String,
                  fieldType: Type,
                  nullability: Type.Nullability,
-                 accessors: Set[String])
+                 accessors: Set[String]) {
+
+  /**
+   * The parquet-normalized column name (snake-cased and sanitized).
+   *
+   * A field's name is static for the lifetime of a schema, so the normalized form is computed
+   * once per [[Field]] and reused for every row rather than re-derived on each cast.
+   */
+  private[parquet] lazy val normalizedName: String = Field.normalizeName(this)
+}
 
 object Field {
 
