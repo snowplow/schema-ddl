@@ -1,3 +1,7 @@
+Version 0.27.2 (2026-07-14)
+---------------------------
+Reduce repeated per-row work in casting hot paths (#6)
+
 Version 0.27.1 (2026-06-30)
 ---------------------------
 Migrate publishing to Sonatype Central Portal and modernize build toolchain (#4)

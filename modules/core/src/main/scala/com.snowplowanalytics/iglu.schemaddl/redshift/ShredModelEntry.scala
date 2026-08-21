@@ -28,6 +28,12 @@ case class ShredModelEntry(
    */
   lazy val columnName: String = ptr.getName
 
+  /**
+   * Cursors of `ptr` in traversal order, computed once as [[Pointer.get]] reverses the cursor
+   * list on every call and [[stringFactory]] runs once per column for every event.
+   */
+  private lazy val cursors: List[Pointer.Cursor] = ptr.get
+
   lazy val isNullable: Boolean = isLateAddition || subSchema.canBeNull
 
   lazy val columnType: ShredModelEntry.ColumnType = columnTypeSuggestions
@@ -69,7 +75,7 @@ case class ShredModelEntry(
         case Pointer.Cursor.DownProperty(_) :: t => go(t, data)
       }
 
-    go(ptr.get, json.hcursor)
+    go(cursors, json.hcursor)
   }
 }
 

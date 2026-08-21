@@ -12,6 +12,8 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.bigquery
 
+import java.util.regex.Pattern
+
 import com.snowplowanalytics.iglu.schemaddl.StringUtils
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.Schema
 import com.snowplowanalytics.iglu.schemaddl.jsonschema.properties.{CommonProperties,ArrayProperty}
@@ -25,7 +27,13 @@ case class Field(name: String, fieldType: Type, mode: Mode) {
     case Field(n, t, _) => Field(n, t, mode)
   }
 
-  def normalName: String =
+  /**
+   * The BigQuery-normalized column name (snake-cased and sanitized).
+   *
+   * A field's name is static for the lifetime of a schema, so the normalized form is computed
+   * once per [[Field]] and reused for every row rather than re-derived on each cast.
+   */
+  lazy val normalName: String =
     StringUtils.snakeCase
       .andThen(Field.replaceDisallowedCharacters)
       .andThen(Field.prependIllegalStart)(name)
@@ -67,16 +75,20 @@ object Field {
     }
   }
 
+  private val disallowedCharacters = Pattern.compile("[^A-Za-z0-9_]")
+
+  private val illegalStart = Pattern.compile("[^A-Za-z_]")
+
   /**
    * Replaces disallowed BQ column characters with underscore
    */
   val replaceDisallowedCharacters: String => String = str =>
-    str.replaceAll("[^A-Za-z0-9_]", "_")
+    disallowedCharacters.matcher(str).replaceAll("_")
 
   /**
    * Prepends underscore if string is starting with
    * disallowed character
    */
   val prependIllegalStart: String => String = str =>
-    if (str.take(1).matches("[^A-Za-z_]")) s"_$str" else str
+    if (illegalStart.matcher(str.take(1)).matches) s"_$str" else str
 }

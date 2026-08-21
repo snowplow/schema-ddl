@@ -13,18 +13,25 @@
 package com.snowplowanalytics.iglu.schemaddl
 
 
+import java.util.regex.Pattern
+
 /**
  * Utilities for manipulating Strings
  */
 object StringUtils {
+
+  private val splitAcronyms = Pattern.compile("([A-Z]+)([A-Z][a-z])")
+
+  private val splitCamelCase = Pattern.compile("([a-z\\d])([A-Z])")
+
   /**
    * Transforms CamelCase string into snake_case
    * Also replaces all hyphens with underscores
    */
   val snakeCase: String => String = str =>
-    str.replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2")
-      .replaceAll("([a-z\\d])([A-Z])", "$1_$2")
-      .replaceAll("-", "_")
+    splitCamelCase.matcher(splitAcronyms.matcher(str).replaceAll("$1_$2"))
+      .replaceAll("$1_$2")
+      .replace('-', '_')
       .toLowerCase
-  
+
 }

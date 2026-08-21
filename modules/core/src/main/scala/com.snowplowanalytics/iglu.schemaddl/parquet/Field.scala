@@ -12,6 +12,8 @@
  */
 package com.snowplowanalytics.iglu.schemaddl.parquet
 
+import java.util.regex.Pattern
+
 import cats.data.NonEmptyVector
 import cats.implicits._
 
@@ -84,11 +86,13 @@ object Field {
   }
 
 
+  private val disallowedCharacters = Pattern.compile("[^A-Za-z0-9_]")
+
   /**
    * Replaces disallowed parquet column characters with underscore
    */
   private val replaceDisallowedCharacters: String => String = str =>
-    str.replaceAll("[^A-Za-z0-9_]", "_")
+    disallowedCharacters.matcher(str).replaceAll("_")
 
   private[parquet] final case class NullableType(value: Type, nullability: JsonNullability)
 
