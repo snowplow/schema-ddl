@@ -105,6 +105,9 @@ object FlatSchema {
    */
   def extractProperties(schema: Schema): List[ShredModelEntry] = postProcess(build(schema).subschemas)
     .map(pair => ShredModelEntry.apply(pair._1, pair._2))
+    // A field clashing with one of the columns common to every shredded table cannot get its own
+    // column, so it is dropped rather than breaking the table definition and the COPY statement.
+    .filterNot(entry => ShredModelEntry.commonColumnNames.contains(entry.columnName))
 
 
   /** Build FlatSchema from a single schema. Must be used only if there's only one schema */

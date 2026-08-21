@@ -220,7 +220,7 @@ object SelfSyntaxChecker {
         (strictValidation ++ laxValidation ++ selfValidation) // Order is important: Errors override Warnings for identical messages
           .toList
           .map { case (message, level) =>
-            val pointer = JsonPath.parse(message.getPath).map(JsonPath.toPointer) match {
+            val pointer = JsonPath.parse(message.getInstanceLocation.toString).map(JsonPath.toPointer) match {
               case Right(Right(value)) => value
               case Right(Left(inComplete)) => inComplete
               case Left(_) => Pointer.Root

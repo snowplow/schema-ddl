@@ -78,7 +78,7 @@ class SelfSyntaxCheckerSpec extends Specification {
         case NonEmptyList
           (Message(
             pointer,
-            "$.properties.example_field_3.users: is not defined in the schema and the schema does not allow additional properties",
+            "$.properties.example_field_3: property 'users' is not defined in the schema and the schema does not allow additional properties",
             Warning
           ),
           Nil
@@ -141,7 +141,7 @@ class SelfSyntaxCheckerSpec extends Specification {
           Nil
         ) =>
             (pointer.value must beEmpty) and
-            (msg must beEqualTo("$.$schema: does not have a value in the enumeration [http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#]"))
+            (msg must beEqualTo("$.$schema: does not have a value in the enumeration [\"http://iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/1-0-0#\"]"))
       }
     }
 

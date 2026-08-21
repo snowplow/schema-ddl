@@ -26,7 +26,6 @@ lazy val core = project.in(file("modules/core"))
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     Dependencies.Libraries.igluCoreCirce,
     Dependencies.Libraries.circeGeneric,
-    Dependencies.Libraries.circeJackson,
     Dependencies.Libraries.circeLiteral,
     Dependencies.Libraries.circeParser,
     Dependencies.Libraries.catsParse,

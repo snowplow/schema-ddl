@@ -6,7 +6,8 @@ import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaMap, SchemaVer, SelfDes
 import org.specs2.mutable.Specification
 import com.snowplowanalytics.iglu.schemaddl.SpecHelpers._
 import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModel.{GoodModel, RecoveryModel}
-import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelSpec.{ModelMergeOps, dummyKey, dummyKey1, dummyKey2, dummyModel}
+import com.snowplowanalytics.iglu.schemaddl.redshift.ShredModelSpec.{ModelMergeOps, allClashingModel, clashingModel, dummyKey, dummyKey1, dummyKey2, dummyModel}
+import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations
 import com.snowplowanalytics.iglu.schemaddl.redshift.internal.Migrations.NullableRequired
 import io.circe.literal._
 
@@ -105,6 +106,55 @@ class ShredModelSpec extends Specification {
       "bar": "ssss"
       }""") must beEqualTo(List(
         "z zzz", "xxxx", "\\N", "\\N", "\\N", "\\N", "ssss", "\\N", "\\N", "\\N", "\\N", "\\N", "\\N", "\\N"))
+    }
+  }
+
+  "fields clashing with the common columns" should {
+    "be dropped from the model entries, keeping normal and nested fields" in {
+      clashingModel.entries.map(_.columnName) must beEqualTo(
+        List("my_field", "my_parent_field.root_tstamp", "ref.parent", "root.tstamp")
+      )
+    }
+    "not be duplicated in the shred table definition" in {
+      val lines = clashingModel.toTableSql("custom").split("\n").toList
+      forall(ShredModelEntry.commonColumnNames) { columnName =>
+        lines.count(_.trim.startsWith(s""""$columnName"""")) must beEqualTo(1)
+      }
+    }
+    "not contribute a value when transforming events" in {
+      clashingModel.jsonToStrings(
+        json"""{
+            "refParent": "pppp",
+            "Ref-Parent": "qqqq",
+            "myField": "mmmm",
+            "myParentField": {"root_tstamp":  "rrrr"},
+            "ref": {"parent":  "nnnn"},
+            "root": {"tstamp":  "tttt"}
+            }""") must beEqualTo(List("mmmm", "rrrr", "nnnn", "tttt"))
+    }
+    "leave a table with only the common columns when every field clashes" in {
+      allClashingModel.entries must beEmpty
+      allClashingModel.toTableSql("custom") must beEqualTo(
+        ShredModel.good(dummyKey, json"""{"type": "object", "properties": {}}""".schema).toTableSql("custom")
+      )
+    }
+    "not trigger a migration when introduced by a later schema version" in {
+      val s1 = ShredModel.good(dummyKey,
+        json"""{
+       "type": "object",
+       "properties": {
+         "myField": {"type": "string"}
+       }
+}""".schema)
+      val s2 = ShredModel.good(dummyKey1,
+        json"""{
+       "type": "object",
+       "properties": {
+         "myField": {"type": "string"},
+         "refParent": {"type": "string"}
+       }
+}""".schema)
+      s1.merge(s2).map(_.migrationsInTransaction()) must beRight(List.empty[Migrations.ColumnAddition])
     }
   }
 
@@ -805,6 +855,63 @@ object ShredModelSpec {
              }
            },
            "required": ["a_field", "e_field"] 
+}""".schema)
+
+  /**
+   * Every name in [[ShredModelEntry.commonColumnNames]], plus fields that must survive. `ref` and
+   * `root` are the near misses: nested names are joined with a dot, so `ref.parent` is a distinct
+   * column from the common `ref_parent`.
+   */
+  val clashingModel = ShredModel.good(dummyKey,
+    json"""{
+           "type": "object",
+           "properties": {
+             "schemaVendor": {"type": "string"},
+             "schema_name": {"type": "string"},
+             "schemaFormat": {"type": "string"},
+             "schema_version": {"type": "string"},
+             "rootId": {"type": "string"},
+             "root_tstamp": {"type": "string"},
+             "refRoot": {"type": "string"},
+             "ref_tree": {"type": "string"},
+             "refParent": {"type": "string"},
+             "Ref-Parent": {"type": "string"},
+             "myField": {"type": "string"},
+             "ref": {
+               "type": "object",
+               "properties": {
+                 "parent": {
+                   "type": "string"
+                 }
+               }
+             },
+             "root": {
+               "type": "object",
+               "properties": {
+                 "tstamp": {
+                   "type": "string"
+                 }
+               }
+             },
+             "myParentField": {
+               "type": "object",
+               "properties": {
+                 "root_tstamp": {
+                   "type": "string"
+                 }
+               }
+             }
+           }
+}""".schema)
+
+  /** A schema in which every field clashes, leaving the table with only the common columns */
+  val allClashingModel = ShredModel.good(dummyKey,
+    json"""{
+           "type": "object",
+           "properties": {
+             "rootTstamp": {"type": "string"},
+             "ref_parent": {"type": "string"}
+           }
 }""".schema)
 
   implicit class ModelMergeOps(result: Either[RecoveryModel, GoodModel]) {

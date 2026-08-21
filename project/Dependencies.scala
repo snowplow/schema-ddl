@@ -17,13 +17,12 @@ import Keys._
 object Dependencies {
   object V {
     // Scala
-    val igluCore         = "1.1.3"
-    val circe            = "0.14.6"
-    val circeJackson     = "0.14.0"
-    val jsonValidator    = "1.0.76"
-    val catsParse        = "1.0.0"
-    val libCompat        = "2.9.0"
-    val jacksonDatabind  = "2.14.1"
+    val igluCore         = "1.1.5"
+    val circe            = "0.14.14"
+    val jsonValidator    = "1.5.8"
+    val catsParse        = "1.1.0"
+    val libCompat        = "2.14.0"
+    val jacksonDatabind  = "2.21.5"
 
     // Scala (test only)
     val specs2           = "4.20.0"
@@ -35,7 +34,6 @@ object Dependencies {
     val igluCoreJson4s   = "com.snowplowanalytics"      %% "iglu-core-json4s"       % V.igluCore
     val igluCoreCirce    = "com.snowplowanalytics"      %% "iglu-core-circe"        % V.igluCore
     val circeGeneric     = "io.circe"                   %% "circe-generic"          % V.circe
-    val circeJackson     = "io.circe"                   %% "circe-jackson210"       % V.circeJackson
     val libCompat        = "org.scala-lang.modules"     %% "scala-collection-compat" % V.libCompat
     val catsParse        = "org.typelevel"              %% "cats-parse"             % V.catsParse
     // Java
