@@ -24,6 +24,6 @@ object Type {
   case object Date extends Type
   case object DateTime extends Type
   case object Timestamp extends Type
+  case object Json extends Type
   case class Record(fields: List[Field]) extends Type
 }
-
